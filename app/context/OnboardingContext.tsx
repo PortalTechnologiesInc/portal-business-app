@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { router } from 'expo-router';
 
 const ONBOARDING_KEY = 'portal_onboarding_complete';
@@ -21,7 +21,7 @@ export const OnboardingProvider: React.FC<{children: React.ReactNode}> = ({ chil
   useEffect(() => {
     const loadOnboardingState = async () => {
       try {
-        const value = await AsyncStorage.getItem(ONBOARDING_KEY);
+        const value = await SecureStore.getItemAsync(ONBOARDING_KEY);
         setIsOnboardingComplete(value === 'true');
       } catch (e) {
         console.error('Failed to load onboarding state:', e);
@@ -34,13 +34,13 @@ export const OnboardingProvider: React.FC<{children: React.ReactNode}> = ({ chil
   }, []);
 
   const completeOnboarding = async () => {
-    await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+    await SecureStore.setItemAsync(ONBOARDING_KEY, 'true');
     setIsOnboardingComplete(true);
     router.replace('/');
   };
 
   const resetOnboarding = async () => {
-    await AsyncStorage.setItem(ONBOARDING_KEY, 'false');
+    await SecureStore.setItemAsync(ONBOARDING_KEY, 'false');
     setIsOnboardingComplete(false);
     router.replace('/onboarding');
   };

@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Text } from 'react-native';
 import { Stack } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import * as SplashScreen from 'expo-splash-screen';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { OnboardingProvider } from '@/app/context/OnboardingContext';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
-
-const ONBOARDING_COMPLETE = 'onboarding_complete';
 
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
@@ -15,10 +14,8 @@ export default function RootLayout() {
   useEffect(() => {
     async function prepare() {
       try {
-        // Add a deliberate delay to ensure SecureStore is ready
+        // Add a deliberate delay to ensure initialization is complete
         await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Just initialize the app - navigation happens in the screens
         setIsReady(true);
       } catch (error) {
         console.error('Error preparing app:', error);
@@ -35,9 +32,13 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="onboarding" />
-    </Stack>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <OnboardingProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="onboarding" />
+        </Stack>
+      </OnboardingProvider>
+    </GestureHandlerRootView>
   );
 }

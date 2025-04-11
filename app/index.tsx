@@ -1,48 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { router } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-
-const ONBOARDING_COMPLETE = 'onboarding_complete';
+import { useOnboarding } from '@/app/context/OnboardingContext';
 
 export default function Home() {
-  const [initialized, setInitialized] = useState(false);
+  const { isOnboardingComplete, isLoading, resetOnboarding } = useOnboarding();
 
   useEffect(() => {
-    // Check onboarding status when component mounts
-    checkOnboardingStatus();
-  }, []);
-
-  async function checkOnboardingStatus() {
-    try {
-      const status = await SecureStore.getItemAsync(ONBOARDING_COMPLETE);
-
-      if (status !== 'true') {
-        // If onboarding is not complete, navigate to onboarding
-        router.replace('/onboarding');
-        return;
-      }
-
-      setInitialized(true);
-    } catch (error) {
-      console.error('Error checking onboarding status:', error);
+    if (!isLoading && !isOnboardingComplete) {
       router.replace('/onboarding');
     }
-  }
-
-  const resetOnboarding = async () => {
-    try {
-      await SecureStore.deleteItemAsync(ONBOARDING_COMPLETE);
-      router.replace('/onboarding');
-    } catch (error) {
-      console.error('Error resetting onboarding:', error);
-    }
-  };
+  }, [isLoading, isOnboardingComplete]);
 
   // Don't render anything until we've checked the onboarding status
-  if (!initialized) {
+  if (isLoading) {
     return null;
   }
 
