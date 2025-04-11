@@ -1,9 +1,11 @@
 import React, { useRef, createContext } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import { Dimensions, StyleSheet, View, Image } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedScrollHandler,
   SharedValue,
+  useAnimatedStyle,
+  interpolate
 } from 'react-native-reanimated';
 import { ThemedView } from '@/components/ThemedView';
 
@@ -40,9 +42,29 @@ export default function OnboardingContainer({ children }: OnboardingContainerPro
     },
   });
 
+  const numberOfPages = React.Children.count(children);
+
+  const logoAnimatedStyle = useAnimatedStyle(() => {
+    // Map full scroll range to 0-360 degrees
+    const rotate = interpolate(
+      scrollX.value,
+      [0, SCREEN_WIDTH * (numberOfPages - 1)],
+      [0, 180 * (numberOfPages - 1)]
+    );
+
+    return { transform: [{ rotate: `${rotate}deg` }] };
+  });
+
   return (
     <ThemedView style={styles.container}>
       <OnboardingContext.Provider value={{ scrollX, screenWidth: SCREEN_WIDTH }}>
+      <Animated.View style={[styles.fixedLogo, logoAnimatedStyle]}>
+        <Image
+          source={require('../../assets/images/logowhite.png')}
+          style={{width: 200, height: 100}}
+          resizeMode="contain"
+        />
+      </Animated.View>
         <Animated.ScrollView
           ref={scrollViewRef}
           horizontal
@@ -69,6 +91,12 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  fixedLogo: {
+    position: 'relative',
+    zIndex: 10,
+    top: 150,
+    alignSelf: 'center',
   },
   pageContainer: {
     flex: 1,
