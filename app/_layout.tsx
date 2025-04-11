@@ -1,31 +1,38 @@
 import { useEffect, useState } from 'react';
-import { Stack, useRouter } from 'expo-router';
-import { STORAGE_KEYS, StorageService } from '@/app/utils/storage';
+import { Text } from 'react-native';
+import { Stack } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import * as SplashScreen from 'expo-splash-screen';
 
+// Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
+const ONBOARDING_COMPLETE = 'onboarding_complete';
+
 export default function RootLayout() {
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    async function checkOnboarding() {
+    async function prepare() {
       try {
-        const onboardingComplete = await StorageService.getData(STORAGE_KEYS.ONBOARDING_COMPLETE);
-        const initialRoute = onboardingComplete === true ? '/' : '/onboarding';
-        router.replace(initialRoute);
-      } catch (e) {
-        console.warn('Failed to get onboarding status, defaulting to onboarding:', e);
-        router.replace('/onboarding');
+        // Add a deliberate delay to ensure SecureStore is ready
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Just initialize the app - navigation happens in the screens
+        setIsReady(true);
+      } catch (error) {
+        console.error('Error preparing app:', error);
       } finally {
-        setLoading(false);
         await SplashScreen.hideAsync();
       }
     }
 
-    checkOnboarding();
-  }, [router]);
+    prepare();
+  }, []);
+
+  if (!isReady) {
+    return <Text>Loading...</Text>;
+  }
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
