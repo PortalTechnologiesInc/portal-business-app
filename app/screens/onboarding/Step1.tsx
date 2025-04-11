@@ -3,15 +3,18 @@ import { router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Image } from 'react-native';
+import { StorageService, STORAGE_KEYS } from '@/app/utils/storage';
 
 export default function Step1() {
-  const handleGenerateKey = () => {
+  const handleGenerateKey = async () => {
     // Will handle key generation later
+    await StorageService.storeData(STORAGE_KEYS.ONBOARDING_COMPLETE, true);
     router.replace('/');
   };
 
-  const handleImportSeed = () => {
+  const handleImportSeed = async () => {
     // Will handle seed import later
+    await StorageService.storeData(STORAGE_KEYS.ONBOARDING_COMPLETE, true);
     router.replace('/');
   };
 
@@ -47,8 +50,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   logo: {
-    marginTop: 100,
-    width: 300,
+    marginTop: 200,
+    width: 250,
     height: 200,
   },
   logoContainer: {
