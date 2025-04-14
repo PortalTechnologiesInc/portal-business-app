@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 
 type OptionsPageProps = {
@@ -10,8 +10,6 @@ type OptionsPageProps = {
 };
 
 export function OptionsPage({
-  onGenerateKey,
-  onImportSeed,
   pageWidth,
   containerStyles
 }: OptionsPageProps) {
@@ -21,14 +19,6 @@ export function OptionsPage({
         <ThemedText type="title" style={styles.headline}>
           Welcome to Portal
         </ThemedText>
-
-        <TouchableOpacity style={styles.buttonContainer} onPress={onGenerateKey}>
-          <ThemedText style={styles.buttonText}>Generate your private key</ThemedText>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.buttonContainer} onPress={onImportSeed}>
-          <ThemedText style={styles.buttonText}>Import existing seed</ThemedText>
-        </TouchableOpacity>
       </View>
     </View>
   );

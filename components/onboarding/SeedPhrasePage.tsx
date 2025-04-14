@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 
@@ -11,7 +11,6 @@ type SeedPhrasePageProps = {
 };
 
 export function SeedPhrasePage({
-  onFinish,
   pageWidth,
   containerStyles,
   seedPhrase
@@ -31,13 +30,6 @@ export function SeedPhrasePage({
             </View>
           ))}
         </View>
-
-        <TouchableOpacity
-          style={styles.buttonContainer}
-          onPress={onFinish}
-        >
-          <ThemedText style={styles.buttonText}>Finish</ThemedText>
-        </TouchableOpacity>
       </ThemedView>
     </View>
   );

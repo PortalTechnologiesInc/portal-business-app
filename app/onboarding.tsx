@@ -13,6 +13,7 @@ import { useOnboarding } from '@/context/OnboardingContext';
 import { IntroPage } from '@/components/onboarding/IntroPage';
 import { OptionsPage } from '@/components/onboarding/OptionsPage';
 import { SeedPhrasePage } from '@/components/onboarding/SeedPhrasePage';
+import { ButtonBar } from '@/components/onboarding/ButtonBar';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -24,6 +25,11 @@ export default function Onboarding() {
   const translateX = useSharedValue(0);
   const scale = useSharedValue(1);
   const logoOpacity = useSharedValue(1);
+  const translateY = useSharedValue(0);
+  const contentOpacity = useSharedValue(1);
+  const buttonsOpacity = useSharedValue(1);
+
+  const { width: SCREEN_WIDTH, height } = Dimensions.get('window');
 
   // Initialize seed phrase once
   useEffect(() => {
@@ -82,8 +88,34 @@ export default function Onboarding() {
   };
 
   const performFinishAnimation = () => {
-    // Scale the logo to fill the screen
-    scale.value = withTiming(SCREEN_WIDTH / 200 * 2, {
+    // Fade out content first
+    contentOpacity.value = withTiming(0, {
+      duration: 400,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+    });
+
+    buttonsOpacity.value = withTiming(0, {
+      duration: 400,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+    });
+
+    // First center the logo vertically
+    translateY.value = withTiming(
+      (height / 2) - 100, // Center logo (accounting for logo height)
+      {
+        duration: 600,
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+      }
+    );
+
+    // Rotate to 90 degrees
+    rotateValue.value = withTiming(270, {
+      duration: 800,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+    });
+
+    // Then scale up
+    scale.value = withTiming(SCREEN_WIDTH / 250 * 2, {
       duration: 800,
       easing: Easing.bezier(0.25, 0.1, 0.25, 1)
     });
@@ -128,6 +160,7 @@ export default function Onboarding() {
   const logoStyle = useAnimatedStyle(() => {
     return {
       transform: [
+        { translateY: translateY.value },
         { rotate: `${rotateValue.value}deg` },
         { scale: scale.value }
       ],
@@ -143,18 +176,26 @@ export default function Onboarding() {
     };
   });
 
+  const contentStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value
+  }));
+
+  const buttonsStyle = useAnimatedStyle(() => ({
+    opacity: buttonsOpacity.value
+  }));
+
   return (
     <ThemedView style={styles.container}>
       <Animated.View style={[styles.logoContainer, logoStyle]}>
         <Image
           source={require('../assets/images/logowhite.png')}
-          style={{width: 200, height: 100}}
+          style={{width: 250, height: 100}}
           resizeMode="contain"
         />
       </Animated.View>
 
       <GestureDetector gesture={panGesture}>
-        <View style={styles.pagesContainer}>
+        <Animated.View style={[styles.pagesContainer, contentStyle]}>
           <Animated.View style={[styles.pagesWrapper, pagesStyle]}>
             {/* Page 1: Intro */}
             <IntroPage
@@ -176,8 +217,17 @@ export default function Onboarding() {
               seedPhrase={seedPhrase}
             />
           </Animated.View>
-        </View>
+        </Animated.View>
       </GestureDetector>
+      <Animated.View style={buttonsStyle}>
+        <ButtonBar
+          currentPage={currentPage}
+          onNext={goToNextPage}
+          onGenerateKey={goToNextPage}
+          onImportSeed={completeOnboarding}
+          onFinish={performFinishAnimation}
+        />
+      </Animated.View>
     </ThemedView>
   );
 }
@@ -185,21 +235,23 @@ export default function Onboarding() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between', // This distributes space
+    paddingTop: 60,
+    paddingBottom: 30,
   },
   logoContainer: {
-    position: 'relative',
-    zIndex: 10,
-    top: 150,
     alignSelf: 'center',
+    marginBottom: 20,
+    zIndex: 20
   },
   pagesContainer: {
-    flex: 1,
-    position: 'relative',
+    flex: 1, // This will take available space between logo and buttons
     overflow: 'hidden',
   },
   pagesWrapper: {
     flex: 1,
     flexDirection: 'row',
-    height: '100%',
   },
 });
