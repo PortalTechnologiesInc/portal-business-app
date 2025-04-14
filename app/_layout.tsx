@@ -37,7 +37,6 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="onboarding" />
-          <Stack.Screen name="screens/SeedPhraseScreen" />
         </Stack>
       </OnboardingProvider>
     </GestureHandlerRootView>
