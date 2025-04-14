@@ -61,3 +61,5 @@ export const useOnboarding = () => {
   }
   return context;
 };
+
+export default OnboardingProvider;

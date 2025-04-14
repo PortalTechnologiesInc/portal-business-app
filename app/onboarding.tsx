@@ -7,10 +7,11 @@ import Animated, {
   Easing,
   runOnJS,
 } from 'react-native-reanimated';
+import { router } from 'expo-router';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import { useOnboarding } from '@/app/context/OnboardingContext';
+import { useOnboarding } from '@/context/OnboardingContext';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -136,7 +137,7 @@ export default function Onboarding() {
                   Welcome to Portal
                 </ThemedText>
 
-                <TouchableOpacity style={styles.buttonContainer} onPress={completeOnboarding}>
+                <TouchableOpacity style={styles.buttonContainer} onPress={() => router.push('/screens/SeedPhraseScreen')}>
                   <ThemedText style={styles.buttonText}>Generate your private key</ThemedText>
                 </TouchableOpacity>
 

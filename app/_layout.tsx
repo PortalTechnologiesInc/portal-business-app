@@ -3,7 +3,7 @@ import { Text } from 'react-native';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { OnboardingProvider } from '@/app/context/OnboardingContext';
+import { OnboardingProvider } from '@/context/OnboardingContext';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -37,6 +37,7 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="onboarding" />
+          <Stack.Screen name="screens/SeedPhraseScreen" />
         </Stack>
       </OnboardingProvider>
     </GestureHandlerRootView>

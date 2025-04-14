@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { useOnboarding } from '@/app/context/OnboardingContext';
+import { useOnboarding } from '@/context/OnboardingContext';
 
 export default function Home() {
   const { isOnboardingComplete, isLoading, resetOnboarding } = useOnboarding();
