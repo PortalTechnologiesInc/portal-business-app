@@ -30,6 +30,12 @@ yarn-error.*
 .DS_Store
 *.pem
 
+# nixOS
+.direnv
+.envrc
+# flake.nix
+flake.lock
+
 # local env files
 .env*.local
 
@@ -37,3 +43,5 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+.aider*
+.env

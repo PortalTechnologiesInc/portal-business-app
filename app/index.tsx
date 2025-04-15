@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useOnboarding } from '@/context/OnboardingContext';
+import ItemList from '@/components/ItemList';
 
 export default function Home() {
   const { isOnboardingComplete, isLoading, resetOnboarding } = useOnboarding();
@@ -22,6 +23,7 @@ export default function Home() {
   return (
     <ThemedView style={styles.container}>
       <ThemedText type="title">Portal Homepage</ThemedText>
+      <ItemList />
       <ThemedText style={styles.button} onPress={resetOnboarding}>
         Reset onboarding
       </ThemedText>
