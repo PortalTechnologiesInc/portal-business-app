@@ -1,65 +1,117 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, TextInput, StyleSheet } from 'react-native';
-import { IconSymbol } from './ui/IconSymbol';
+import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from './ThemedText';
-import { Ionicons } from '@expo/vector-icons';
 import Feather from '@expo/vector-icons/Feather';
-import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
-
-enum ItemType {
-  Auth,
-  Pay,
-}
-type Item = {
-  type: ItemType;
-  name: string;
-  detail: string;
-  date: Date;
-};
+import { Activity, ActivityType } from './../models/Activity'
+import { getMockedActivities } from '@/mocks/Activities';
+import { formatCentsToCurrency } from '@/utils';
 
 const ItemList: React.FC = () => {
-  const [items, setItems] = useState<Item[]>([
-    { type: ItemType.Auth, name: 'Instagram', detail: 'a3qp4Idn3iNDi3Ld...', date: new Date() },
-    { type: ItemType.Pay, name: 'Musicfly', detail: 'a3qp4Idn3iNDi3Ld...', date: new Date() },
-    { type: ItemType.Pay, name: 'JustEat', detail: 'a3qp4Idn3iNDi3Ld...', date: new Date() },
-    { type: ItemType.Auth, name: 'Facebook', detail: 'a3qp4Idn3iNDi3Ld...', date: new Date() },
-    { type: ItemType.Auth, name: 'INPS', detail: 'a3qp4Idn3iNDi3Ld...', date: new Date() },
-    // ... more items
-  ]);
-  const [filter, setFilter] = useState('');
+  const [items, setItems] = useState<Activity[]>([]);
+  const [filter, setFilter] = useState<ActivityType | null>(null);
 
-  const filteredItems = items.filter(item =>
-    item.name.toLowerCase().includes(filter.toLowerCase())
-  );
+  const filteredItems = filter === null
+    ? items
+    : items.filter(item => item.type === filter);
 
-  const renderItem = ({ item }: { item: Item }) => (
-    <View style={styles.itemContainer}>
-      <View style={styles.itemIconContainer}>
-        {item.type === ItemType.Auth ? (
-          <Feather name="unlock" size={24} color="white" />
+  const groupedItems = filteredItems.reduce((acc, item) => {
+    const dateString = item.date.toDateString();
+    if (!acc[dateString]) {
+      acc[dateString] = [];
+    }
+    acc[dateString].push(item);
+    return acc;
+  }, {} as Record<string, Activity[]>);
+
+  useEffect(() => {
+    setItems(getMockedActivities())
+  }, []);
+
+  const renderItem = ({ activity: activity }: { activity: Activity }) => (
+    <View style={styles.itemCard}>
+      <View style={styles.itemContainer}>
+        <View style={styles.itemIconContainer}>
+          {activity.type === ActivityType.Auth ? (
+            <Feather name="unlock" size={24} color="white" />
+          ) : (
+            <Feather name="dollar-sign" size={24} color="white" />
+          )}
+        </View>
+        <View style={styles.itemTextContainer}>
+          <ThemedText type="subtitle">{activity.name}</ThemedText>
+          <ThemedText>{activity.detail}</ThemedText>
+        </View>
+        {activity.type === ActivityType.Pay ? (
+          <>
+            {
+              activity.amount < 0 ? (
+                <ThemedText lightColor='#b12729' darkColor='#b12729' type='defaultSemiBold'>{formatCentsToCurrency(activity.amount)+activity.currency}</ThemedText>
+              ) : (
+                <ThemedText lightColor='#007f4e' darkColor='#007f4e' type='defaultSemiBold'>{formatCentsToCurrency(activity.amount)+activity.currency}</ThemedText>
+              )
+            }
+          </>
         ) : (
-          <FontAwesome5 name="bitcoin" size={24} color="white" />
+          <ThemedText lightColor='gray' darkColor='gray' type='defaultSemiBold'>{"Auth"}</ThemedText>
         )}
       </View>
-      <View style={styles.itemTextContainer}>
-        <ThemedText type="title">{item.name}</ThemedText>
-        <ThemedText>{item.detail}</ThemedText>
-      </View>
-      <Text style={styles.date}>{item.date.toLocaleDateString()}</Text>
     </View>
+  );
+
+  const renderSectionHeader = ({ section: { title } }: { section: { title: string } }) => (
+    <ThemedText style={styles.sectionHeader}>{title}</ThemedText>
   );
 
   return (
     <View style={styles.container}>
-      <TextInput
-        style={styles.filterInput}
-        placeholder="Filter items"
-        value={filter}
-        onChangeText={setFilter}
-      />
+      <View style={styles.filterContainer}>
+        <ThemedText type="subtitle">Filter: </ThemedText>
+        <TouchableOpacity
+          style={[styles.filterChip, filter === null && styles.filterChipActive]}
+          onPress={() => setFilter(null)}
+        >
+          <ThemedText
+            type="subtitle"
+            style={[styles.filterChipText, filter === null && styles.filterChipTextActive]}
+          >
+            All
+          </ThemedText>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterChip, filter === ActivityType.Pay && styles.filterChipActive]}
+          onPress={() => setFilter(ActivityType.Pay)}
+        >
+          <ThemedText
+            type="subtitle"
+            style={[styles.filterChipText, filter === ActivityType.Pay && styles.filterChipTextActive]}
+          >
+            Pay
+          </ThemedText>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.filterChip, filter === ActivityType.Auth && styles.filterChipActive]}
+          onPress={() => setFilter(ActivityType.Auth)}
+        >
+          <ThemedText
+            type="subtitle"
+            style={[styles.filterChipText, filter === ActivityType.Auth && styles.filterChipTextActive]}
+          >
+            Auth
+          </ThemedText>
+        </TouchableOpacity>
+      </View>
       <FlatList
-        data={filteredItems}
-        renderItem={renderItem}
+        data={Object.entries(groupedItems).map(([title, data]) => ({ title, data }))}
+        renderItem={({ item }) => (
+          <>
+            {renderSectionHeader({ section: { title: item.title } })}
+            {item.data.map((item, index) => (
+              <React.Fragment key={index}>
+                {renderItem({ activity: item })}
+              </React.Fragment>
+            ))}
+          </>
+        )}
         keyExtractor={(item, index) => index.toString()}
       />
     </View>
@@ -75,25 +127,46 @@ const styles = StyleSheet.create({
   itemContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#999',
+    padding: 4,
   },
   itemTextContainer: {
     flex: 1,
   },
   itemIconContainer: {
-    marginRight: 15
+    marginRight: 16
+  },
+  itemCard: {
+    backgroundColor: '#333',
+    padding: 8,
+    margin: 8,
+    borderRadius: 8,
+  },
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    padding: 8,
   },
   date: {
     color: '#999',
   },
-  filterInput: {
-    color: "#fff",
-    height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
-    margin: 10,
+  filterChipActive: {
+    backgroundColor: '#ddd',
+  },
+  filterChipText: {
+    color: '#333', // Darker text color
+  },
+  filterChipTextActive: {
+    color: 'black', // Darkest text color for active chip
+  },
+  filterChip: {
+    padding: 4,
+    margin: 4,
+    borderRadius: 8,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    padding: 4,
+    alignItems: "center"
   },
 });
 
