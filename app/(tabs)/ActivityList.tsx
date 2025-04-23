@@ -68,7 +68,7 @@ const ItemList: React.FC = () => {
   );
 
   const renderSectionHeader = ({ section: { title } }: { section: { title: string } }) => (
-    <ThemedText style={styles.sectionHeader}>{title}</ThemedText>
+    <ThemedText type='subtitle' style={styles.date}>{title}</ThemedText>
   );
 
   return (
@@ -123,7 +123,8 @@ const ItemList: React.FC = () => {
           </>
         )}
         keyExtractor={(item, index) => index.toString()}
-        ListFooterComponent={<View style={{ height: 20 }}></View>}
+        ListHeaderComponent={<View style={{ height: 16 }}></View>}
+        ListFooterComponent={<View style={{ height: 24 }}></View>}
       />
     </ThemedView>
   );
@@ -134,11 +135,12 @@ const styles = StyleSheet.create({
   container: {
     width: '100%', // Make items take up full width
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingHorizontal: 30,
+    paddingTop: 45,
   },
   filterContainer: {
     paddingVertical: 16,
+    marginBottom: 16,
     flexDirection: 'row',
     alignItems: "center"
   },
@@ -167,19 +169,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemIconContainer: {
-    marginHorizontal: 16
+    marginStart: 8,
+    marginEnd: 24,
   },
   itemCard: {
     backgroundColor: Colors.darkGray,
-    padding: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     marginVertical: 8,
     borderRadius: 8,
   },
-  sectionHeader: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
   date: {
+    marginBottom: 8,
     color: Colors.dirtyWhite,
   },
 });

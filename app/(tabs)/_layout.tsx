@@ -1,20 +1,20 @@
 import { Tabs } from 'expo-router';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import { Colors } from '@/constants/Colors';
 
 export default function TabLayout() {
     return (
         <Tabs
             screenOptions={{
-                tabBarActiveTintColor: '#ffd33d',
+                tabBarActiveTintColor: Colors.almostWhite,
+                tabBarInactiveTintColor: Colors.darkGray,
                 headerShown: false,
                 tabBarStyle: {
+                    paddingTop: 16,
+                    alignItems: 'center', // Align items vertically
                     backgroundColor: '#000',
-                    height: 75,
-                },
-                headerTintColor: '#fff',
-                headerStyle: {
-                    backgroundColor: '#000',
-                    height: 75,
+                    height: 80,
+                    borderTopWidth: 0,
                 },
             }}
         >

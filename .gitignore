@@ -33,11 +33,10 @@ yarn-error.*
 # nixOS
 .direnv
 .envrc
-# flake.nix
-flake.lock
 
 # local env files
-.env*.local
+.env*
+.local
 
 # typescript
 *.tsbuildinfo
