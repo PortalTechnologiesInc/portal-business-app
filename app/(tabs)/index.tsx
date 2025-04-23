@@ -21,10 +21,6 @@ export default function Home() {
 
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="title">Portal Homepage</ThemedText>
-      <ThemedText style={styles.button} onPress={resetOnboarding}>
-        Reset onboarding
-      </ThemedText>
     </ThemedView>
   );
 }
