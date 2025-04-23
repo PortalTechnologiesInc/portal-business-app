@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
-import { ThemedText } from './ThemedText';
-import Feather from '@expo/vector-icons/Feather';
-import { Activity, ActivityType } from './../models/Activity'
+import { ThemedText } from '../../components/ThemedText';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import { Activity, ActivityType } from '../../models/Activity'
 import { getMockedActivities } from '@/mocks/Activities';
 import { formatCentsToCurrency } from '@/utils';
+import { ThemedView } from '@/components/ThemedView';
+import { Colors } from '@/constants/Colors';
+import Feather from '@expo/vector-icons/Feather';
 
 const ItemList: React.FC = () => {
   const [items, setItems] = useState<Activity[]>([]);
@@ -32,27 +35,33 @@ const ItemList: React.FC = () => {
       <View style={styles.itemContainer}>
         <View style={styles.itemIconContainer}>
           {activity.type === ActivityType.Auth ? (
-            <Feather name="unlock" size={24} color="white" />
+            <FontAwesome6 name="unlock-keyhole" size={24} color={Colors.almostWhite} />
           ) : (
-            <Feather name="dollar-sign" size={24} color="white" />
+            <FontAwesome6 name="dollar-sign" size={24} color={Colors.almostWhite} />
           )}
         </View>
         <View style={styles.itemTextContainer}>
-          <ThemedText type="subtitle">{activity.name}</ThemedText>
-          <ThemedText>{activity.detail}</ThemedText>
+          <ThemedText type="subtitle" darkColor={Colors.almostWhite} lightColor={Colors.almostWhite}>{activity.name}</ThemedText>
+          <ThemedText darkColor={Colors.dirtyWhite} lightColor={Colors.dirtyWhite}>{activity.detail}</ThemedText>
         </View>
         {activity.type === ActivityType.Pay ? (
           <>
             {
               activity.amount < 0 ? (
-                <ThemedText lightColor='#b12729' darkColor='#b12729' type='defaultSemiBold'>{formatCentsToCurrency(activity.amount)+activity.currency}</ThemedText>
+                <>
+                  <Feather name="arrow-up-left" size={16} color={Colors.dirtyWhite} />
+                  <ThemedText lightColor={Colors.red} darkColor={Colors.red} type='defaultSemiBold'>{formatCentsToCurrency(activity.amount) + activity.currency}</ThemedText>
+                </>
               ) : (
-                <ThemedText lightColor='#007f4e' darkColor='#007f4e' type='defaultSemiBold'>{formatCentsToCurrency(activity.amount)+activity.currency}</ThemedText>
+                <>
+                  <Feather name="arrow-down-right" size={16} color={Colors.dirtyWhite} />
+                  <ThemedText lightColor={Colors.green} darkColor={Colors.green} type='defaultSemiBold'>{formatCentsToCurrency(activity.amount) + activity.currency}</ThemedText>
+                </>
               )
             }
           </>
         ) : (
-          <ThemedText lightColor='gray' darkColor='gray' type='defaultSemiBold'>{"Auth"}</ThemedText>
+          <ThemedText lightColor={Colors.dirtyWhite} darkColor={Colors.dirtyWhite} type='defaultSemiBold'>{"Auth"}</ThemedText>
         )}
       </View>
     </View>
@@ -63,9 +72,9 @@ const ItemList: React.FC = () => {
   );
 
   return (
-    <View style={styles.container}>
+    <ThemedView lightColor={Colors.darkerGray} darkColor={Colors.darkerGray} style={styles.container}>
+      <ThemedText type="title">Your activities</ThemedText>
       <View style={styles.filterContainer}>
-        <ThemedText type="subtitle">Filter: </ThemedText>
         <TouchableOpacity
           style={[styles.filterChip, filter === null && styles.filterChipActive]}
           onPress={() => setFilter(null)}
@@ -101,6 +110,7 @@ const ItemList: React.FC = () => {
         </TouchableOpacity>
       </View>
       <FlatList
+        showsVerticalScrollIndicator={false}
         data={Object.entries(groupedItems).map(([title, data]) => ({ title, data }))}
         renderItem={({ item }) => (
           <>
@@ -113,8 +123,9 @@ const ItemList: React.FC = () => {
           </>
         )}
         keyExtractor={(item, index) => index.toString()}
+        ListFooterComponent={<View style={{ height: 20 }}></View>}
       />
-    </View>
+    </ThemedView>
   );
 };
 
@@ -123,6 +134,29 @@ const styles = StyleSheet.create({
   container: {
     width: '100%', // Make items take up full width
     flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  filterContainer: {
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: "center"
+  },
+  filterChipActive: {
+    backgroundColor: Colors.dirtyWhite,
+  },
+  filterChipText: {
+    color: Colors.darkerGray, // Darker text color
+  },
+  filterChipTextActive: {
+    color: Colors.darkGray, // Darkest text color for active chip
+  },
+  filterChip: {
+    backgroundColor: Colors.darkGray,
+    paddingVertical: 4,
+    paddingHorizontal: 16,
+    marginEnd: 8,
+    borderRadius: 8,
   },
   itemContainer: {
     flexDirection: 'row',
@@ -133,40 +167,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemIconContainer: {
-    marginRight: 16
+    marginHorizontal: 16
   },
   itemCard: {
-    backgroundColor: '#333',
+    backgroundColor: Colors.darkGray,
     padding: 8,
-    margin: 8,
+    marginVertical: 8,
     borderRadius: 8,
   },
   sectionHeader: {
     fontSize: 16,
     fontWeight: 'bold',
-    padding: 8,
   },
   date: {
-    color: '#999',
-  },
-  filterChipActive: {
-    backgroundColor: '#ddd',
-  },
-  filterChipText: {
-    color: '#333', // Darker text color
-  },
-  filterChipTextActive: {
-    color: 'black', // Darkest text color for active chip
-  },
-  filterChip: {
-    padding: 4,
-    margin: 4,
-    borderRadius: 8,
-  },
-  filterContainer: {
-    flexDirection: 'row',
-    padding: 4,
-    alignItems: "center"
+    color: Colors.dirtyWhite,
   },
 });
 

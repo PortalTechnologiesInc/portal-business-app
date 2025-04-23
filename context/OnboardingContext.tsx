@@ -13,7 +13,7 @@ type OnboardingContextType = {
 
 const OnboardingContext = createContext<OnboardingContextType | null>(null);
 
-export const OnboardingProvider: React.FC<{children: React.ReactNode}> = ({ children }) => {
+export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isOnboardingComplete, setIsOnboardingComplete] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState(true);
 
