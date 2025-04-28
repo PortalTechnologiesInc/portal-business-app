@@ -26,6 +26,7 @@ export const Colors = {
   almostWhite: '#e6e6e6',
   dirtyWhite: '#bfbfbf',
   gray: '#b3b3b3',
+  unselectedGray: '#687076',
   darkGray: '#222222',
   darkerGray: '#0c0c0c',
   green: '#004f4e',

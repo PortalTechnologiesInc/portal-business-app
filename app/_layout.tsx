@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Text } from 'react-native';
+import { Text, View, Platform, SafeAreaView } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { OnboardingProvider } from '@/context/OnboardingContext';
+import { StatusBar } from 'expo-status-bar';
+import { Colors } from '@/constants/Colors';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -65,16 +67,32 @@ export default function RootLayout() {
   }, []);
 
   if (!isReady) {
-    return <Text>Loading...</Text>;
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#000000' }}>
+        <StatusBar style="light" />
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: Colors.almostWhite }}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#000000' }}>
+      <StatusBar style="light" />
       <OnboardingProvider>
-        <Stack screenOptions={{ headerShown: false }}>
+        <Stack 
+          screenOptions={{ 
+            headerShown: false,
+            contentStyle: { 
+              backgroundColor: '#000000',
+            },
+          }}
+        >
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="index" />
           <Stack.Screen name="onboarding" />
+          <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
         </Stack>
       </OnboardingProvider>
     </GestureHandlerRootView>

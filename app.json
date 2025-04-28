@@ -6,17 +6,35 @@
     "orientation": "portrait",
     "icon": "./assets/images/logowhite.png",
     "scheme": "portal",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/logowhite.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "userInterfaceStyle": "dark"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/logowhite.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#000000"
       },
-      "package": "com.okazakee.portal"
+      "package": "com.okazakee.portal",
+      "userInterfaceStyle": "dark",
+      "navigationBarColor": "#000000",
+      "softwareNavBarColor": "#000000",
+      "statusBar": {
+        "backgroundColor": "#000000",
+        "barStyle": "light-content",
+        "translucent": false
+      },
+      "colors": {
+        "navigationBar": "#000000",
+        "statusBar": "#000000"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -31,7 +49,7 @@
           "image": "./assets/images/logowhite.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#000000"
         }
       ],
       "expo-secure-store"

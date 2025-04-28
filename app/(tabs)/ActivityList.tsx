@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '../../components/ThemedText';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { Activity, ActivityType } from '../../models/Activity'
@@ -8,29 +8,42 @@ import { formatCentsToCurrency } from '@/utils';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import Feather from '@expo/vector-icons/Feather';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ItemList: React.FC = () => {
   const [items, setItems] = useState<Activity[]>([]);
   const [filter, setFilter] = useState<ActivityType | null>(null);
 
-  const filteredItems = filter === null
-    ? items
-    : items.filter(item => item.type === filter);
+  // Memoize filtered items to prevent recalculation on every render
+  const filteredItems = useMemo(() => 
+    filter === null ? items : items.filter(item => item.type === filter),
+    [filter, items]
+  );
 
-  const groupedItems = filteredItems.reduce((acc, item) => {
-    const dateString = item.date.toDateString();
-    if (!acc[dateString]) {
-      acc[dateString] = [];
-    }
-    acc[dateString].push(item);
-    return acc;
-  }, {} as Record<string, Activity[]>);
+  // Memoize grouped items to prevent recalculation on every render
+  const groupedItems = useMemo(() => {
+    return filteredItems.reduce((acc, item) => {
+      const dateString = item.date.toDateString();
+      if (!acc[dateString]) {
+        acc[dateString] = [];
+      }
+      acc[dateString].push(item);
+      return acc;
+    }, {} as Record<string, Activity[]>);
+  }, [filteredItems]);
+
+  // Memoize data for FlatList to prevent new array creation on every render
+  const listData = useMemo(() => 
+    Object.entries(groupedItems).map(([title, data]) => ({ title, data })), 
+    [groupedItems]
+  );
 
   useEffect(() => {
     setItems(getMockedActivities())
   }, []);
 
-  const renderItem = ({ activity: activity }: { activity: Activity }) => (
+  // Memoize renderItem to prevent recreation on every render
+  const renderItem = useCallback(({ activity }: { activity: Activity }) => (
     <View style={styles.itemCard}>
       <View style={styles.itemContainer}>
         <View style={styles.itemIconContainer}>
@@ -65,78 +78,102 @@ const ItemList: React.FC = () => {
         )}
       </View>
     </View>
-  );
+  ), []);
 
-  const renderSectionHeader = ({ section: { title } }: { section: { title: string } }) => (
+  // Memoize section header to prevent recreation on every render
+  const renderSectionHeader = useCallback(({ section: { title } }: { section: { title: string } }) => (
     <ThemedText type='subtitle' style={styles.date}>{title}</ThemedText>
-  );
+  ), []);
+
+  // Memoize filter handlers
+  const handleFilterAll = useCallback(() => setFilter(null), []);
+  const handleFilterPay = useCallback(() => setFilter(ActivityType.Pay), []);
+  const handleFilterAuth = useCallback(() => setFilter(ActivityType.Auth), []);
+  
+  // Memoized list header and footer components
+  const ListHeaderComponent = useMemo(() => <View style={{ height: 16 }} />, []);
+  const ListFooterComponent = useMemo(() => <View style={{ height: 24 }} />, []);
+
+  // Memoize list item renderer
+  const listItemRenderer = useCallback(({ item }: { item: { title: string, data: Activity[] } }) => (
+    <>
+      {renderSectionHeader({ section: { title: item.title } })}
+      {item.data.map((activity: Activity, index: number) => (
+        <React.Fragment key={index}>
+          {renderItem({ activity })}
+        </React.Fragment>
+      ))}
+    </>
+  ), [renderItem, renderSectionHeader]);
 
   return (
-    <ThemedView lightColor={Colors.darkerGray} darkColor={Colors.darkerGray} style={styles.container}>
-      <ThemedText type="title">Your activities</ThemedText>
-      <View style={styles.filterContainer}>
-        <TouchableOpacity
-          style={[styles.filterChip, filter === null && styles.filterChipActive]}
-          onPress={() => setFilter(null)}
-        >
-          <ThemedText
-            type="subtitle"
-            style={[styles.filterChipText, filter === null && styles.filterChipTextActive]}
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ThemedView style={styles.container}>
+        <ThemedText type="title" darkColor={Colors.almostWhite}>Your activities</ThemedText>
+        <View style={styles.filterContainer}>
+          <TouchableOpacity
+            style={[styles.filterChip, filter === null && styles.filterChipActive]}
+            onPress={handleFilterAll}
           >
-            All
-          </ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filterChip, filter === ActivityType.Pay && styles.filterChipActive]}
-          onPress={() => setFilter(ActivityType.Pay)}
-        >
-          <ThemedText
-            type="subtitle"
-            style={[styles.filterChipText, filter === ActivityType.Pay && styles.filterChipTextActive]}
+            <ThemedText
+              type="subtitle"
+              style={[styles.filterChipText, filter === null && styles.filterChipTextActive]}
+            >
+              All
+            </ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterChip, filter === ActivityType.Pay && styles.filterChipActive]}
+            onPress={handleFilterPay}
           >
-            Pay
-          </ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filterChip, filter === ActivityType.Auth && styles.filterChipActive]}
-          onPress={() => setFilter(ActivityType.Auth)}
-        >
-          <ThemedText
-            type="subtitle"
-            style={[styles.filterChipText, filter === ActivityType.Auth && styles.filterChipTextActive]}
+            <ThemedText
+              type="subtitle"
+              style={[styles.filterChipText, filter === ActivityType.Pay && styles.filterChipTextActive]}
+            >
+              Pay
+            </ThemedText>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterChip, filter === ActivityType.Auth && styles.filterChipActive]}
+            onPress={handleFilterAuth}
           >
-            Auth
-          </ThemedText>
-        </TouchableOpacity>
-      </View>
-      <FlatList
-        showsVerticalScrollIndicator={false}
-        data={Object.entries(groupedItems).map(([title, data]) => ({ title, data }))}
-        renderItem={({ item }) => (
-          <>
-            {renderSectionHeader({ section: { title: item.title } })}
-            {item.data.map((item, index) => (
-              <React.Fragment key={index}>
-                {renderItem({ activity: item })}
-              </React.Fragment>
-            ))}
-          </>
-        )}
-        keyExtractor={(item, index) => index.toString()}
-        ListHeaderComponent={<View style={{ height: 16 }}></View>}
-        ListFooterComponent={<View style={{ height: 24 }}></View>}
-      />
-    </ThemedView>
+            <ThemedText
+              type="subtitle"
+              style={[styles.filterChipText, filter === ActivityType.Auth && styles.filterChipTextActive]}
+            >
+              Auth
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+        <FlatList
+          showsVerticalScrollIndicator={false}
+          data={listData}
+          renderItem={listItemRenderer}
+          keyExtractor={(item, index) => index.toString()}
+          ListHeaderComponent={ListHeaderComponent}
+          ListFooterComponent={ListFooterComponent}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          initialNumToRender={8}
+        />
+      </ThemedView>
+    </SafeAreaView>
   );
 };
 
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
   container: {
-    width: '100%', // Make items take up full width
+    width: '100%',
     flex: 1,
     paddingHorizontal: 30,
-    paddingTop: 45,
+    paddingTop: 10,
+    backgroundColor: '#000000',
   },
   filterContainer: {
     paddingVertical: 16,
@@ -148,10 +185,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.dirtyWhite,
   },
   filterChipText: {
-    color: Colors.darkerGray, // Darker text color
+    color: Colors.darkerGray,
   },
   filterChipTextActive: {
-    color: Colors.darkGray, // Darkest text color for active chip
+    color: Colors.darkGray,
   },
   filterChip: {
     backgroundColor: Colors.darkGray,
