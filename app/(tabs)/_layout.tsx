@@ -23,6 +23,10 @@ const CertificateIcon = React.memo(({ color }: { color: string }) => (
     <FontAwesome6 name="certificate" size={24} color={color} />
 ));
 
+const IdentityIcon = React.memo(({ color }: { color: string }) => (
+    <FontAwesome6 name="address-card" size={24} color={color} />
+));
+
 // Memoized tab bar background to prevent unnecessary re-rendering
 const TabBarBackground = React.memo(() => (
     <View style={{ 
@@ -88,6 +92,13 @@ export default function TabLayout() {
                 options={{
                     title: 'Certificates',
                     tabBarIcon: ({ color }) => <CertificateIcon color={color} />,
+                }}
+            />
+            <Tabs.Screen
+                name="IdentityList"
+                options={{
+                    title: 'Identities',
+                    tabBarIcon: ({ color }) => <IdentityIcon color={color} />,
                 }}
             />
         </Tabs>

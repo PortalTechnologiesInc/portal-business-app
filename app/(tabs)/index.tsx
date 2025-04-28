@@ -55,7 +55,7 @@ export default function Home() {
             </ThemedText>
           </TouchableOpacity>
           <TouchableOpacity style={styles.qrButton} onPress={handleQrScan}>
-            <FontAwesome6 name="qrcode" size={24} color={Colors.almostWhite} />
+            <FontAwesome6 name="qrcode" size={30} color={Colors.almostWhite} />
           </TouchableOpacity>
         </ThemedView>
       </ThemedView>
@@ -83,6 +83,7 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flex: 1,
+    justifyContent: 'center',
   },
   welcomeText: {
     fontSize: 14,
@@ -94,12 +95,13 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   qrButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: Colors.green,
     justifyContent: 'center',
     alignItems: 'center',
+    alignSelf: 'center',
   },
   button: {
     fontSize: 16,
