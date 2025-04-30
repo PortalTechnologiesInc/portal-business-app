@@ -2,12 +2,11 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '../../components/ThemedText';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
-import { Activity, ActivityType } from '../../models/Activity'
+import { Activity, ActivityType } from '../../models/Activity';
 import { getMockedActivities } from '@/mocks/Activities';
-import { formatCentsToCurrency } from '@/utils';
+import { formatCentsToCurrency, formatRelativeTime } from '@/utils';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
-import Feather from '@expo/vector-icons/Feather';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ItemList: React.FC = () => {
@@ -15,101 +14,124 @@ const ItemList: React.FC = () => {
   const [filter, setFilter] = useState<ActivityType | null>(null);
 
   // Memoize filtered items to prevent recalculation on every render
-  const filteredItems = useMemo(() => 
-    filter === null ? items : items.filter(item => item.type === filter),
+  const filteredItems = useMemo(
+    () => (filter === null ? items : items.filter(item => item.type === filter)),
     [filter, items]
   );
 
   // Memoize grouped items to prevent recalculation on every render
   const groupedItems = useMemo(() => {
-    return filteredItems.reduce((acc, item) => {
-      const dateString = item.date.toDateString();
-      if (!acc[dateString]) {
-        acc[dateString] = [];
-      }
-      acc[dateString].push(item);
-      return acc;
-    }, {} as Record<string, Activity[]>);
+    return filteredItems.reduce(
+      (acc, item) => {
+        const dateString = item.date.toDateString();
+        if (!acc[dateString]) {
+          acc[dateString] = [];
+        }
+        acc[dateString].push(item);
+        return acc;
+      },
+      {} as Record<string, Activity[]>
+    );
   }, [filteredItems]);
 
   // Memoize data for FlatList to prevent new array creation on every render
-  const listData = useMemo(() => 
-    Object.entries(groupedItems).map(([title, data]) => ({ title, data })), 
+  const listData = useMemo(
+    () => Object.entries(groupedItems).map(([title, data]) => ({ title, data })),
     [groupedItems]
   );
 
   useEffect(() => {
-    setItems(getMockedActivities())
+    setItems(getMockedActivities());
   }, []);
 
   // Memoize renderItem to prevent recreation on every render
-  const renderItem = useCallback(({ activity }: { activity: Activity }) => (
-    <View style={styles.itemCard}>
-      <View style={styles.itemContainer}>
-        <View style={styles.itemIconContainer}>
+  const renderItem = useCallback(
+    ({ activity }: { activity: Activity }) => (
+      <View style={styles.activityCard}>
+        <View style={styles.iconContainer}>
           {activity.type === ActivityType.Auth ? (
-            <FontAwesome6 name="unlock-keyhole" size={24} color={Colors.almostWhite} />
+            <FontAwesome6 name="key" size={20} color={Colors.almostWhite} />
           ) : (
-            <FontAwesome6 name="dollar-sign" size={24} color={Colors.almostWhite} />
+            <FontAwesome6 name="money-bill" size={20} color={Colors.almostWhite} />
           )}
         </View>
-        <View style={styles.itemTextContainer}>
-          <ThemedText type="subtitle" darkColor={Colors.almostWhite} lightColor={Colors.almostWhite}>{activity.name}</ThemedText>
-          <ThemedText darkColor={Colors.dirtyWhite} lightColor={Colors.dirtyWhite}>{activity.detail}</ThemedText>
+        <View style={styles.activityInfo}>
+          <ThemedText
+            type="subtitle"
+            darkColor={Colors.almostWhite}
+            lightColor={Colors.almostWhite}
+          >
+            {activity.name}
+          </ThemedText>
+          <ThemedText
+            style={styles.typeText}
+            darkColor={Colors.dirtyWhite}
+            lightColor={Colors.dirtyWhite}
+          >
+            {activity.type === ActivityType.Auth ? 'Login Request' : 'Payment'}
+          </ThemedText>
         </View>
-        {activity.type === ActivityType.Pay ? (
-          <>
-            {
-              activity.amount < 0 ? (
-                <>
-                  <Feather name="arrow-up-left" size={16} color={Colors.dirtyWhite} />
-                  <ThemedText lightColor={Colors.red} darkColor={Colors.red} type='defaultSemiBold'>{formatCentsToCurrency(activity.amount) + activity.currency}</ThemedText>
-                </>
-              ) : (
-                <>
-                  <Feather name="arrow-down-right" size={16} color={Colors.dirtyWhite} />
-                  <ThemedText lightColor={Colors.green} darkColor={Colors.green} type='defaultSemiBold'>{formatCentsToCurrency(activity.amount) + activity.currency}</ThemedText>
-                </>
-              )
-            }
-          </>
-        ) : (
-          <ThemedText lightColor={Colors.dirtyWhite} darkColor={Colors.dirtyWhite} type='defaultSemiBold'>{"Auth"}</ThemedText>
-        )}
+        <View style={styles.activityDetails}>
+          {activity.type === ActivityType.Pay && (
+            <ThemedText
+              style={styles.amount}
+              darkColor={activity.amount < 0 ? Colors.red : Colors.green}
+              lightColor={activity.amount < 0 ? Colors.red : Colors.green}
+            >
+              {formatCentsToCurrency(activity.amount)} {activity.currency}
+            </ThemedText>
+          )}
+          <ThemedText
+            style={styles.timeAgo}
+            darkColor={Colors.dirtyWhite}
+            lightColor={Colors.dirtyWhite}
+          >
+            {formatRelativeTime(activity.date)}
+          </ThemedText>
+        </View>
       </View>
-    </View>
-  ), []);
+    ),
+    []
+  );
 
   // Memoize section header to prevent recreation on every render
-  const renderSectionHeader = useCallback(({ section: { title } }: { section: { title: string } }) => (
-    <ThemedText type='subtitle' style={styles.date}>{title}</ThemedText>
-  ), []);
+  const renderSectionHeader = useCallback(
+    ({ section: { title } }: { section: { title: string } }) => (
+      <ThemedText type="subtitle" style={styles.date}>
+        {title}
+      </ThemedText>
+    ),
+    []
+  );
 
   // Memoize filter handlers
   const handleFilterAll = useCallback(() => setFilter(null), []);
   const handleFilterPay = useCallback(() => setFilter(ActivityType.Pay), []);
   const handleFilterAuth = useCallback(() => setFilter(ActivityType.Auth), []);
-  
+
   // Memoized list header and footer components
   const ListHeaderComponent = useMemo(() => <View style={{ height: 16 }} />, []);
   const ListFooterComponent = useMemo(() => <View style={{ height: 24 }} />, []);
 
   // Memoize list item renderer
-  const listItemRenderer = useCallback(({ item }: { item: { title: string, data: Activity[] } }) => (
-    <>
-      {renderSectionHeader({ section: { title: item.title } })}
-      {item.data.map((activity: Activity, index: number) => (
-        <React.Fragment key={index}>
-          {renderItem({ activity })}
-        </React.Fragment>
-      ))}
-    </>
-  ), [renderItem, renderSectionHeader]);
+  const listItemRenderer = useCallback(
+    ({ item }: { item: { title: string; data: Activity[] } }) => (
+      <>
+        {renderSectionHeader({ section: { title: item.title } })}
+        {item.data.map((activity: Activity, index: number) => (
+          <React.Fragment key={index}>{renderItem({ activity })}</React.Fragment>
+        ))}
+      </>
+    ),
+    [renderItem, renderSectionHeader]
+  );
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ThemedView style={styles.container}>
-        <ThemedText type="title" darkColor={Colors.almostWhite}>Your activities</ThemedText>
+        <ThemedText type="title" darkColor={Colors.almostWhite}>
+          Your activities
+        </ThemedText>
         <View style={styles.filterContainer}>
           <TouchableOpacity
             style={[styles.filterChip, filter === null && styles.filterChipActive]}
@@ -128,7 +150,10 @@ const ItemList: React.FC = () => {
           >
             <ThemedText
               type="subtitle"
-              style={[styles.filterChipText, filter === ActivityType.Pay && styles.filterChipTextActive]}
+              style={[
+                styles.filterChipText,
+                filter === ActivityType.Pay && styles.filterChipTextActive,
+              ]}
             >
               Pay
             </ThemedText>
@@ -139,9 +164,12 @@ const ItemList: React.FC = () => {
           >
             <ThemedText
               type="subtitle"
-              style={[styles.filterChipText, filter === ActivityType.Auth && styles.filterChipTextActive]}
+              style={[
+                styles.filterChipText,
+                filter === ActivityType.Auth && styles.filterChipTextActive,
+              ]}
             >
-              Auth
+              Login
             </ThemedText>
           </TouchableOpacity>
         </View>
@@ -162,7 +190,6 @@ const ItemList: React.FC = () => {
   );
 };
 
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -179,7 +206,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     marginBottom: 16,
     flexDirection: 'row',
-    alignItems: "center"
+    alignItems: 'center',
   },
   filterChipActive: {
     backgroundColor: Colors.dirtyWhite,
@@ -197,24 +224,44 @@ const styles = StyleSheet.create({
     marginEnd: 8,
     borderRadius: 8,
   },
-  itemContainer: {
+  activityCard: {
     flexDirection: 'row',
+    backgroundColor: '#1E1E1E',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    minHeight: 72,
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#333333',
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: 4,
+    marginRight: 12,
   },
-  itemTextContainer: {
+  activityInfo: {
     flex: 1,
+    justifyContent: 'center',
   },
-  itemIconContainer: {
-    marginStart: 8,
-    marginEnd: 24,
+  activityDetails: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    minWidth: 80,
   },
-  itemCard: {
-    backgroundColor: Colors.darkGray,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginVertical: 8,
-    borderRadius: 8,
+  typeText: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  amount: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  timeAgo: {
+    fontSize: 12,
+    marginTop: 4,
   },
   date: {
     marginBottom: 8,

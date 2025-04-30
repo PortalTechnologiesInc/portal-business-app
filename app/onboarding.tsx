@@ -34,8 +34,20 @@ export default function Onboarding() {
   // Initialize seed phrase once
   useEffect(() => {
     // In a real app, this would be generated or imported
-    setSeedPhrase(["word1", "word2", "word3", "word4", "word5", "word6",
-                   "word7", "word8", "word9", "word10", "word11", "word12"]);
+    setSeedPhrase([
+      'word1',
+      'word2',
+      'word3',
+      'word4',
+      'word5',
+      'word6',
+      'word7',
+      'word8',
+      'word9',
+      'word10',
+      'word11',
+      'word12',
+    ]);
   }, []);
 
   // Handle Android back button
@@ -56,14 +68,14 @@ export default function Onboarding() {
     if (currentPage < 2) {
       translateX.value = withTiming(-SCREEN_WIDTH * (currentPage + 1), {
         duration: 400,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
       });
 
       // Only rotate the logo for the first two pages
       if (currentPage < 1) {
         rotateValue.value = withTiming((currentPage + 1) * 180, {
           duration: 800,
-          easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
         });
       }
 
@@ -75,12 +87,12 @@ export default function Onboarding() {
     if (currentPage > 0) {
       translateX.value = withTiming(-SCREEN_WIDTH * (currentPage - 1), {
         duration: 400,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
       });
 
       rotateValue.value = withTiming((currentPage - 1) * 180, {
         duration: 800,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
       });
 
       setCurrentPage(currentPage - 1);
@@ -91,51 +103,55 @@ export default function Onboarding() {
     // Fade out content first
     contentOpacity.value = withTiming(0, {
       duration: 400,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
     });
 
     buttonsOpacity.value = withTiming(0, {
       duration: 400,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
     });
 
     // First center the logo vertically
     translateY.value = withTiming(
-      (height / 2) - 100, // Center logo (accounting for logo height)
+      height / 2 - 100, // Center logo (accounting for logo height)
       {
         duration: 600,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
       }
     );
 
     // Rotate to 90 degrees
     rotateValue.value = withTiming(270, {
       duration: 800,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
     });
 
     // Then scale up
-    scale.value = withTiming(SCREEN_WIDTH / 250 * 2, {
+    scale.value = withTiming((SCREEN_WIDTH / 250) * 2, {
       duration: 800,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1)
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
     });
 
     // After 2 seconds, fade out and navigate to home
     setTimeout(() => {
-      logoOpacity.value = withTiming(0, {
-        duration: 500,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1)
-      }, (finished) => {
-        if (finished) {
-          runOnJS(completeOnboarding)();
+      logoOpacity.value = withTiming(
+        0,
+        {
+          duration: 500,
+          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+        },
+        finished => {
+          if (finished) {
+            runOnJS(completeOnboarding)();
+          }
         }
-      });
+      );
     }, 2000);
   };
 
   // Create pan gesture handler
   const panGesture = Gesture.Pan()
-    .onUpdate((e) => {
+    .onUpdate(e => {
       // Calculate the destination page based on current page and swipe direction
       const newX = -SCREEN_WIDTH * currentPage + e.translationX;
 
@@ -144,7 +160,7 @@ export default function Onboarding() {
         translateX.value = newX;
       }
     })
-    .onEnd((e) => {
+    .onEnd(e => {
       if (e.translationX < -SCREEN_WIDTH / 3 && currentPage < 2) {
         // Swipe left
         runOnJS(goToNextPage)();
@@ -162,7 +178,7 @@ export default function Onboarding() {
       transform: [
         { translateY: translateY.value },
         { rotate: `${rotateValue.value}deg` },
-        { scale: scale.value }
+        { scale: scale.value },
       ],
       opacity: logoOpacity.value,
     };
@@ -177,11 +193,11 @@ export default function Onboarding() {
   });
 
   const contentStyle = useAnimatedStyle(() => ({
-    opacity: contentOpacity.value
+    opacity: contentOpacity.value,
   }));
 
   const buttonsStyle = useAnimatedStyle(() => ({
-    opacity: buttonsOpacity.value
+    opacity: buttonsOpacity.value,
   }));
 
   return (
@@ -189,7 +205,7 @@ export default function Onboarding() {
       <Animated.View style={[styles.logoContainer, logoStyle]}>
         <Image
           source={require('../assets/images/logowhite.png')}
-          style={{width: 250, height: 100}}
+          style={{ width: 250, height: 100 }}
           resizeMode="contain"
         />
       </Animated.View>
@@ -198,10 +214,7 @@ export default function Onboarding() {
         <Animated.View style={[styles.pagesContainer, contentStyle]}>
           <Animated.View style={[styles.pagesWrapper, pagesStyle]}>
             {/* Page 1: Intro */}
-            <IntroPage
-              onNext={goToNextPage}
-              pageWidth={SCREEN_WIDTH}
-            />
+            <IntroPage onNext={goToNextPage} pageWidth={SCREEN_WIDTH} />
 
             {/* Page 2: Options */}
             <OptionsPage
@@ -244,7 +257,7 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignSelf: 'center',
     marginBottom: 20,
-    zIndex: 20
+    zIndex: 20,
   },
   pagesContainer: {
     flex: 1, // This will take available space between logo and buttons

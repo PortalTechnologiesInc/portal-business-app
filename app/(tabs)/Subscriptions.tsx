@@ -9,11 +9,7 @@ export default function SubscriptionsScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ThemedView style={styles.container}>
-        <ThemedText 
-          style={styles.text}
-          lightColor={Colors.darkGray} 
-          darkColor={Colors.almostWhite}
-        >
+        <ThemedText style={styles.text} lightColor={Colors.darkGray} darkColor={Colors.almostWhite}>
           Subscriptions Page
         </ThemedText>
       </ThemedView>
@@ -37,4 +33,4 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-}); 
+});

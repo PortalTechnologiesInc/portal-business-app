@@ -14,25 +14,22 @@ export default function SettingsScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ThemedView style={styles.container}>
         <ThemedView style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => router.back()} 
-            style={styles.backButton}
-          >
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <FontAwesome6 name="arrow-left" size={20} color={Colors.almostWhite} />
           </TouchableOpacity>
-          <ThemedText 
+          <ThemedText
             style={styles.headerText}
-            lightColor={Colors.darkGray} 
+            lightColor={Colors.darkGray}
             darkColor={Colors.almostWhite}
           >
             Settings
           </ThemedText>
         </ThemedView>
-        
+
         <ThemedView style={styles.content}>
-          <ThemedText 
+          <ThemedText
             style={styles.text}
-            lightColor={Colors.darkGray} 
+            lightColor={Colors.darkGray}
             darkColor={Colors.almostWhite}
           >
             Settings Page
@@ -76,4 +73,4 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 18,
   },
-}); 
+});

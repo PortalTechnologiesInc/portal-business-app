@@ -4,6 +4,8 @@ import { router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { PendingRequestsList } from '@/components/PendingRequestsList';
+import { UpcomingPaymentsList } from '@/components/UpcomingPaymentsList';
+import { RecentActivitiesList } from '@/components/RecentActivitiesList';
 import { useOnboarding } from '@/context/OnboardingContext';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { Colors } from '@/constants/Colors';
@@ -12,7 +14,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function Home() {
   const { isOnboardingComplete, isLoading, resetOnboarding } = useOnboarding();
   // This would come from a real user context in the future
-  const [userPublicKey, setUserPublicKey] = useState('npub1abcdef1234567890abcdef1234567890abcdef1234567890abcdef123456');
+  const [userPublicKey, setUserPublicKey] = useState(
+    'npub1abcdef1234567890abcdef1234567890abcdef1234567890abcdef123456'
+  );
 
   // Memoize the truncated key to prevent recalculation on every render
   const truncatedPublicKey = useMemo(() => {
@@ -43,13 +47,21 @@ export default function Home() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ThemedView style={styles.container}>
-        <ScrollView>
+        <ScrollView showsVerticalScrollIndicator={false}>
           <ThemedView style={styles.header}>
             <TouchableOpacity style={styles.headerLeft} onPress={handleSettingsNavigate}>
-              <ThemedText style={styles.welcomeText} lightColor={Colors.darkGray} darkColor={Colors.dirtyWhite}>
+              <ThemedText
+                style={styles.welcomeText}
+                lightColor={Colors.darkGray}
+                darkColor={Colors.dirtyWhite}
+              >
                 Welcome back 👋
               </ThemedText>
-              <ThemedText style={styles.username} lightColor={Colors.darkGray} darkColor={Colors.almostWhite}>
+              <ThemedText
+                style={styles.username}
+                lightColor={Colors.darkGray}
+                darkColor={Colors.almostWhite}
+              >
                 satoshi@getportal.cc
               </ThemedText>
               <ThemedText lightColor={Colors.gray} darkColor={Colors.dirtyWhite}>
@@ -63,6 +75,12 @@ export default function Home() {
 
           {/* Pending Requests Section */}
           <PendingRequestsList />
+
+          {/* Upcoming Payments Section */}
+          <UpcomingPaymentsList />
+
+          {/* Recent Activities Section */}
+          <RecentActivitiesList />
         </ScrollView>
       </ThemedView>
     </SafeAreaView>

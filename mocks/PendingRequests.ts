@@ -54,4 +54,4 @@ export const mockPendingRequests: PendingRequest[] = [
       recipient: 'npub4qyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqszqgpqyqsabcdef',
     },
   },
-]; 
+];

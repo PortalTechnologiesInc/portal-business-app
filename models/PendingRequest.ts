@@ -16,4 +16,4 @@ export interface PendingRequest {
     location?: string;
     certificateType?: string;
   };
-} 
+}

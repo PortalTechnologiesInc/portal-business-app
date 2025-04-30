@@ -35,34 +35,30 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
   };
 
   const approve = (id: string) => {
-    setPendingRequests(prev => 
-      prev.map(request => 
-        request.id === id ? { ...request, status: 'approved' } : request
-      )
+    setPendingRequests(prev =>
+      prev.map(request => (request.id === id ? { ...request, status: 'approved' } : request))
     );
     // In a real implementation, you would send this to an API
     console.log(`Request ${id} approved`);
   };
 
   const deny = (id: string) => {
-    setPendingRequests(prev => 
-      prev.map(request => 
-        request.id === id ? { ...request, status: 'denied' } : request
-      )
+    setPendingRequests(prev =>
+      prev.map(request => (request.id === id ? { ...request, status: 'denied' } : request))
     );
     // In a real implementation, you would send this to an API
     console.log(`Request ${id} denied`);
   };
 
   return (
-    <PendingRequestsContext.Provider 
-      value={{ 
-        pendingRequests, 
-        getByType, 
-        getById, 
-        approve, 
-        deny, 
-        hasPending 
+    <PendingRequestsContext.Provider
+      value={{
+        pendingRequests,
+        getByType,
+        getById,
+        approve,
+        deny,
+        hasPending,
       }}
     >
       {children}
@@ -76,4 +72,4 @@ export const usePendingRequests = () => {
     throw new Error('usePendingRequests must be used within a PendingRequestsProvider');
   }
   return context;
-}; 
+};

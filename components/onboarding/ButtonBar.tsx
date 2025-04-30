@@ -17,7 +17,7 @@ export function ButtonBar({
   onNext,
   onGenerateKey,
   onImportSeed,
-  onFinish
+  onFinish,
 }: ButtonBarProps) {
   return (
     <View style={styles.container}>

@@ -19,7 +19,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     // Handle links when app is already running
-    const subscription = Linking.addEventListener('url', (event) => {
+    const subscription = Linking.addEventListener('url', event => {
       const { path, queryParams } = Linking.parse(event.url);
       console.log('Received link:', path, queryParams);
 
@@ -83,10 +83,10 @@ export default function RootLayout() {
       <StatusBar style="light" />
       <OnboardingProvider>
         <PendingRequestsProvider>
-          <Stack 
-            screenOptions={{ 
+          <Stack
+            screenOptions={{
               headerShown: false,
-              contentStyle: { 
+              contentStyle: {
                 backgroundColor: '#000000',
               },
             }}

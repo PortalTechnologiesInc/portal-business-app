@@ -10,7 +10,7 @@ const CARD_MARGIN = 16; // Margin between cards
 
 export const PendingRequestsList: React.FC = () => {
   const { pendingRequests, hasPending } = usePendingRequests();
-  
+
   // Only show requests with pending status
   const pendingOnly = pendingRequests.filter(req => req.status === 'pending');
 
@@ -22,7 +22,7 @@ export const PendingRequestsList: React.FC = () => {
     <View style={styles.container}>
       <FlatList
         data={pendingOnly}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         renderItem={({ item }) => (
           <View style={styles.itemContainer}>
             <PendingRequestCard request={item} />
@@ -36,19 +36,19 @@ export const PendingRequestsList: React.FC = () => {
         contentContainerStyle={[
           styles.listContent,
           // If there's only one item, center it
-          pendingOnly.length === 1 && { flex: 1, justifyContent: 'center' }
+          pendingOnly.length === 1 && { flex: 1, justifyContent: 'center' },
         ]}
         CellRendererComponent={({ children, index, style, ...props }) => (
-          <View 
+          <View
             style={[
-              style, 
+              style,
               styles.cellRenderer,
               // First cell gets left padding
               index === 0 && { paddingLeft: (width - CARD_WIDTH) / 2 },
               // Last cell gets right padding
               index === pendingOnly.length - 1 && { paddingRight: (width - CARD_WIDTH) / 2 },
               // All cells except the last get right margin
-              index !== pendingOnly.length - 1 && { marginRight: CARD_MARGIN }
+              index !== pendingOnly.length - 1 && { marginRight: CARD_MARGIN },
             ]}
             {...props}
           >
@@ -76,5 +76,5 @@ const styles = StyleSheet.create({
   cellRenderer: {
     alignItems: 'center',
     justifyContent: 'center',
-  }
-}); 
+  },
+});

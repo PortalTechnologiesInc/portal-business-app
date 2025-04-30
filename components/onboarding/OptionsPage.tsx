@@ -9,10 +9,7 @@ type OptionsPageProps = {
   containerStyles?: any;
 };
 
-export function OptionsPage({
-  pageWidth,
-  containerStyles
-}: OptionsPageProps) {
+export function OptionsPage({ pageWidth, containerStyles }: OptionsPageProps) {
   return (
     <View style={[styles.pageContainer, { width: pageWidth }, containerStyles]}>
       <View style={styles.contentContainer}>

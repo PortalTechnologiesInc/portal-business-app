@@ -50,33 +50,24 @@ const truncatePubkey = (pubkey: string | undefined) => {
 export const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request }) => {
   const { approve, deny } = usePendingRequests();
   const { id, type, metadata } = request;
-  
+
   const requester = metadata.requester || 'Unknown Service';
   const recipientPubkey = metadata.recipient;
 
   return (
     <View style={styles.card}>
       <Text style={styles.requestType}>{getRequestTypeText(type)}</Text>
-      
+
       <Text style={styles.serviceName}>{requester}</Text>
-      
-      <Text style={styles.serviceInfo}>
-        {truncatePubkey(recipientPubkey)}
-      </Text>
-      
+
+      <Text style={styles.serviceInfo}>{truncatePubkey(recipientPubkey)}</Text>
+
       <View style={styles.actions}>
-        <TouchableOpacity 
-          style={[styles.button, styles.approveButton]} 
-          onPress={() => approve(id)}
-        >
+        <TouchableOpacity style={[styles.button, styles.approveButton]} onPress={() => approve(id)}>
           <Ionicons name="checkmark-outline" size={20} color="#FFFFFF" />
           <Text style={styles.buttonText}>Approve</Text>
         </TouchableOpacity>
-        <TouchableOpacity 
-        
-          style={[styles.button, styles.denyButton]} 
-          onPress={() => deny(id)}
-        >
+        <TouchableOpacity style={[styles.button, styles.denyButton]} onPress={() => deny(id)}>
           <Ionicons name="close-outline" size={20} color="#FFFFFF" />
           <Text style={styles.buttonText}>Deny</Text>
         </TouchableOpacity>
@@ -139,4 +130,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 6,
   },
-}); 
+});

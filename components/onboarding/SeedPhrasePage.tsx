@@ -10,16 +10,16 @@ type SeedPhrasePageProps = {
   seedPhrase: string[];
 };
 
-export function SeedPhrasePage({
-  pageWidth,
-  containerStyles,
-  seedPhrase
-}: SeedPhrasePageProps) {
+export function SeedPhrasePage({ pageWidth, containerStyles, seedPhrase }: SeedPhrasePageProps) {
   return (
     <View style={[styles.pageContainer, { width: pageWidth }, containerStyles]}>
       <ThemedView style={styles.content}>
-        <ThemedText type="title" style={styles.title}>Your Seed Phrase</ThemedText>
-        <ThemedText style={styles.subtitle}>Write down these 12 words and keep them safe</ThemedText>
+        <ThemedText type="title" style={styles.title}>
+          Your Seed Phrase
+        </ThemedText>
+        <ThemedText style={styles.subtitle}>
+          Write down these 12 words and keep them safe
+        </ThemedText>
 
         <View style={styles.seedContainer}>
           {seedPhrase.map((word, index) => (
