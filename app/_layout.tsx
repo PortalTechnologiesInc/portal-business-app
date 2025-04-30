@@ -5,6 +5,7 @@ import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { OnboardingProvider } from '@/context/OnboardingContext';
+import { PendingRequestsProvider } from '@/context/PendingRequestsContext';
 import { StatusBar } from 'expo-status-bar';
 import { Colors } from '@/constants/Colors';
 
@@ -81,19 +82,21 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#000000' }}>
       <StatusBar style="light" />
       <OnboardingProvider>
-        <Stack 
-          screenOptions={{ 
-            headerShown: false,
-            contentStyle: { 
-              backgroundColor: '#000000',
-            },
-          }}
-        >
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="index" />
-          <Stack.Screen name="onboarding" />
-          <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
-        </Stack>
+        <PendingRequestsProvider>
+          <Stack 
+            screenOptions={{ 
+              headerShown: false,
+              contentStyle: { 
+                backgroundColor: '#000000',
+              },
+            }}
+          >
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="index" />
+            <Stack.Screen name="onboarding" />
+            <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
+          </Stack>
+        </PendingRequestsProvider>
       </OnboardingProvider>
     </GestureHandlerRootView>
   );

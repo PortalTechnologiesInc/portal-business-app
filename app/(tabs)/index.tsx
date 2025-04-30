@@ -1,8 +1,9 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { StyleSheet, View, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import { PendingRequestsList } from '@/components/PendingRequestsList';
 import { useOnboarding } from '@/context/OnboardingContext';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { Colors } from '@/constants/Colors';
@@ -42,22 +43,27 @@ export default function Home() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ThemedView style={styles.container}>
-        <ThemedView style={styles.header}>
-          <TouchableOpacity style={styles.headerLeft} onPress={handleSettingsNavigate}>
-            <ThemedText style={styles.welcomeText} lightColor={Colors.darkGray} darkColor={Colors.dirtyWhite}>
-              Welcome back 👋
-            </ThemedText>
-            <ThemedText style={styles.username} lightColor={Colors.darkGray} darkColor={Colors.almostWhite}>
-              satoshi@getportal.cc
-            </ThemedText>
-            <ThemedText lightColor={Colors.gray} darkColor={Colors.dirtyWhite}>
-              {truncatedPublicKey}
-            </ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.qrButton} onPress={handleQrScan}>
-            <FontAwesome6 name="qrcode" size={30} color={Colors.almostWhite} />
-          </TouchableOpacity>
-        </ThemedView>
+        <ScrollView>
+          <ThemedView style={styles.header}>
+            <TouchableOpacity style={styles.headerLeft} onPress={handleSettingsNavigate}>
+              <ThemedText style={styles.welcomeText} lightColor={Colors.darkGray} darkColor={Colors.dirtyWhite}>
+                Welcome back 👋
+              </ThemedText>
+              <ThemedText style={styles.username} lightColor={Colors.darkGray} darkColor={Colors.almostWhite}>
+                satoshi@getportal.cc
+              </ThemedText>
+              <ThemedText lightColor={Colors.gray} darkColor={Colors.dirtyWhite}>
+                {truncatedPublicKey}
+              </ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.qrButton} onPress={handleQrScan}>
+              <FontAwesome6 name="qrcode" size={25} color={Colors.almostWhite} />
+            </TouchableOpacity>
+          </ThemedView>
+
+          {/* Pending Requests Section */}
+          <PendingRequestsList />
+        </ScrollView>
       </ThemedView>
     </SafeAreaView>
   );
