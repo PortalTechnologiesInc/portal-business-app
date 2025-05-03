@@ -79,7 +79,12 @@ export const RecentActivitiesList: React.FC = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <ThemedText type="title" style={styles.title} darkColor={Colors.almostWhite} lightColor={Colors.almostWhite}>
+        <ThemedText
+          type="title"
+          style={styles.title}
+          darkColor={Colors.almostWhite}
+          lightColor={Colors.almostWhite}
+        >
           Recent Activities
         </ThemedText>
         <TouchableOpacity onPress={handleSeeAll}>
