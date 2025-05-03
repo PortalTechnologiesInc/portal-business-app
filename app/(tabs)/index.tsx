@@ -26,18 +26,18 @@ export default function Home() {
 
   // Memoize handlers to prevent recreation on every render
   const handleQrScan = useCallback(() => {
-    Alert.alert('qr scan page');
+    router.push('/qr');
   }, []);
 
   const handleSettingsNavigate = useCallback(() => {
     router.push('/settings');
-  }, [router]);
+  }, []);
 
   useEffect(() => {
     if (!isLoading && !isOnboardingComplete) {
       router.replace('/onboarding');
     }
-  }, [isLoading, isOnboardingComplete, router]);
+  }, [isLoading, isOnboardingComplete]);
 
   // Don't render anything until we've checked the onboarding status
   if (isLoading) {
