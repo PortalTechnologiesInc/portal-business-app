@@ -1,0 +1,189 @@
+import { Currency } from "@/models/Activity";
+import { Subscription } from "@/models/Subscription";
+
+export function getMockedSubscriptions(): Subscription[] {
+    return [
+        {
+            id: '0',
+            amount: 50000,
+            currency: Currency.Eur,
+            recurrence: {
+                until: new Date(Date.now() + 15 * 60000).getTime(),
+                calendar: 'monthly',
+                maxPayments: 24,
+                firstPaymentDue: new Date(Date.now() - 62 * 24 * 60 * 60000).getTime(),
+            },
+            currentExchangeRate: 0.002345,
+            expiresAt: new Date(Date.now() + 120000).getTime(),
+            serviceName: 'BoneraAuto',
+            servicePub: 'hU7Ujh2gU6Hhghs4s...'
+        },
+        {
+            id: '1',
+            amount: 500,
+            currency: Currency.Eur,
+            recurrence: {
+                until: new Date(Date.now() + 1538 * 60000).getTime(),
+                calendar: 'daily',
+                maxPayments: 365,
+                firstPaymentDue: new Date(Date.now() - 62 * 24 * 60 * 60000).getTime(),
+            },
+            currentExchangeRate: 0.002345,
+            expiresAt: new Date(Date.now() + 120000).getTime(),
+            serviceName: 'OpenAI',
+            servicePub: 'pU7Ujh2gU6Hhghs4s...'
+        },
+        {
+            id: '2',
+            amount: 200,
+            currency: Currency.Eur,
+            recurrence: {
+                until: new Date(Date.now() + 15000 * 60000).getTime(),
+                calendar: 'weekly',
+                maxPayments: 52,
+                firstPaymentDue: new Date(Date.now() - 62 * 24 * 60 * 60000).getTime(),
+            },
+            currentExchangeRate: 0.002345,
+            expiresAt: new Date(Date.now() + 120000).getTime(),
+            serviceName: 'Medium',
+            servicePub: 'wU7Ujh2gU6Hhghs4s...'
+        },
+        {
+            id: '3',
+            amount: 2500000,
+            currency: Currency.Eur,
+            recurrence: {
+                until: new Date(Date.now() + 20000 * 60000).getTime(),
+                calendar: 'annually',
+                maxPayments: 20,
+                firstPaymentDue: new Date(Date.now() - 620 * 4 * 60 * 60000).getTime(),
+            },
+            currentExchangeRate: 0.002345,
+            expiresAt: new Date(Date.now() + 120000).getTime(),
+            serviceName: 'Intesa Sanpaolo',
+            servicePub: 'jU7Ujh2gU6Hhghs4s...'
+        },
+        {
+            id: '4',
+            amount: 5000,
+            currency: Currency.Eur,
+            recurrence: {
+                until: new Date(Date.now() + 15 * 60000).getTime(),
+                calendar: 'monthly',
+                maxPayments: 24,
+                firstPaymentDue: new Date(Date.now() - 620 * 24 * 60 * 60000).getTime(),
+            },
+            currentExchangeRate: 0.002345,
+            expiresAt: new Date(Date.now() + 120000).getTime(),
+            serviceName: 'Campo padel',
+            servicePub: 'hU7Ujh2gU6Hhghs4s...'
+        },
+        {
+            id: '1',
+            amount: 500,
+            currency: Currency.Eur,
+            recurrence: {
+                until: new Date(Date.now() + 1538 * 60000).getTime(),
+                calendar: 'daily',
+                maxPayments: 365,
+                firstPaymentDue: new Date(Date.now() - 62 * 24 * 60 * 60000).getTime(),
+            },
+            currentExchangeRate: 0.002345,
+            expiresAt: new Date(Date.now() + 120000).getTime(),
+            serviceName: 'OpenAI',
+            servicePub: 'pU7Ujh2gU6Hhghs4s...'
+        },
+        {
+            id: '2',
+            amount: 200,
+            currency: Currency.Eur,
+            recurrence: {
+                until: new Date(Date.now() + 15000 * 60000).getTime(),
+                calendar: 'weekly',
+                maxPayments: 52,
+                firstPaymentDue: new Date(Date.now() - 62 * 24 * 60 * 60000).getTime(),
+            },
+            currentExchangeRate: 0.002345,
+            expiresAt: new Date(Date.now() + 120000).getTime(),
+            serviceName: 'Medium',
+            servicePub: 'wU7Ujh2gU6Hhghs4s...'
+        },
+        {
+            id: '3',
+            amount: 2500000,
+            currency: Currency.Eur,
+            recurrence: {
+                until: new Date(Date.now() + 20000 * 60000).getTime(),
+                calendar: 'annually',
+                maxPayments: 20,
+                firstPaymentDue: new Date(Date.now() - 62 * 24 * 60 * 60000).getTime(),
+            },
+            currentExchangeRate: 0.002345,
+            expiresAt: new Date(Date.now() + 120000).getTime(),
+            serviceName: 'Intesa Sanpaolo',
+            servicePub: 'jU7Ujh2gU6Hhghs4s...'
+        },
+        {
+            id: '0',
+            amount: 50000,
+            currency: Currency.Eur,
+            recurrence: {
+                until: new Date(Date.now() + 15 * 60000).getTime(),
+                calendar: 'monthly',
+                maxPayments: 24,
+                firstPaymentDue: new Date(Date.now() - 62 * 24 * 60 * 60000).getTime(),
+            },
+            currentExchangeRate: 0.002345,
+            expiresAt: new Date(Date.now() + 120000).getTime(),
+            serviceName: 'BoneraAuto',
+            servicePub: 'hU7Ujh2gU6Hhghs4s...'
+        },
+        {
+            id: '1',
+            amount: 500,
+            currency: Currency.Eur,
+            recurrence: {
+                until: new Date(Date.now() + 1538 * 60000).getTime(),
+                calendar: 'daily',
+                maxPayments: 365,
+                firstPaymentDue: new Date(Date.now() - 62 * 24 * 60 * 60000).getTime(),
+            },
+            currentExchangeRate: 0.002345,
+            expiresAt: new Date(Date.now() + 120000).getTime(),
+            serviceName: 'OpenAI',
+            servicePub: 'pU7Ujh2gU6Hhghs4s...'
+        },
+        {
+            id: '2',
+            amount: 200,
+            currency: Currency.Eur,
+            recurrence: {
+                until: new Date(Date.now() + 15000 * 60000).getTime(),
+                calendar: 'weekly',
+                maxPayments: 52,
+                firstPaymentDue: new Date(Date.now() - 62 * 24 * 60 * 60000).getTime(),
+            },
+            currentExchangeRate: 0.002345,
+            expiresAt: new Date(Date.now() + 120000).getTime(),
+            serviceName: 'Medium',
+            servicePub: 'wU7Ujh2gU6Hhghs4s...'
+        },
+        {
+            id: '3',
+            amount: 2500000,
+            currency: Currency.Eur,
+            recurrence: {
+                until: new Date(Date.now() + 20000 * 60000).getTime(),
+                calendar: 'annually',
+                maxPayments: 20,
+                firstPaymentDue: new Date(Date.now() - 62 * 24 * 60 * 60000).getTime(),
+            },
+            currentExchangeRate: 0.002345,
+            expiresAt: new Date(Date.now() + 120000).getTime(),
+            serviceName: 'Intesa Sanpaolo',
+            servicePub: 'jU7Ujh2gU6Hhghs4s...'
+        },
+    ]
+}
+export { Subscription };
+
