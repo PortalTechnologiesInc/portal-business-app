@@ -1,6 +1,8 @@
 import { Timestamp } from "react-native-reanimated/lib/typescript/commonTypes";
 import { Currency } from "./Activity";
 
+export type Frequency = 'daily' | 'weekly' | 'monthly' | 'annually';
+
 interface RecurringPaymentsRequestContent {
     amount: number;
     currency: Currency;
@@ -11,8 +13,8 @@ interface RecurringPaymentsRequestContent {
 }
 interface RecurrenceInfo {
     until?: Timestamp;
-    calendar: string;
-    maxPayments?: Number;
+    calendar: Frequency;
+    maxPayments?: number;
     firstPaymentDue: Timestamp;
 }
 

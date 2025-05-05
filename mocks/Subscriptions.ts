@@ -56,7 +56,7 @@ export function getMockedSubscriptions(): Subscription[] {
                 until: new Date(Date.now() + 20000 * 60000).getTime(),
                 calendar: 'annually',
                 maxPayments: 20,
-                firstPaymentDue: new Date(Date.now() - 62 * 24 * 60 * 60000).getTime(),
+                firstPaymentDue: new Date(Date.now() - 620 * 4 * 60 * 60000).getTime(),
             },
             currentExchangeRate: 0.002345,
             expiresAt: new Date(Date.now() + 120000).getTime(),
@@ -64,18 +64,18 @@ export function getMockedSubscriptions(): Subscription[] {
             servicePub: 'jU7Ujh2gU6Hhghs4s...'
         },
         {
-            id: '0',
-            amount: 50000,
+            id: '4',
+            amount: 5000,
             currency: Currency.Eur,
             recurrence: {
                 until: new Date(Date.now() + 15 * 60000).getTime(),
                 calendar: 'monthly',
                 maxPayments: 24,
-                firstPaymentDue: new Date(Date.now() - 62 * 24 * 60 * 60000).getTime(),
+                firstPaymentDue: new Date(Date.now() - 620 * 24 * 60 * 60000).getTime(),
             },
             currentExchangeRate: 0.002345,
             expiresAt: new Date(Date.now() + 120000).getTime(),
-            serviceName: 'BoneraAuto',
+            serviceName: 'Campo padel',
             servicePub: 'hU7Ujh2gU6Hhghs4s...'
         },
         {

@@ -5,7 +5,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getMockedSubscriptions, Subscription } from '@/mocks/Subscriptions';
-import { formatCentsToCurrency, formatDayAndDate } from '@/utils';
+import { formatCentsToCurrency, formatDayAndDate, formatRelativeTime, getNextRecurrenceDay, getRemainingRecurrenceCount } from '@/utils';
 import { Collapsible } from '@/components/Collapsible';
 
 export default function SubscriptionsScreen() {
@@ -55,14 +55,14 @@ export default function SubscriptionsScreen() {
                 darkColor={Colors.dirtyWhite}
                 lightColor={Colors.dirtyWhite}
               >
-                {`💸 Next payment: ${formatDayAndDate(new Date(item.recurrence.until ?? 0))}`}
+                {`💸 Next payment in ${getNextRecurrenceDay(new Date(item.recurrence.firstPaymentDue ?? 0), item.recurrence.calendar)}`}
               </ThemedText>
               {item.amount && (
                 <ThemedText
                   darkColor={Colors.dirtyWhite}
                   lightColor={Colors.dirtyWhite}
                 >
-                  {`🏃 Payments left: ${item.recurrence.maxPayments}`}
+                  {`🏃 ${getRemainingRecurrenceCount(new Date(item.recurrence.firstPaymentDue ?? 0), item.recurrence.calendar, item.recurrence.maxPayments ?? 0)} payments left`}
                 </ThemedText>
               )}
               <ThemedText
