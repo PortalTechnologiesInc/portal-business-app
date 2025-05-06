@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'space-between', // This distributes space
+    justifyContent: 'space-between',
     paddingTop: 60,
     paddingBottom: 30,
   },

@@ -106,44 +106,55 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    height: 60,
-    width: '100%'
+    alignItems: 'center',
+    width: '100%',
+    minHeight: 60,
+    flex: 1
   },
   headerTexts: {
-    justifyContent: 'space-between'
+    flex: 1,
+    justifyContent: 'center',
+    marginRight: 16
   },
   typeText: {
     fontSize: 12,
+    marginTop: 4
   },
   subscriptionCard: {
     flexDirection: 'row',
     backgroundColor: '#1E1E1E',
     borderRadius: 20,
-    paddingVertical: 16,
-    paddingStart: 16,
+    padding: 16,
     marginBottom: 16,
+    width: '100%'
   },
   activityInfo: {
-    justifyContent: 'center',
+    flex: 1,
+    justifyContent: 'center'
   },
   activityDetails: {
     justifyContent: 'center',
+    alignItems: 'flex-end',
+    minWidth: '30%'
   },
   amount: {
-    fontSize: 24,
-    fontWeight: 300,
+    fontSize: 20,
+    fontWeight: '300',
+    textAlign: 'right'
   },
   container: {
     flex: 1,
     paddingHorizontal: 30,
-    paddingTop: 10,
+    paddingTop: 60,
     backgroundColor: Colors.darkerGray
   },
   list: {
     marginTop: 32,
     flex: 1,
+    width: '100%'
   },
   listContent: {
     paddingVertical: 32,
+    width: '100%'
   },
 });

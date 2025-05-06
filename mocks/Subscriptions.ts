@@ -79,7 +79,7 @@ export function getMockedSubscriptions(): Subscription[] {
             servicePub: 'hU7Ujh2gU6Hhghs4s...'
         },
         {
-            id: '1',
+            id: '5',
             amount: 500,
             currency: Currency.Eur,
             recurrence: {
@@ -94,7 +94,7 @@ export function getMockedSubscriptions(): Subscription[] {
             servicePub: 'pU7Ujh2gU6Hhghs4s...'
         },
         {
-            id: '2',
+            id: '6',
             amount: 200,
             currency: Currency.Eur,
             recurrence: {
@@ -109,7 +109,7 @@ export function getMockedSubscriptions(): Subscription[] {
             servicePub: 'wU7Ujh2gU6Hhghs4s...'
         },
         {
-            id: '3',
+            id: '7',
             amount: 2500000,
             currency: Currency.Eur,
             recurrence: {
@@ -124,7 +124,7 @@ export function getMockedSubscriptions(): Subscription[] {
             servicePub: 'jU7Ujh2gU6Hhghs4s...'
         },
         {
-            id: '0',
+            id: '8',
             amount: 50000,
             currency: Currency.Eur,
             recurrence: {
@@ -139,7 +139,7 @@ export function getMockedSubscriptions(): Subscription[] {
             servicePub: 'hU7Ujh2gU6Hhghs4s...'
         },
         {
-            id: '1',
+            id: '9',
             amount: 500,
             currency: Currency.Eur,
             recurrence: {
@@ -154,7 +154,7 @@ export function getMockedSubscriptions(): Subscription[] {
             servicePub: 'pU7Ujh2gU6Hhghs4s...'
         },
         {
-            id: '2',
+            id: '10',
             amount: 200,
             currency: Currency.Eur,
             recurrence: {
@@ -169,7 +169,7 @@ export function getMockedSubscriptions(): Subscription[] {
             servicePub: 'wU7Ujh2gU6Hhghs4s...'
         },
         {
-            id: '3',
+            id: '11',
             amount: 2500000,
             currency: Currency.Eur,
             recurrence: {

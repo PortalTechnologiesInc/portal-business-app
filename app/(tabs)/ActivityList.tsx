@@ -196,11 +196,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
   },
   container: {
-    width: '100%',
     flex: 1,
     paddingHorizontal: 30,
-    paddingTop: 10,
-    backgroundColor: '#000000',
+    paddingTop: 60,
+    backgroundColor: Colors.darkerGray
   },
   filterContainer: {
     paddingVertical: 16,
