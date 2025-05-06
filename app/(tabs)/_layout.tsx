@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Tabs } from 'expo-router';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { Colors } from '@/constants/Colors';
-import { View, Platform, ViewStyle } from 'react-native';
+import { View, Platform, ToastAndroid } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HapticTab } from '@/components/HapticTab';
 
@@ -92,8 +92,19 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <SubscriptionIcon color={color} />,
         }}
       />
+      {/* remove listeners to enable buttons*/}
       <Tabs.Screen
         name="Certificates"
+        listeners={{
+          tabPress: e => {
+            e.preventDefault(); // <-- this function bl<-- this function blocks 
+            ToastAndroid.showWithGravity(
+              'Coming soon!',
+              ToastAndroid.SHORT,
+              ToastAndroid.CENTER,
+            );
+          },
+        }}
         options={{
           title: 'Certificates',
           tabBarIcon: ({ color }) => <CertificateIcon color={color} />,

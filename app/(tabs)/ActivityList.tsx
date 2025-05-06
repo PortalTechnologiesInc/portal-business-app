@@ -193,13 +193,14 @@ const ItemList: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: Colors.darkerGray,
   },
   container: {
+    width: '100%',
     flex: 1,
     paddingHorizontal: 30,
-    paddingTop: 60,
-    backgroundColor: Colors.darkerGray
+    paddingTop: 20,
+    backgroundColor: Colors.darkerGray,
   },
   filterContainer: {
     paddingVertical: 16,
@@ -226,9 +227,9 @@ const styles = StyleSheet.create({
   activityCard: {
     flexDirection: 'row',
     backgroundColor: '#1E1E1E',
-    borderRadius: 12,
+    borderRadius: 20,
     padding: 16,
-    marginBottom: 8,
+    marginBottom: 12,
     minHeight: 72,
   },
   iconContainer: {

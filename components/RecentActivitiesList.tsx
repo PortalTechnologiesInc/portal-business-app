@@ -118,9 +118,10 @@ export const RecentActivitiesList: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
+    backgroundColor: Colors.darkerGray,
     marginTop: 8,
     marginBottom: 24,
-    paddingHorizontal: 20,
+    paddingHorizontal: 30,
   },
   header: {
     flexDirection: 'row',
@@ -138,9 +139,9 @@ const styles = StyleSheet.create({
   activityCard: {
     flexDirection: 'row',
     backgroundColor: '#1E1E1E',
-    borderRadius: 12,
+    borderRadius: 20,
     padding: 16,
-    marginBottom: 8,
+    marginBottom: 12,
     minHeight: 72,
   },
   iconContainer: {

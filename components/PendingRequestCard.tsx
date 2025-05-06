@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
-import { MaterialIcons, Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { PendingRequest } from '../models/PendingRequest';
 import { usePendingRequests } from '../context/PendingRequestsContext';
 
@@ -79,7 +79,7 @@ export const PendingRequestCard: React.FC<PendingRequestCardProps> = ({ request 
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#1E1E1E',
-    borderRadius: 12,
+    borderRadius: 20,
     padding: 16,
     width: CARD_WIDTH,
     shadowColor: '#000',

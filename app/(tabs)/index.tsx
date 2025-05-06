@@ -90,18 +90,19 @@ export default function Home() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: Colors.darkerGray,
   },
   container: {
     flex: 1,
     padding: 0,
-    backgroundColor: '#000000',
+    backgroundColor: Colors.darkerGray,
   },
   header: {
+    backgroundColor: Colors.darkerGray,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 30,
     paddingVertical: 16,
     width: '100%',
   },

@@ -26,32 +26,30 @@ export default function SubscriptionsScreen() {
                 <ThemedText type='subtitle'>
                   {item.serviceName}
                 </ThemedText>
-                <ThemedText
-                  style={styles.typeText}
-                  darkColor={Colors.dirtyWhite}
-                  lightColor={Colors.dirtyWhite}
-                >
-                  {item.recurrence.calendar}
-                </ThemedText>
-              </View>
-              <View style={styles.activityDetails}>
-                <ThemedText
-                  style={styles.amount}
-                >
+                <ThemedText style={styles.amount}>
                   {item.currency} {formatCentsToCurrency(item.amount)}
                 </ThemedText>
               </View>
+              <ThemedText
+                style={styles.recurrency}
+                type='defaultSemiBold'
+                darkColor={Colors.dirtyWhite}
+                lightColor={Colors.dirtyWhite}
+              >
+                {item.recurrence.calendar}
+              </ThemedText>
             </View>
           }>
-            {/* <View style={styles.detailsContainer}> */}
             <View>
               <ThemedText
+                style={styles.detail}
                 darkColor={Colors.dirtyWhite}
                 lightColor={Colors.dirtyWhite}
               >
                 {`☝️ First payment: ${formatDayAndDate(new Date(item.recurrence.firstPaymentDue))}`}
               </ThemedText>
               <ThemedText
+                style={styles.detail}
                 darkColor={Colors.dirtyWhite}
                 lightColor={Colors.dirtyWhite}
               >
@@ -59,6 +57,7 @@ export default function SubscriptionsScreen() {
               </ThemedText>
               {item.amount && (
                 <ThemedText
+                  style={styles.detail}
                   darkColor={Colors.dirtyWhite}
                   lightColor={Colors.dirtyWhite}
                 >
@@ -66,6 +65,7 @@ export default function SubscriptionsScreen() {
                 </ThemedText>
               )}
               <ThemedText
+                style={styles.detail}
                 darkColor={Colors.dirtyWhite}
                 lightColor={Colors.dirtyWhite}
               >
@@ -104,57 +104,46 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.darkerGray,
   },
   header: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
     width: '100%',
-    minHeight: 60,
-    flex: 1
   },
   headerTexts: {
-    flex: 1,
-    justifyContent: 'center',
-    marginRight: 16
+    paddingEnd: 12,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between'
   },
-  typeText: {
-    fontSize: 12,
-    marginTop: 4
+  recurrency: {
+
+    marginVertical: 8
   },
   subscriptionCard: {
-    flexDirection: 'row',
     backgroundColor: '#1E1E1E',
     borderRadius: 20,
     padding: 16,
-    marginBottom: 16,
-    width: '100%'
+    marginBottom: 12,
   },
   activityInfo: {
-    flex: 1,
     justifyContent: 'center'
   },
-  activityDetails: {
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    minWidth: '30%'
+  detail: {
+    marginVertical: 2,
   },
   amount: {
     fontSize: 20,
     fontWeight: '300',
-    textAlign: 'right'
   },
   container: {
     flex: 1,
     paddingHorizontal: 30,
-    paddingTop: 60,
+    paddingTop: 20,
     backgroundColor: Colors.darkerGray
   },
   list: {
     marginTop: 32,
     flex: 1,
-    width: '100%'
   },
   listContent: {
     paddingVertical: 32,
-    width: '100%'
   },
 });

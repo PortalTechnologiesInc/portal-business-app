@@ -24,6 +24,7 @@
     "@scure/bip39": "^1.5.4",
     "expo": "~52.0.43",
     "expo-blur": "~14.0.3",
+    "expo-camera": "~16.0.18",
     "expo-constants": "~17.0.8",
     "expo-font": "~13.0.4",
     "expo-haptics": "~14.0.1",
@@ -46,8 +47,7 @@
     "react-native-screens": "~4.4.0",
     "react-native-web": "~0.19.13",
     "react-native-webview": "13.12.5",
-    "undefined": "react-native-reanimated/lib/typescript/Animated",
-    "expo-camera": "~16.0.18"
+    "undefined": "react-native-reanimated/lib/typescript/Animated"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

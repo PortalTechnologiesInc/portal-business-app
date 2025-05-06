@@ -1,5 +1,5 @@
 import { PropsWithChildren, ReactNode, useState } from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -18,13 +18,16 @@ export function Collapsible({ children, header, darkColor, lightColor }: PropsWi
         onPress={() => setIsOpen(value => !value)}
         activeOpacity={0.8}
       >
-        <IconSymbol
-          name="chevron.right"
-          size={18}
-          weight="medium"
-          color={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
-          style={{ transform: [{ rotate: isOpen ? '90deg' : '0deg' }] }}
-        />
+        <View
+          style={styles.iconContainer}>
+          <IconSymbol
+            name="chevron.right"
+            size={18}
+            weight="medium"
+            color={theme === 'light' ? Colors.light.icon : Colors.dark.icon}
+            style={{ transform: [{ rotate: isOpen ? '90deg' : '0deg' }] }}
+          />
+        </View>
         <ThemedText type="defaultSemiBold">{header}</ThemedText>
       </TouchableOpacity>
       {isOpen && <ThemedView lightColor={lightColor} darkColor={darkColor} style={styles.content}>{children}</ThemedView>}
@@ -40,6 +43,15 @@ const styles = StyleSheet.create({
   },
   content: {
     marginTop: 6,
-    marginLeft: 24,
+    marginLeft: 36,
+  },
+  iconContainer: {
+    width: 20,
+    height: 20,
+    borderRadius: 20,
+    backgroundColor: '#333333',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
 });

@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   container: {
     marginTop: 8,
     marginBottom: 24,
-    paddingHorizontal: 20,
+    paddingHorizontal: 30,
   },
   header: {
     flexDirection: 'row',
@@ -104,9 +104,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     backgroundColor: '#1E1E1E',
-    borderRadius: 12,
+    borderRadius: 20,
     padding: 16,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   paymentInfo: {
     flex: 1,
