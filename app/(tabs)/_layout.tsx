@@ -125,6 +125,7 @@ export default function TabLayout() {
         options={{
           title: 'Identities',
           tabBarIcon: ({ color }) => <IdentityIcon color={color} />,
+          href: null, // This hides the tab from the tab bar
         }}
       />
     </Tabs>
