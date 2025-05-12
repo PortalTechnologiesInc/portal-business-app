@@ -13,6 +13,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
+    "androidNavigationBar": {
+      "backgroundColor": "#000000"
+    },
     "ios": {
       "supportsTablet": true,
       "userInterfaceStyle": "dark",
