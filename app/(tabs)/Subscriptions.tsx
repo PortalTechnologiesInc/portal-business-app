@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, FlatList } from 'react-native';
+import { StyleSheet, View, FlatList, TouchableOpacity } from 'react-native';
+import { router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
@@ -15,10 +16,21 @@ export default function SubscriptionsScreen() {
     setSubscriptions(getMockedSubscriptions());
   }, []);
 
+  const handleSubscriptionPress = useCallback((subscriptionId: string) => {
+    router.push({
+      pathname: "/subscription/[id]",
+      params: { id: subscriptionId }
+    });
+  }, []);
+
   // Memoize renderItem to prevent recreation on every render
   const renderItem = useCallback(
     ({ item }: { item: Subscription }) => (
-      <View style={styles.subscriptionCard}>
+      <TouchableOpacity 
+        style={styles.subscriptionCard} 
+        onPress={() => handleSubscriptionPress(item.id)}
+        activeOpacity={0.7}
+      >
         <View style={styles.activityInfo}>
           <Collapsible darkColor='transparent' lightColor='transparent' header={
             <View style={styles.header}>
@@ -74,7 +86,7 @@ export default function SubscriptionsScreen() {
             </View>
           </Collapsible>
         </View>
-      </View>
+      </TouchableOpacity>
     ),
     []
   );
@@ -114,7 +126,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between'
   },
   recurrency: {
-
     marginVertical: 8
   },
   subscriptionCard: {

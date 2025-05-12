@@ -96,6 +96,12 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <SubscriptionIcon color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="subscription"
+        options={{
+          href: null, // This hides the tab from the tab bar
+        }}
+      />
       {/* remove listeners to enable buttons*/}
       <Tabs.Screen
         name="Certificates"
