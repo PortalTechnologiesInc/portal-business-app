@@ -1,14 +1,36 @@
 import React from 'react';
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { useRouter } from 'expo-router';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useOnboarding } from '@/context/OnboardingContext';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { resetOnboarding } = useOnboarding();
+
+  const handleClearAppData = () => {
+    Alert.alert(
+      "Clear App Data",
+      "This will reset all app data and take you back to onboarding. Are you sure?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        { 
+          text: "Clear Data", 
+          style: "destructive",
+          onPress: async () => {
+            await resetOnboarding();
+          }
+        }
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -34,6 +56,15 @@ export default function SettingsScreen() {
           >
             Settings Page
           </ThemedText>
+          
+          <TouchableOpacity 
+            style={styles.clearDataButton} 
+            onPress={handleClearAppData}
+          >
+            <ThemedText style={styles.clearDataButtonText}>
+              Clear App Data
+            </ThemedText>
+          </TouchableOpacity>
         </ThemedView>
       </ThemedView>
     </SafeAreaView>
@@ -72,5 +103,18 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 18,
+    marginBottom: 40,
+  },
+  clearDataButton: {
+    backgroundColor: '#FF3B30',
+    padding: 16,
+    borderRadius: 8,
+    width: '80%',
+    alignItems: 'center',
+  },
+  clearDataButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

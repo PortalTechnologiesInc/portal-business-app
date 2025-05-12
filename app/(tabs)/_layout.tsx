@@ -61,10 +61,14 @@ export default function TabLayout() {
       tabBarBackground: () => <TabBarBackground />,
       tabBarHideOnKeyboard: true,
       tabBarButton: (props: any) => <HapticTab {...props} />,
-      // Improve performance by not mounting screens until they are viewed
-      lazy: true,
-      // Faster tab transitions
+      // Preload adjacent tabs for smoother navigation
+      lazy: false,
+      // Optimize tab transition animation
       animationEnabled: true,
+      // Preventing excessive re-renders
+      freezeOnBlur: false,
+      // Use hardware acceleration where possible
+      detachInactiveScreens: false,
     }),
     [insets.bottom]
   );
@@ -97,7 +101,7 @@ export default function TabLayout() {
         name="Certificates"
         listeners={{
           tabPress: e => {
-            e.preventDefault(); // <-- this function bl<-- this function blocks 
+            e.preventDefault(); // <-- this function blocks 
             ToastAndroid.showWithGravity(
               'Coming soon!',
               ToastAndroid.SHORT,

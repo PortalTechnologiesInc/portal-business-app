@@ -8,12 +8,12 @@ import { getMockedActivities } from '@/mocks/Activities';
 import { formatCentsToCurrency, formatDayAndDate, formatRelativeTime } from '@/utils';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 
-export const RecentActivitiesList: React.FC = () => {
-  const [activities, setActivities] = useState<Activity[]>([]);
+// Preload activities data
+const PRELOADED_ACTIVITIES = getMockedActivities().slice(0, 5);
 
-  useEffect(() => {
-    setActivities(getMockedActivities().slice(0, 5));
-  }, []);
+export const RecentActivitiesList: React.FC = () => {
+  // Use preloaded data to avoid loading delay on mount
+  const [activities] = useState<Activity[]>(PRELOADED_ACTIVITIES);
 
   const handleSeeAll = useCallback(() => {
     router.push('/ActivityList');
@@ -111,6 +111,8 @@ export const RecentActivitiesList: React.FC = () => {
         keyExtractor={(_, index) => index.toString()}
         renderItem={renderActivityItem}
         scrollEnabled={false}
+        removeClippedSubviews={false}
+        initialNumToRender={5}
       />
     </View>
   );

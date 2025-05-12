@@ -33,12 +33,6 @@ export default function Home() {
     router.push('/settings');
   }, []);
 
-  useEffect(() => {
-    if (!isLoading && !isOnboardingComplete) {
-      router.replace('/onboarding');
-    }
-  }, [isLoading, isOnboardingComplete]);
-
   // Don't render anything until we've checked the onboarding status
   if (isLoading) {
     return null;

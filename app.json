@@ -4,12 +4,12 @@
     "slug": "portal",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/logowhite.png",
+    "icon": "./assets/images/appLogo.png",
     "scheme": "portal",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/logowhite.png",
+      "image": "./assets/images/appLogo.png",
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
@@ -20,7 +20,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/logowhite.png",
+        "foregroundImage": "./assets/images/appLogo.png",
         "backgroundColor": "#000000"
       },
       "package": "com.twentytwo.portal",
@@ -47,7 +47,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/logowhite.png",
+          "image": "./assets/images/appLogo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#000000"

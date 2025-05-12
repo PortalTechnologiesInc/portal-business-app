@@ -9,27 +9,47 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { IntroPage } from '@/components/onboarding/IntroPage';
 import { OptionsPage } from '@/components/onboarding/OptionsPage';
 import { SeedPhrasePage } from '@/components/onboarding/SeedPhrasePage';
 import { ButtonBar } from '@/components/onboarding/ButtonBar';
+import { Asset } from 'expo-asset';
+import * as SplashScreen from 'expo-splash-screen';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// Preload all required assets
+const onboardingLogo = require('../assets/images/logoFull.png');
 
 export default function Onboarding() {
   const { completeOnboarding } = useOnboarding();
   const [currentPage, setCurrentPage] = useState(0);
   const [seedPhrase, setSeedPhrase] = useState<string[]>([]);
-  const rotateValue = useSharedValue(0);
+  const [assetsLoaded, setAssetsLoaded] = useState(false);
   const translateX = useSharedValue(0);
-  const scale = useSharedValue(1);
-  const logoOpacity = useSharedValue(1);
-  const translateY = useSharedValue(0);
   const contentOpacity = useSharedValue(1);
   const buttonsOpacity = useSharedValue(1);
 
-  const { width: SCREEN_WIDTH, height } = Dimensions.get('window');
+  const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+  // Preload assets when component mounts
+  useEffect(() => {
+    async function loadAssets() {
+      try {
+        // Preload the logo image
+        await Asset.loadAsync([onboardingLogo]);
+      } catch (error) {
+        console.error('Error preloading assets:', error);
+      } finally {
+        setAssetsLoaded(true);
+      }
+    }
+
+    loadAssets();
+  }, []);
 
   // Initialize seed phrase once
   useEffect(() => {
@@ -71,14 +91,6 @@ export default function Onboarding() {
         easing: Easing.bezier(0.25, 0.1, 0.25, 1),
       });
 
-      // Only rotate the logo for the first two pages
-      if (currentPage < 1) {
-        rotateValue.value = withTiming((currentPage + 1) * 180, {
-          duration: 800,
-          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-        });
-      }
-
       setCurrentPage(currentPage + 1);
     }
   };
@@ -90,17 +102,12 @@ export default function Onboarding() {
         easing: Easing.bezier(0.25, 0.1, 0.25, 1),
       });
 
-      rotateValue.value = withTiming((currentPage - 1) * 180, {
-        duration: 800,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-      });
-
       setCurrentPage(currentPage - 1);
     }
   };
 
   const performFinishAnimation = () => {
-    // Fade out content first
+    // Fade out content
     contentOpacity.value = withTiming(0, {
       duration: 400,
       easing: Easing.bezier(0.25, 0.1, 0.25, 1),
@@ -111,42 +118,10 @@ export default function Onboarding() {
       easing: Easing.bezier(0.25, 0.1, 0.25, 1),
     });
 
-    // First center the logo vertically
-    translateY.value = withTiming(
-      height / 2 - 100, // Center logo (accounting for logo height)
-      {
-        duration: 600,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-      }
-    );
-
-    // Rotate to 90 degrees
-    rotateValue.value = withTiming(270, {
-      duration: 800,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-    });
-
-    // Then scale up
-    scale.value = withTiming((SCREEN_WIDTH / 250) * 2, {
-      duration: 800,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-    });
-
-    // After 2 seconds, fade out and navigate to home
+    // After 500ms, navigate to home
     setTimeout(() => {
-      logoOpacity.value = withTiming(
-        0,
-        {
-          duration: 500,
-          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-        },
-        finished => {
-          if (finished) {
-            runOnJS(completeOnboarding)();
-          }
-        }
-      );
-    }, 2000);
+      completeOnboarding();
+    }, 500);
   };
 
   // Create pan gesture handler
@@ -173,17 +148,6 @@ export default function Onboarding() {
       }
     });
 
-  const logoStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { translateY: translateY.value },
-        { rotate: `${rotateValue.value}deg` },
-        { scale: scale.value },
-      ],
-      opacity: logoOpacity.value,
-    };
-  });
-
   const pagesStyle = useAnimatedStyle(() => {
     return {
       transform: [{ translateX: translateX.value }],
@@ -200,67 +164,87 @@ export default function Onboarding() {
     opacity: buttonsOpacity.value,
   }));
 
+  // Show loading view while assets are being loaded
+  if (!assetsLoaded) {
+    return (
+      <ThemedView style={[styles.container, styles.loadingContainer]}>
+        <ThemedText>Loading...</ThemedText>
+      </ThemedView>
+    );
+  }
+
   return (
-    <ThemedView style={styles.container}>
-      <Animated.View style={[styles.logoContainer, logoStyle]}>
-        <Image
-          source={require('../assets/images/logowhite.png')}
-          style={{ width: 250, height: 100 }}
-          resizeMode="contain"
-        />
-      </Animated.View>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ThemedView style={styles.container}>
+        <View style={styles.logoContainer}>
+          <Image
+            source={onboardingLogo}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
 
-      <GestureDetector gesture={panGesture}>
-        <Animated.View style={[styles.pagesContainer, contentStyle]}>
-          <Animated.View style={[styles.pagesWrapper, pagesStyle]}>
-            {/* Page 1: Intro */}
-            <IntroPage onNext={goToNextPage} pageWidth={SCREEN_WIDTH} />
+        <GestureDetector gesture={panGesture}>
+          <Animated.View style={[styles.pagesContainer, contentStyle]}>
+            <Animated.View style={[styles.pagesWrapper, pagesStyle]}>
+              {/* Page 1: Intro */}
+              <IntroPage onNext={goToNextPage} pageWidth={SCREEN_WIDTH} />
 
-            {/* Page 2: Options */}
-            <OptionsPage
-              onGenerateKey={goToNextPage}
-              onImportSeed={completeOnboarding}
-              pageWidth={SCREEN_WIDTH}
-            />
+              {/* Page 2: Options */}
+              <OptionsPage
+                onGenerateKey={goToNextPage}
+                onImportSeed={completeOnboarding}
+                pageWidth={SCREEN_WIDTH}
+              />
 
-            {/* Page 3: Seed Phrase */}
-            <SeedPhrasePage
-              onFinish={performFinishAnimation}
-              pageWidth={SCREEN_WIDTH}
-              seedPhrase={seedPhrase}
-            />
+              {/* Page 3: Seed Phrase */}
+              <SeedPhrasePage
+                onFinish={performFinishAnimation}
+                pageWidth={SCREEN_WIDTH}
+                seedPhrase={seedPhrase}
+              />
+            </Animated.View>
           </Animated.View>
+        </GestureDetector>
+        <Animated.View style={buttonsStyle}>
+          <ButtonBar
+            currentPage={currentPage}
+            onNext={goToNextPage}
+            onGenerateKey={goToNextPage}
+            onImportSeed={completeOnboarding}
+            onFinish={performFinishAnimation}
+          />
         </Animated.View>
-      </GestureDetector>
-      <Animated.View style={buttonsStyle}>
-        <ButtonBar
-          currentPage={currentPage}
-          onNext={goToNextPage}
-          onGenerateKey={goToNextPage}
-          onImportSeed={completeOnboarding}
-          onFinish={performFinishAnimation}
-        />
-      </Animated.View>
-    </ThemedView>
+      </ThemedView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
   container: {
     flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    paddingTop: 60,
-    paddingBottom: 30,
+    backgroundColor: '#000000',
+    paddingHorizontal: 20,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   logoContainer: {
-    alignSelf: 'center',
-    marginBottom: 20,
-    zIndex: 20,
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 40,
+  },
+  logo: {
+    width: 200,
+    height: 80,
   },
   pagesContainer: {
-    flex: 1, // This will take available space between logo and buttons
+    flex: 1,
     overflow: 'hidden',
   },
   pagesWrapper: {

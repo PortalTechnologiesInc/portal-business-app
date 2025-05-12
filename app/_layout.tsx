@@ -8,9 +8,20 @@ import { OnboardingProvider } from '@/context/OnboardingContext';
 import { PendingRequestsProvider } from '@/context/PendingRequestsContext';
 import { StatusBar } from 'expo-status-bar';
 import { Colors } from '@/constants/Colors';
+import { Asset } from 'expo-asset';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
+
+// Preload all commonly used images
+const preloadImages = async () => {
+  const images = [
+    require('../assets/images/appLogo.png'),
+    require('../assets/images/logoFull.png'),
+  ];
+
+  return Asset.loadAsync(images);
+};
 
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
@@ -54,8 +65,11 @@ export default function RootLayout() {
   useEffect(() => {
     async function prepare() {
       try {
-        // Add a deliberate delay to ensure initialization is complete
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Preload required assets
+        await preloadImages();
+        
+        // Add a shorter delay to ensure initialization is complete
+        await new Promise(resolve => setTimeout(resolve, 300));
         setIsReady(true);
       } catch (error) {
         console.error('Error preparing app:', error);

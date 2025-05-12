@@ -1,6 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { PendingRequest, PendingRequestType } from '../models/PendingRequest';
 import { mockPendingRequests } from '../mocks/PendingRequests';
+
+// Preload mock data to avoid loading delay when the context is used
+const PRELOADED_REQUESTS = mockPendingRequests;
 
 interface PendingRequestsContextType {
   pendingRequests: PendingRequest[];
@@ -14,53 +17,51 @@ interface PendingRequestsContextType {
 const PendingRequestsContext = createContext<PendingRequestsContextType | undefined>(undefined);
 
 export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
-  const [hasPending, setHasPending] = useState(false);
-
-  useEffect(() => {
-    // In a real implementation, this would fetch data from an API
-    setPendingRequests(mockPendingRequests);
-  }, []);
-
-  useEffect(() => {
-    setHasPending(pendingRequests.some(req => req.status === 'pending'));
+  // Use preloaded data to avoid loading delay on mount
+  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>(PRELOADED_REQUESTS);
+  
+  // Memoize hasPending to avoid recalculation on every render
+  const hasPending = useMemo(() => {
+    return pendingRequests.some(req => req.status === 'pending');
   }, [pendingRequests]);
 
-  const getByType = (type: PendingRequestType) => {
+  // Memoize these functions to prevent recreation on every render
+  const getByType = useCallback((type: PendingRequestType) => {
     return pendingRequests.filter(request => request.type === type);
-  };
+  }, [pendingRequests]);
 
-  const getById = (id: string) => {
+  const getById = useCallback((id: string) => {
     return pendingRequests.find(request => request.id === id);
-  };
+  }, [pendingRequests]);
 
-  const approve = (id: string) => {
+  const approve = useCallback((id: string) => {
     setPendingRequests(prev =>
       prev.map(request => (request.id === id ? { ...request, status: 'approved' } : request))
     );
     // In a real implementation, you would send this to an API
     console.log(`Request ${id} approved`);
-  };
+  }, []);
 
-  const deny = (id: string) => {
+  const deny = useCallback((id: string) => {
     setPendingRequests(prev =>
       prev.map(request => (request.id === id ? { ...request, status: 'denied' } : request))
     );
     // In a real implementation, you would send this to an API
     console.log(`Request ${id} denied`);
-  };
+  }, []);
+
+  // Memoize the context value to prevent recreation on every render
+  const contextValue = useMemo(() => ({
+    pendingRequests,
+    getByType,
+    getById,
+    approve,
+    deny,
+    hasPending,
+  }), [pendingRequests, getByType, getById, approve, deny, hasPending]);
 
   return (
-    <PendingRequestsContext.Provider
-      value={{
-        pendingRequests,
-        getByType,
-        getById,
-        approve,
-        deny,
-        hasPending,
-      }}
-    >
+    <PendingRequestsContext.Provider value={contextValue}>
       {children}
     </PendingRequestsContext.Provider>
   );
