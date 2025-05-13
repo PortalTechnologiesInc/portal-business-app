@@ -120,19 +120,19 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   headerTexts: {
-    paddingEnd: 12,
+    paddingEnd: 10,
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'space-between'
   },
   recurrency: {
-    marginVertical: 8
+    marginVertical: 6
   },
   subscriptionCard: {
     backgroundColor: '#1E1E1E',
     borderRadius: 20,
-    padding: 16,
-    marginBottom: 12,
+    padding: 14,
+    marginBottom: 10,
   },
   activityInfo: {
     justifyContent: 'center'
@@ -146,15 +146,15 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: 30,
-    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingTop: 16,
     backgroundColor: Colors.darkerGray
   },
   list: {
-    marginTop: 32,
+    marginTop: 24,
     flex: 1,
   },
   listContent: {
-    paddingVertical: 32,
+    paddingVertical: 24,
   },
 });

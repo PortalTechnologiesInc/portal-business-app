@@ -122,18 +122,18 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.darkerGray,
     marginTop: 8,
-    marginBottom: 24,
-    paddingHorizontal: 30,
+    marginBottom: 20,
+    paddingHorizontal: 20,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   dateHeader: {
     fontSize: 14,
-    marginBottom: 12,
+    marginBottom: 10,
   },
   seeAll: {
     fontSize: 14,
@@ -142,8 +142,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#1E1E1E',
     borderRadius: 20,
-    padding: 16,
-    marginBottom: 12,
+    padding: 14,
+    marginBottom: 10,
     minHeight: 72,
   },
   iconContainer: {
@@ -153,7 +153,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#333333',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   activityInfo: {
     flex: 1,

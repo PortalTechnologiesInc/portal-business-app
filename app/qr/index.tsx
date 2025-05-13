@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
   },
   middleSection: {
     flexDirection: 'row',
-    height: 300,
+    height: 250,
   },
   leftSection: {
     flex: 1,

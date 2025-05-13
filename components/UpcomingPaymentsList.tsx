@@ -88,14 +88,14 @@ export const UpcomingPaymentsList: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     marginTop: 8,
-    marginBottom: 24,
-    paddingHorizontal: 30,
+    marginBottom: 20,
+    paddingHorizontal: 20,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   seeAll: {
     fontSize: 14,
@@ -105,8 +105,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: '#1E1E1E',
     borderRadius: 20,
-    padding: 16,
-    marginBottom: 12,
+    padding: 14,
+    marginBottom: 10,
   },
   paymentInfo: {
     flex: 1,

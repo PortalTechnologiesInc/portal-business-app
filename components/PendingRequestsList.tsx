@@ -5,8 +5,8 @@ import { PendingRequestCard } from './PendingRequestCard';
 import { PendingRequest } from '../models/PendingRequest';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = width - 64; // Full width minus padding
-const CARD_MARGIN = 16; // Margin between cards
+const CARD_WIDTH = width - 48; // Full width minus padding
+const CARD_MARGIN = 12; // Margin between cards
 
 export const PendingRequestsList: React.FC = () => {
   const { pendingRequests, hasPending } = usePendingRequests();
@@ -62,8 +62,8 @@ export const PendingRequestsList: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    marginTop: 16,
-    marginBottom: 24,
+    marginTop: 12,
+    marginBottom: 20,
   },
   listContent: {
     flexGrow: 1,

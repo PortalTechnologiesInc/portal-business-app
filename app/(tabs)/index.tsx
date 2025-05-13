@@ -96,8 +96,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 30,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     width: '100%',
   },
   headerLeft: {

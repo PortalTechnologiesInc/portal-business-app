@@ -5,7 +5,7 @@ import { PendingRequest } from '../models/PendingRequest';
 import { usePendingRequests } from '../context/PendingRequestsContext';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = width - 64; // Full width minus padding
+const CARD_WIDTH = width - 50; // Full width minus padding
 
 interface PendingRequestCardProps {
   request: PendingRequest;
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#1E1E1E',
     borderRadius: 20,
-    padding: 16,
+    padding: 14,
     width: CARD_WIDTH,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

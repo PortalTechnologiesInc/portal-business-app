@@ -198,13 +198,13 @@ const styles = StyleSheet.create({
   container: {
     width: '100%',
     flex: 1,
-    paddingHorizontal: 30,
-    paddingTop: 20,
+    paddingHorizontal: 20,
+    paddingTop: 16,
     backgroundColor: Colors.darkerGray,
   },
   filterContainer: {
     paddingVertical: 16,
-    marginBottom: 16,
+    marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -228,8 +228,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#1E1E1E',
     borderRadius: 20,
-    padding: 16,
-    marginBottom: 12,
+    padding: 14,
+    marginBottom: 10,
     minHeight: 72,
   },
   iconContainer: {
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#333333',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   activityInfo: {
     flex: 1,
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   date: {
-    marginBottom: 8,
+    marginBottom: 6,
     color: Colors.dirtyWhite,
   },
 });
