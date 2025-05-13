@@ -1,49 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Dimensions, Image, BackHandler } from 'react-native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  Easing,
-  runOnJS,
-} from 'react-native-reanimated';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { StyleSheet, View, Image, TouchableOpacity, TextInput, BackHandler } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useOnboarding } from '@/context/OnboardingContext';
-import { IntroPage } from '@/components/onboarding/IntroPage';
-import { OptionsPage } from '@/components/onboarding/OptionsPage';
-import { SeedPhrasePage } from '@/components/onboarding/SeedPhrasePage';
-import { ButtonBar } from '@/components/onboarding/ButtonBar';
 import { Asset } from 'expo-asset';
-import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 // Preload all required assets
-const onboardingLogo = require('../assets/images/logoFull.png');
+const onboardingLogo = require('../assets/images/appLogo.png');
+
+// Temporary fake seed phrase words
+const TEMP_SEED_WORDS = [
+  'apple', 'banana', 'cherry', 'diamond', 'elephant', 'famous',
+  'guitar', 'hurdle', 'island', 'jungle', 'kitchen', 'lemon'
+];
 
 export default function Onboarding() {
   const { completeOnboarding } = useOnboarding();
-  const [currentPage, setCurrentPage] = useState(0);
-  const [seedPhrase, setSeedPhrase] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState<'intro' | 'generate' | 'import' | 'splash'>('intro');
+  const [seedPhrase, setSeedPhrase] = useState('');
   const [assetsLoaded, setAssetsLoaded] = useState(false);
-  const translateX = useSharedValue(0);
-  const contentOpacity = useSharedValue(1);
-  const buttonsOpacity = useSharedValue(1);
-
-  const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
   // Preload assets when component mounts
   useEffect(() => {
     async function loadAssets() {
       try {
-        // Preload the logo image
         await Asset.loadAsync([onboardingLogo]);
+        setAssetsLoaded(true);
       } catch (error) {
         console.error('Error preloading assets:', error);
-      } finally {
         setAssetsLoaded(true);
       }
     }
@@ -51,31 +36,12 @@ export default function Onboarding() {
     loadAssets();
   }, []);
 
-  // Initialize seed phrase once
-  useEffect(() => {
-    // In a real app, this would be generated or imported
-    setSeedPhrase([
-      'word1',
-      'word2',
-      'word3',
-      'word4',
-      'word5',
-      'word6',
-      'word7',
-      'word8',
-      'word9',
-      'word10',
-      'word11',
-      'word12',
-    ]);
-  }, []);
-
   // Handle Android back button
   useEffect(() => {
     const backAction = () => {
-      if (currentPage > 0) {
-        goToPrevPage();
-        return true; // Prevent default behavior
+      if (currentPage !== 'intro') {
+        setCurrentPage('intro');
+        return true;
       }
       return false; // Let system handle default behavior
     };
@@ -84,91 +50,46 @@ export default function Onboarding() {
     return () => backHandler.remove();
   }, [currentPage]);
 
-  const goToNextPage = () => {
-    if (currentPage < 2) {
-      translateX.value = withTiming(-SCREEN_WIDTH * (currentPage + 1), {
-        duration: 400,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-      });
-
-      setCurrentPage(currentPage + 1);
+  const handleImport = () => {
+    if (seedPhrase.trim()) {
+      // Show splash screen before completing onboarding
+      setCurrentPage('splash');
+      
+      // Complete onboarding after a short delay
+      setTimeout(() => {
+        completeOnboarding();
+      }, 2000);
     }
   };
 
-  const goToPrevPage = () => {
-    if (currentPage > 0) {
-      translateX.value = withTiming(-SCREEN_WIDTH * (currentPage - 1), {
-        duration: 400,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-      });
-
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
-  const performFinishAnimation = () => {
-    // Fade out content
-    contentOpacity.value = withTiming(0, {
-      duration: 400,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-    });
-
-    buttonsOpacity.value = withTiming(0, {
-      duration: 400,
-      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-    });
-
-    // After 500ms, navigate to home
+  const handleGenerateComplete = () => {
+    // Show splash screen before completing onboarding
+    setCurrentPage('splash');
+    
+    // Complete onboarding after a short delay
     setTimeout(() => {
       completeOnboarding();
-    }, 500);
+    }, 2000);
   };
-
-  // Create pan gesture handler
-  const panGesture = Gesture.Pan()
-    .onUpdate(e => {
-      // Calculate the destination page based on current page and swipe direction
-      const newX = -SCREEN_WIDTH * currentPage + e.translationX;
-
-      // Only allow panning within bounds (between first and last page)
-      if (newX <= 0 && newX >= -SCREEN_WIDTH * 2) {
-        translateX.value = newX;
-      }
-    })
-    .onEnd(e => {
-      if (e.translationX < -SCREEN_WIDTH / 3 && currentPage < 2) {
-        // Swipe left
-        runOnJS(goToNextPage)();
-      } else if (e.translationX > SCREEN_WIDTH / 3 && currentPage > 0) {
-        // Swipe right
-        runOnJS(goToPrevPage)();
-      } else {
-        // Snap back to current page
-        translateX.value = withTiming(-SCREEN_WIDTH * currentPage, { duration: 300 });
-      }
-    });
-
-  const pagesStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateX: translateX.value }],
-      width: SCREEN_WIDTH * 3,
-      flexDirection: 'row',
-    };
-  });
-
-  const contentStyle = useAnimatedStyle(() => ({
-    opacity: contentOpacity.value,
-  }));
-
-  const buttonsStyle = useAnimatedStyle(() => ({
-    opacity: buttonsOpacity.value,
-  }));
 
   // Show loading view while assets are being loaded
   if (!assetsLoaded) {
     return (
       <ThemedView style={[styles.container, styles.loadingContainer]}>
         <ThemedText>Loading...</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  // Show splash screen when transitioning to home
+  if (currentPage === 'splash') {
+    return (
+      <ThemedView style={[styles.container, styles.splashContainer]}>
+        <Image
+          source={onboardingLogo}
+          style={styles.splashLogo}
+          resizeMode="contain"
+        />
       </ThemedView>
     );
   }
@@ -184,37 +105,89 @@ export default function Onboarding() {
           />
         </View>
 
-        <GestureDetector gesture={panGesture}>
-          <Animated.View style={[styles.pagesContainer, contentStyle]}>
-            <Animated.View style={[styles.pagesWrapper, pagesStyle]}>
-              {/* Page 1: Intro */}
-              <IntroPage onNext={goToNextPage} pageWidth={SCREEN_WIDTH} />
+        {currentPage === 'intro' && (
+          <View style={styles.pageContainer}>
+            <ThemedText type="title" style={styles.mainTitle}>
+              Your identity in your inventory
+            </ThemedText>
+            
+            <View style={styles.buttonGroup}>
+              <TouchableOpacity 
+                style={styles.button} 
+                onPress={() => setCurrentPage('generate')}
+              >
+                <ThemedText style={styles.buttonText}>Generate your private key</ThemedText>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.button} 
+                onPress={() => setCurrentPage('import')}
+              >
+                <ThemedText style={styles.buttonText}>Import existing seed</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
-              {/* Page 2: Options */}
-              <OptionsPage
-                onGenerateKey={goToNextPage}
-                onImportSeed={completeOnboarding}
-                pageWidth={SCREEN_WIDTH}
-              />
+        {currentPage === 'generate' && (
+          <View style={styles.pageContainer}>
+            <ThemedText type="title" style={styles.title}>
+              Your Seed Phrase
+            </ThemedText>
+            <ThemedText style={styles.subtitle}>
+              Write down these 12 words and keep them safe
+            </ThemedText>
 
-              {/* Page 3: Seed Phrase */}
-              <SeedPhrasePage
-                onFinish={performFinishAnimation}
-                pageWidth={SCREEN_WIDTH}
-                seedPhrase={seedPhrase}
+            <View style={styles.seedContainer}>
+              {TEMP_SEED_WORDS.map((word, index) => (
+                <View key={index} style={styles.wordContainer}>
+                  <ThemedText style={styles.wordText}>
+                    {index + 1}. {word}
+                  </ThemedText>
+                </View>
+              ))}
+            </View>
+
+            <TouchableOpacity 
+              style={[styles.button, styles.finishButton]} 
+              onPress={handleGenerateComplete}
+            >
+              <ThemedText style={styles.buttonText}>Finish</ThemedText>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {currentPage === 'import' && (
+          <View style={styles.pageContainer}>
+            <ThemedText type="title" style={styles.title}>
+              Import Seed Phrase
+            </ThemedText>
+            <ThemedText style={styles.subtitle}>
+              Enter your 12-word seed phrase
+            </ThemedText>
+
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your seed phrase separated by spaces"
+                placeholderTextColor="rgba(255,255,255,0.5)"
+                value={seedPhrase}
+                onChangeText={setSeedPhrase}
+                multiline
+                numberOfLines={4}
+                autoCorrect={false}
+                autoCapitalize="none"
               />
-            </Animated.View>
-          </Animated.View>
-        </GestureDetector>
-        <Animated.View style={buttonsStyle}>
-          <ButtonBar
-            currentPage={currentPage}
-            onNext={goToNextPage}
-            onGenerateKey={goToNextPage}
-            onImportSeed={completeOnboarding}
-            onFinish={performFinishAnimation}
-          />
-        </Animated.View>
+            </View>
+
+            <TouchableOpacity 
+              style={[styles.button, styles.finishButton]} 
+              onPress={handleImport}
+            >
+              <ThemedText style={styles.buttonText}>Import</ThemedText>
+            </TouchableOpacity>
+          </View>
+        )}
       </ThemedView>
     </SafeAreaView>
   );
@@ -228,7 +201,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000000',
-    paddingHorizontal: 20,
+    padding: 20,
   },
   loadingContainer: {
     justifyContent: 'center',
@@ -236,19 +209,102 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 40,
     marginBottom: 40,
   },
   logo: {
-    width: 200,
-    height: 80,
+    width: '100%',
+    height: 100,
   },
-  pagesContainer: {
+  pageContainer: {
     flex: 1,
-    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
-  pagesWrapper: {
-    flex: 1,
+  mainTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 'auto',
+    textAlign: 'center',
+    marginTop: 'auto'
+  },
+  mainSubtitle: {
+    fontSize: 18,
+    marginBottom: 60,
+    textAlign: 'center',
+    opacity: 0.8,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    marginBottom: 30,
+    textAlign: 'center',
+    opacity: 0.7,
+  },
+  buttonGroup: {
+    width: '100%',
+    marginTop: 'auto',
+    gap: 15,
+  },
+  button: {
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 8,
+    width: '100%',
+    marginVertical: 5,
+  },
+  buttonText: {
+    fontSize: 16,
+    color: 'black',
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  finishButton: {
+    marginTop: 30,
+  },
+  seedContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  wordContainer: {
+    width: '40%',
+    padding: 10,
+    margin: 5,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+  },
+  wordText: {
+    textAlign: 'center',
+  },
+  inputContainer: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  input: {
+    width: '100%',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    padding: 15,
+    color: 'white',
+    minHeight: 120,
+    textAlignVertical: 'top',
+  },
+  splashContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    flex: 1,
+  },
+  splashLogo: {
+    width: '70%',
+    height: '30%',
+    maxWidth: 300,
   },
 });
