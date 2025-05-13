@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, ScrollView, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
@@ -72,6 +72,30 @@ export default function SubscriptionDetailScreen() {
 
   const handleBackPress = () => {
     router.back();
+  };
+
+  const handleStopSubscription = () => {
+    if (!subscription) return;
+    
+    Alert.alert(
+      "Cancel Subscription",
+      `Are you sure you want to cancel your subscription to ${subscription.serviceName}?`,
+      [
+        {
+          text: "No",
+          style: "cancel"
+        },
+        { 
+          text: "Yes, Cancel", 
+          onPress: () => {
+            // In a real app, this would call an API to cancel the subscription
+            Alert.alert("Subscription Cancelled", "Your subscription has been cancelled successfully.");
+            router.back();
+          },
+          style: "destructive"
+        }
+      ]
+    );
   };
 
   const getStatusColor = (status: string) => {
@@ -165,14 +189,14 @@ export default function SubscriptionDetailScreen() {
                 darkColor={Colors.dirtyWhite}
                 lightColor={Colors.dirtyWhite}
               >
-                {`☝️ First payment: ${formatDayAndDate(new Date(subscription.recurrence.firstPaymentDue))}`}
+                First payment: {formatDayAndDate(new Date(subscription.recurrence.firstPaymentDue))}
               </ThemedText>
               <ThemedText
                 style={styles.detail}
                 darkColor={Colors.dirtyWhite}
                 lightColor={Colors.dirtyWhite}
               >
-                {`💸 Next payment in ${getNextRecurrenceDay(new Date(subscription.recurrence.firstPaymentDue ?? 0), subscription.recurrence.calendar)}`}
+                Next payment in {getNextRecurrenceDay(new Date(subscription.recurrence.firstPaymentDue ?? 0), subscription.recurrence.calendar)}
               </ThemedText>
               {subscription.amount && (
                 <ThemedText
@@ -180,7 +204,7 @@ export default function SubscriptionDetailScreen() {
                   darkColor={Colors.dirtyWhite}
                   lightColor={Colors.dirtyWhite}
                 >
-                  {`🏃 ${getRemainingRecurrenceCount(new Date(subscription.recurrence.firstPaymentDue ?? 0), subscription.recurrence.calendar, subscription.recurrence.maxPayments ?? 0)} payments left`}
+                  {getRemainingRecurrenceCount(new Date(subscription.recurrence.firstPaymentDue ?? 0), subscription.recurrence.calendar, subscription.recurrence.maxPayments ?? 0)} payments left
                 </ThemedText>
               )}
               <ThemedText
@@ -188,10 +212,32 @@ export default function SubscriptionDetailScreen() {
                 darkColor={Colors.dirtyWhite}
                 lightColor={Colors.dirtyWhite}
               >
-                {`⏳ Until: ${formatDayAndDate(new Date(subscription.recurrence.until ?? 0))}`}
+                Until: {formatDayAndDate(new Date(subscription.recurrence.until ?? 0))}
               </ThemedText>
             </View>
           </View>
+          
+          <TouchableOpacity 
+            style={styles.stopButton} 
+            onPress={handleStopSubscription}
+            activeOpacity={0.7}
+          >
+            <View style={styles.stopButtonContent}>
+              <FontAwesome6 
+                name="stop-circle" 
+                size={18} 
+                color={Colors.almostWhite} 
+                style={styles.stopIcon}
+              />
+              <ThemedText 
+                style={styles.stopButtonText}
+                darkColor={Colors.almostWhite}
+                lightColor={Colors.almostWhite}
+              >
+                Stop Subscription
+              </ThemedText>
+            </View>
+          </TouchableOpacity>
 
           <View style={styles.paymentHistoryContainer}>
             <ThemedText type="subtitle" style={styles.sectionTitle}>
@@ -293,7 +339,6 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   paymentHistoryContainer: {
-    marginTop: 24,
     marginBottom: 32,
   },
   sectionTitle: {
@@ -328,5 +373,33 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 24,
     color: Colors.dirtyWhite,
+  },
+  stopButton: {
+    backgroundColor: '#bc1c3d',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 24,
+    marginBottom: 24,
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  stopButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stopIcon: {
+    marginRight: 8,
+  },
+  stopButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 

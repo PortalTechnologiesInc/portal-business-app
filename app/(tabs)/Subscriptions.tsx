@@ -31,60 +31,42 @@ export default function SubscriptionsScreen() {
         onPress={() => handleSubscriptionPress(item.id)}
         activeOpacity={0.7}
       >
-        <View style={styles.activityInfo}>
-          <Collapsible darkColor='transparent' lightColor='transparent' header={
-            <View style={styles.header}>
-              <View style={styles.headerTexts}>
-                <ThemedText type='subtitle'>
-                  {item.serviceName}
-                </ThemedText>
-                <ThemedText style={styles.amount}>
-                  {item.currency} {formatCentsToCurrency(item.amount)}
-                </ThemedText>
-              </View>
-              <ThemedText
-                style={styles.recurrency}
-                type='defaultSemiBold'
-                darkColor={Colors.dirtyWhite}
-                lightColor={Colors.dirtyWhite}
-              >
-                {item.recurrence.calendar}
-              </ThemedText>
-            </View>
-          }>
-            <View>
-              <ThemedText
-                style={styles.detail}
-                darkColor={Colors.dirtyWhite}
-                lightColor={Colors.dirtyWhite}
-              >
-                {`☝️ First payment: ${formatDayAndDate(new Date(item.recurrence.firstPaymentDue))}`}
-              </ThemedText>
-              <ThemedText
-                style={styles.detail}
-                darkColor={Colors.dirtyWhite}
-                lightColor={Colors.dirtyWhite}
-              >
-                {`💸 Next payment in ${getNextRecurrenceDay(new Date(item.recurrence.firstPaymentDue ?? 0), item.recurrence.calendar)}`}
-              </ThemedText>
-              {item.amount && (
-                <ThemedText
-                  style={styles.detail}
-                  darkColor={Colors.dirtyWhite}
-                  lightColor={Colors.dirtyWhite}
-                >
-                  {`🏃 ${getRemainingRecurrenceCount(new Date(item.recurrence.firstPaymentDue ?? 0), item.recurrence.calendar, item.recurrence.maxPayments ?? 0)} payments left`}
-                </ThemedText>
-              )}
-              <ThemedText
-                style={styles.detail}
-                darkColor={Colors.dirtyWhite}
-                lightColor={Colors.dirtyWhite}
-              >
-                {`⏳ Until: ${formatDayAndDate(new Date(item.recurrence.until ?? 0))}`}
-              </ThemedText>
-            </View>
-          </Collapsible>
+        <View style={styles.cardContent}>
+          <View style={styles.headerRow}>
+            <ThemedText type='subtitle'>{item.serviceName}</ThemedText>
+            <ThemedText style={styles.amount}>
+              {item.currency} {formatCentsToCurrency(item.amount)}
+            </ThemedText>
+          </View>
+          
+          <ThemedText
+            style={styles.recurrency}
+            type='defaultSemiBold'
+            darkColor={Colors.dirtyWhite}
+            lightColor={Colors.dirtyWhite}
+          >
+            {item.recurrence.calendar}
+          </ThemedText>
+          
+          <View style={styles.infoRow}>
+            <ThemedText
+              style={styles.detail}
+              darkColor={Colors.dirtyWhite}
+              lightColor={Colors.dirtyWhite}
+            >
+              Next payment in {getNextRecurrenceDay(new Date(item.recurrence.firstPaymentDue ?? 0), item.recurrence.calendar)}
+            </ThemedText>
+          </View>
+          
+          <View style={styles.infoRow}>
+            <ThemedText
+              style={styles.detail}
+              darkColor={Colors.dirtyWhite}
+              lightColor={Colors.dirtyWhite}
+            >
+              {getRemainingRecurrenceCount(new Date(item.recurrence.firstPaymentDue ?? 0), item.recurrence.calendar, item.recurrence.maxPayments ?? 0)} payments left
+            </ThemedText>
+          </View>
         </View>
       </TouchableOpacity>
     ),
@@ -119,6 +101,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
   headerTexts: {
     paddingEnd: 10,
     flexDirection: 'row',
@@ -126,13 +114,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between'
   },
   recurrency: {
-    marginVertical: 6
+    marginBottom: 12,
   },
   subscriptionCard: {
     backgroundColor: '#1E1E1E',
     borderRadius: 20,
-    padding: 14,
+    padding: 18,
     marginBottom: 10,
+  },
+  cardContent: {
+    flex: 1,
+  },
+  infoRow: {
+    marginBottom: 4,
   },
   activityInfo: {
     justifyContent: 'center'
