@@ -6,8 +6,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getMockedSubscriptions, Subscription } from '@/mocks/Subscriptions';
-import { formatCentsToCurrency, formatDayAndDate, formatRelativeTime, getNextRecurrenceDay, getRemainingRecurrenceCount } from '@/utils';
-import { Collapsible } from '@/components/Collapsible';
+import { formatCentsToCurrency, formatDayAndDate, formatRelativeTime, getNextRecurrenceDay } from '@/utils';
 
 export default function SubscriptionsScreen() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -48,25 +47,13 @@ export default function SubscriptionsScreen() {
             {item.recurrence.calendar}
           </ThemedText>
           
-          <View style={styles.infoRow}>
-            <ThemedText
-              style={styles.detail}
-              darkColor={Colors.dirtyWhite}
-              lightColor={Colors.dirtyWhite}
-            >
-              Next payment in {getNextRecurrenceDay(new Date(item.recurrence.firstPaymentDue ?? 0), item.recurrence.calendar)}
-            </ThemedText>
-          </View>
-          
-          <View style={styles.infoRow}>
-            <ThemedText
-              style={styles.detail}
-              darkColor={Colors.dirtyWhite}
-              lightColor={Colors.dirtyWhite}
-            >
-              {getRemainingRecurrenceCount(new Date(item.recurrence.firstPaymentDue ?? 0), item.recurrence.calendar, item.recurrence.maxPayments ?? 0)} payments left
-            </ThemedText>
-          </View>
+          <ThemedText
+            style={styles.nextPayment}
+            darkColor={Colors.dirtyWhite}
+            lightColor={Colors.dirtyWhite}
+          >
+            Next payment in {getNextRecurrenceDay(new Date(item.recurrence.firstPaymentDue ?? 0), item.recurrence.calendar)}
+          </ThemedText>
         </View>
       </TouchableOpacity>
     ),
@@ -107,14 +94,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 8,
   },
-  headerTexts: {
-    paddingEnd: 10,
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    justifyContent: 'space-between'
-  },
   recurrency: {
     marginBottom: 12,
+  },
+  nextPayment: {
+    marginVertical: 2,
   },
   subscriptionCard: {
     backgroundColor: '#1E1E1E',
@@ -124,15 +108,6 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     flex: 1,
-  },
-  infoRow: {
-    marginBottom: 4,
-  },
-  activityInfo: {
-    justifyContent: 'center'
-  },
-  detail: {
-    marginVertical: 2,
   },
   amount: {
     fontSize: 20,

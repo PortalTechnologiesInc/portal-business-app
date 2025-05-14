@@ -7,12 +7,15 @@ import { PendingRequestsList } from '@/components/PendingRequestsList';
 import { UpcomingPaymentsList } from '@/components/UpcomingPaymentsList';
 import { RecentActivitiesList } from '@/components/RecentActivitiesList';
 import { useOnboarding } from '@/context/OnboardingContext';
+import { useUserProfile } from '@/context/UserProfileContext';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Home() {
   const { isOnboardingComplete, isLoading, resetOnboarding } = useOnboarding();
+  const { username } = useUserProfile();
+  
   // This would come from a real user context in the future
   const [userPublicKey, setUserPublicKey] = useState(
     'npub1abcdef1234567890abcdef1234567890abcdef1234567890abcdef123456'
@@ -51,14 +54,20 @@ export default function Home() {
               >
                 Welcome back 👋
               </ThemedText>
-              <ThemedText
-                style={styles.username}
-                lightColor={Colors.darkGray}
-                darkColor={Colors.almostWhite}
+              {username ? (
+                <ThemedText
+                  style={styles.username}
+                  lightColor={Colors.darkGray}
+                  darkColor={Colors.almostWhite}
+                >
+                  {username}
+                </ThemedText>
+              ) : null}
+              <ThemedText 
+                style={styles.publicKey} 
+                lightColor={username ? Colors.gray : Colors.darkGray} 
+                darkColor={username ? Colors.dirtyWhite : Colors.almostWhite}
               >
-                satoshi@getportal.cc
-              </ThemedText>
-              <ThemedText lightColor={Colors.gray} darkColor={Colors.dirtyWhite}>
                 {truncatedPublicKey}
               </ThemedText>
             </TouchableOpacity>
@@ -112,6 +121,10 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '600',
     marginVertical: 4,
+  },
+  publicKey: {
+    fontSize: 14,
+    fontWeight: '400',
   },
   qrButton: {
     width: 64,
