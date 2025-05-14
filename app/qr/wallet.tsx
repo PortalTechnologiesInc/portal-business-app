@@ -3,8 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Colors } from '@/constants/Colors';
 import { router } from 'expo-router';
-import { useWallet } from '@/context/WalletContext';
-import { ArrowLeft, Flashlight, FlashlightOff } from 'lucide-react-native';
+import { Flashlight, FlashlightOff } from 'lucide-react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 // Define the type for the barcode scanner result
@@ -17,44 +16,24 @@ export default function WalletQRScannerScreen() {
   const [scanned, setScanned] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [enableTorch, setEnableTorch] = useState(false);
-  const { setWalletUrl } = useWallet();
 
   const toggleTorch = () => {
     setEnableTorch(!enableTorch);
   };
 
-  const handleBarCodeScanned = async (result: BarcodeResult) => {
+  const handleBarCodeScanned = (result: BarcodeResult) => {
+    if (scanned) return;
+    
     const { data } = result;
     setScanned(true);
     
-    try {
-      // Save the scanned wallet URL directly
-      await setWalletUrl(data);
-      
-      // Show success message
-      Alert.alert(
-        "Success",
-        "Wallet URL saved successfully",
-        [
-          {
-            text: "OK",
-            onPress: () => router.push('/wallet')
-          }
-        ]
-      );
-    } catch (error) {
-      console.error('Error saving wallet URL:', error);
-      Alert.alert(
-        "Error",
-        "Failed to save wallet URL. Please try again.",
-        [
-          {
-            text: "OK",
-            onPress: () => setScanned(false)
-          }
-        ]
-      );
-    }
+    // Use replace instead of push to remove the QR scanner from navigation history
+    setTimeout(() => {
+      router.replace({
+        pathname: '/wallet',
+        params: { scannedUrl: data }
+      });
+    }, 500);
   };
 
   if (!permission) {
@@ -247,8 +226,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scannedText: {
-    color: 'white',
-    fontSize: 24,
+    color: Colors.light.tint,
+    fontSize: 22,
     fontWeight: 'bold',
   },
 }); 

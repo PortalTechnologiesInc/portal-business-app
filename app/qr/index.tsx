@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { ActivityType, Currency } from '@/models/Activity';
-import type { Activity } from '@/models/Activity';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
 import { router } from 'expo-router';
-import { getMockedActivities } from '@/mocks/Activities';
-import { QRScanModal } from '@/components/QRScanModal';
+import { usePendingRequests } from '@/context/PendingRequestsContext';
 
 // Define the type for the barcode scanner result
 type BarcodeResult = {
@@ -15,25 +12,11 @@ type BarcodeResult = {
   data: string;
 };
 
-// Define a simple type for our modal data
-type ModalData = {
-  name: string;
-  amount?: number;
-  currency?: string;
-  detail: string;
-};
-
 export default function QRScannerScreen() {
   const [scanned, setScanned] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [enableTorch, setEnableTorch] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [modalData, setModalData] = useState<ModalData>({
-    name: '',
-    amount: 0,
-    currency: Currency.Eur,
-    detail: '',
-  });
+  const { showSkeletonLoader } = usePendingRequests();
 
   const toggleTorch = () => {
     setEnableTorch(!enableTorch);
@@ -44,81 +27,12 @@ export default function QRScannerScreen() {
     setScanned(true);
     console.log(`Bar code with type ${type} and data ${data} has been scanned!`);
 
-    // For demo purposes, we'll randomly choose between payment and auth request
-    // In a real app, you would parse the QR code data to determine the type and details
-    const isPayment = Math.random() > 0.5; // 50% chance for payment, 50% for login
+    // Show the skeleton loader
+    showSkeletonLoader();
 
-    if (isPayment) {
-      // Create a payment request
-      const requestData = {
-        name: 'Demo Payment',
-        amount: 1000, // 10.00 in the selected currency
-        currency: Currency.Eur,
-        detail: data.substring(0, 30) + (data.length > 30 ? '...' : ''),
-      };
-      setModalData(requestData);
-      setModalVisible(true);
-    } else {
-      // Create an auth request
-      const requestData = {
-        name: 'Demo Login',
-        detail: data.substring(0, 30) + (data.length > 30 ? '...' : ''),
-      };
-      setModalData(requestData);
-      setModalVisible(true);
-    }
-  };
-
-  const handleAccept = () => {
-    // Determine the type of activity to create based on whether amount exists
-    const isPayment = modalData.amount !== undefined;
-
-    let newActivity: Activity;
-    if (isPayment) {
-      // Create a payment activity
-      newActivity = {
-        type: ActivityType.Pay,
-        amount: modalData.amount || 0,
-        currency: modalData.currency as Currency,
-        name: modalData.name,
-        detail: modalData.detail,
-        date: new Date(),
-      };
-    } else {
-      // Create an auth activity
-      newActivity = {
-        type: ActivityType.Auth,
-        name: modalData.name,
-        detail: modalData.detail,
-        date: new Date(),
-      };
-    }
-
-    console.log('Created new activity:', newActivity);
-
-    // Add to mocked activities - this is a simulation as there's no global state
-    try {
-      const mockedActivities = getMockedActivities();
-      mockedActivities.unshift(newActivity);
-      console.log('Activity added to activities list');
-
-      // Close modal
-      setModalVisible(false);
-
-      // Navigate to the activity list to show the result
-      setTimeout(() => {
-        router.push('/ActivityList');
-      }, 500);
-    } catch (error) {
-      console.error('Error adding activity:', error);
-    }
-  };
-
-  const handleDecline = () => {
-    setModalVisible(false);
-    // Reset scanner after closing modal
+    // Navigate back to home immediately
     setTimeout(() => {
-      setScanned(false);
+      router.replace('/'); // Using replace instead of back to ensure we go to homepage
     }, 500);
   };
 
@@ -178,19 +92,11 @@ export default function QRScannerScreen() {
         </View>
       </CameraView>
 
-      {scanned && !modalVisible && (
+      {scanned && (
         <View style={styles.scannedOverlay}>
           <Text style={styles.scannedText}>QR Code Scanned!</Text>
         </View>
       )}
-
-      <QRScanModal
-        visible={modalVisible}
-        onClose={handleDecline}
-        onAccept={handleAccept}
-        requestType={modalData.amount !== undefined ? 'payment' : 'login'}
-        data={modalData}
-      />
     </View>
   );
 }

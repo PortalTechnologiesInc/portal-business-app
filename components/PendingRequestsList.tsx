@@ -2,30 +2,57 @@ import React from 'react';
 import { View, StyleSheet, FlatList, Dimensions } from 'react-native';
 import { usePendingRequests } from '../context/PendingRequestsContext';
 import { PendingRequestCard } from './PendingRequestCard';
-import { PendingRequest } from '../models/PendingRequest';
+import { PendingRequestSkeletonCard } from './PendingRequestSkeletonCard';
+import { PendingRequest, PendingRequestType } from '../models/PendingRequest';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 48; // Full width minus padding
 const CARD_MARGIN = 12; // Margin between cards
 
+// Create a skeleton request that adheres to the PendingRequest interface
+const createSkeletonRequest = (): PendingRequest => ({
+  id: 'skeleton',
+  type: 'login' as PendingRequestType, // TypeScript needs explicit type
+  status: 'pending',
+  timestamp: new Date().toISOString(), // Current timestamp to ensure it's the most recent
+  title: 'Loading...',
+  description: 'Please wait...',
+  metadata: {}
+});
+
 export const PendingRequestsList: React.FC = () => {
-  const { pendingRequests, hasPending } = usePendingRequests();
+  const { pendingRequests, hasPending, isLoadingRequest } = usePendingRequests();
 
   // Only show requests with pending status
   const pendingOnly = pendingRequests.filter(req => req.status === 'pending');
-
-  if (!hasPending) {
+  
+  // Sort requests by timestamp (newest first)
+  const sortedRequests = [...pendingOnly].sort((a, b) => 
+    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+  
+  // If nothing to show, return null
+  if (!hasPending && !isLoadingRequest) {
     return null;
   }
+
+  // Create combined data - if loading, add a skeleton item at the beginning of the list
+  const combinedData = isLoadingRequest 
+    ? [createSkeletonRequest(), ...sortedRequests]
+    : sortedRequests;
 
   return (
     <View style={styles.container}>
       <FlatList
-        data={pendingOnly}
+        data={combinedData}
         keyExtractor={item => item.id}
         renderItem={({ item }) => (
           <View style={styles.itemContainer}>
-            <PendingRequestCard request={item} />
+            {item.id === 'skeleton' ? (
+              <PendingRequestSkeletonCard />
+            ) : (
+              <PendingRequestCard request={item} />
+            )}
           </View>
         )}
         horizontal
@@ -36,7 +63,7 @@ export const PendingRequestsList: React.FC = () => {
         contentContainerStyle={[
           styles.listContent,
           // If there's only one item, center it
-          pendingOnly.length === 1 && { flex: 1, justifyContent: 'center' },
+          combinedData.length === 1 && { flex: 1, justifyContent: 'center' },
         ]}
         CellRendererComponent={({ children, index, style, ...props }) => (
           <View
@@ -46,9 +73,9 @@ export const PendingRequestsList: React.FC = () => {
               // First cell gets left padding
               index === 0 && { paddingLeft: (width - CARD_WIDTH) / 2 },
               // Last cell gets right padding
-              index === pendingOnly.length - 1 && { paddingRight: (width - CARD_WIDTH) / 2 },
+              index === combinedData.length - 1 && { paddingRight: (width - CARD_WIDTH) / 2 },
               // All cells except the last get right margin
-              index !== pendingOnly.length - 1 && { marginRight: CARD_MARGIN },
+              index !== combinedData.length - 1 && { marginRight: CARD_MARGIN },
             ]}
             {...props}
           >
@@ -76,5 +103,5 @@ const styles = StyleSheet.create({
   cellRenderer: {
     alignItems: 'center',
     justifyContent: 'center',
-  },
+  }
 });
