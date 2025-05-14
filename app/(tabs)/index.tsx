@@ -29,7 +29,14 @@ export default function Home() {
 
   // Memoize handlers to prevent recreation on every render
   const handleQrScan = useCallback(() => {
-    router.push('/qr');
+    // Using 'modal' navigation to ensure cleaner navigation history
+    router.push({
+      pathname: '/qr',
+      params: {
+        source: 'homepage',
+        timestamp: Date.now() // Prevent caching issues
+      }
+    });
   }, []);
 
   const handleSettingsNavigate = useCallback(() => {

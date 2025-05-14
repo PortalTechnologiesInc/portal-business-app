@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Colors } from '@/constants/Colors';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { Flashlight, FlashlightOff } from 'lucide-react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -16,6 +16,7 @@ export default function WalletQRScannerScreen() {
   const [scanned, setScanned] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [enableTorch, setEnableTorch] = useState(false);
+  const params = useLocalSearchParams();
 
   const toggleTorch = () => {
     setEnableTorch(!enableTorch);
@@ -27,13 +28,21 @@ export default function WalletQRScannerScreen() {
     const { data } = result;
     setScanned(true);
     
+    // Add a unique timestamp to ensure URL is processed as new
+    const timestamp = Date.now();
+    
     // Use replace instead of push to remove the QR scanner from navigation history
     setTimeout(() => {
       router.replace({
         pathname: '/wallet',
-        params: { scannedUrl: data }
+        params: { 
+          scannedUrl: data,
+          source: params.source || 'settings', // Maintain source parameter
+          returnToWallet: params.returnToWallet || 'false', // Parameter to control navigation after confirmation
+          timestamp: timestamp.toString() // Add timestamp to ensure URL is unique each scan
+        }
       });
-    }, 500);
+    }, 300); // Reduced timeout to minimize lag
   };
 
   if (!permission) {
@@ -69,7 +78,17 @@ export default function WalletQRScannerScreen() {
         }}
       >
         <View style={styles.overlay}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backButton} onPress={() => {
+            // Check if we came from wallet management
+            if (params.returnToWallet === 'true') {
+              router.back(); // Return to wallet management
+            } else {
+              // Return to original source (settings)
+              router.replace({
+                pathname: '/settings'
+              });
+            }
+          }}>
             <Ionicons name="arrow-back" size={28} color="white" />
           </TouchableOpacity>
           <View style={styles.upperSection} />

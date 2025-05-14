@@ -100,9 +100,12 @@ export default function SettingsScreen() {
   };
 
   const handleWalletCardPress = () => {
-    // Navigate to wallet management page
+    // Navigate to wallet management page with proper source parameter
     router.push({
-      pathname: '/wallet'
+      pathname: '/wallet',
+      params: {
+        source: 'settings'
+      }
     });
   };
 

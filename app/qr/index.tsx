@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, BackHandler } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
@@ -18,11 +18,25 @@ export default function QRScannerScreen() {
   const [enableTorch, setEnableTorch] = useState(false);
   const { showSkeletonLoader } = usePendingRequests();
 
+  // Handle hardware back button
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      // Replace navigation stack to return to tabs cleanly
+      router.replace('/(tabs)');
+      return true;
+    });
+    
+    return () => backHandler.remove();
+  }, []);
+
   const toggleTorch = () => {
     setEnableTorch(!enableTorch);
   };
 
   const handleBarCodeScanned = (result: BarcodeResult) => {
+    // Prevent multiple scans
+    if (scanned) return;
+    
     const { type, data } = result;
     setScanned(true);
     console.log(`Bar code with type ${type} and data ${data} has been scanned!`);
@@ -30,10 +44,12 @@ export default function QRScannerScreen() {
     // Show the skeleton loader
     showSkeletonLoader();
 
-    // Navigate back to home immediately
+    // Use router.replace to completely replace the navigation stack
+    // This will make it so that when the user gets to the home page,
+    // there's no QR scanner page in the history
     setTimeout(() => {
-      router.replace('/'); // Using replace instead of back to ensure we go to homepage
-    }, 500);
+      router.replace('/(tabs)');
+    }, 300);
   };
 
   if (!permission) {
@@ -69,7 +85,7 @@ export default function QRScannerScreen() {
         }}
       >
         <View style={styles.overlay}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/(tabs)')}>
             <Ionicons name="arrow-back" size={28} color="white" />
           </TouchableOpacity>
           <View style={styles.upperSection} />

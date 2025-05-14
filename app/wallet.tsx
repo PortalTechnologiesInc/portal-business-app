@@ -32,8 +32,15 @@ export default function WalletManagementScreen() {
       setScannedUrl(scannedUrlParam);
       setShowConfirmModal(true);
       handledUrlRef.current = scannedUrlParam;
+      
+      // Clear the URL parameter immediately to prevent re-processing
+      // This prevents the infinite loop of rendering when the modal is displayed
+      if (params.scannedUrl) {
+        const { scannedUrl, timestamp, ...restParams } = params;
+        router.setParams(restParams);
+      }
     }
-  }, [params]);
+  }, [params.scannedUrl]);
 
   // Handle hardware back button
   useEffect(() => {
@@ -49,8 +56,14 @@ export default function WalletManagementScreen() {
   }, [router]);
 
   const handleScanQrCode = () => {
-    // Navigate to wallet QR scanner
-    router.push('/qr/wallet');
+    // Navigate to wallet QR scanner with returnToWallet parameter
+    router.push({
+      pathname: '/qr/wallet',
+      params: {
+        source: 'wallet',
+        returnToWallet: 'true'
+      }
+    });
   };
 
   const handleClearInput = async () => {
@@ -69,12 +82,28 @@ export default function WalletManagementScreen() {
       await setWalletUrl(urlToSave);
       setIsEditing(false);
       setShowConfirmModal(false);
+      
+      // Reset the handled URL reference to prevent duplicate processing
+      handledUrlRef.current = null;
 
-      // Clear the current route and navigate to a fresh wallet screen
-      // This ensures the params are completely cleared
-      setTimeout(() => {
-        router.replace('/wallet');
-      }, 100);
+      // Get source and return parameters
+      const sourceParam = params.source as string | undefined;
+      const returnToWalletParam = params.returnToWallet as string | undefined;
+      
+      // Clear all params first to prevent infinite loops
+      router.setParams({});
+      
+      // Check if we should return to wallet management (from QR scan inside wallet management)
+      if (returnToWalletParam === 'true') {
+        // Already cleared params, so no need to navigate
+        return;
+      } 
+      // Otherwise, navigate back to the source screen if specified
+      else if (sourceParam === 'settings') {
+        setTimeout(() => {
+          router.replace('/settings');
+        }, 100);
+      }
     } catch (error) {
       console.error('Error saving wallet URL:', error);
       Alert.alert('Error', 'Failed to save wallet URL. Please try again.');
@@ -102,16 +131,42 @@ export default function WalletManagementScreen() {
     setShowConfirmModal(false);
     setScannedUrl('');
     
-    // Clear the current route and navigate to a fresh wallet screen
-    // This ensures the params are completely cleared
-    setTimeout(() => {
-      router.replace('/wallet');
-    }, 100);
+    // Get navigation parameters
+    const sourceParam = params.source as string | undefined;
+    const returnToWalletParam = params.returnToWallet as string | undefined;
+    
+    // Clear the handled URL ref to prevent duplicate processing
+    handledUrlRef.current = null;
+    
+    // Clear all params first to prevent infinite loops
+    router.setParams({});
+    
+    // Check if we should return to wallet management (from QR scan inside wallet management)
+    if (returnToWalletParam === 'true') {
+      // Already cleared params, so no need to navigate
+      return;
+    }
+    // Otherwise, navigate back to the source screen if specified
+    else if (sourceParam === 'settings') {
+      setTimeout(() => {
+        router.replace('/settings');
+      }, 100);
+    }
   };
 
   // Navigate back to previous screen
   const handleBackPress = () => {
-    router.back();
+    // Check navigation parameters
+    const sourceParam = params.source as string | undefined;
+    const returnToWalletParam = params.returnToWallet as string | undefined;
+    
+    // If we have a source param and it's not a QR scan from wallet itself, navigate directly to that screen
+    if (sourceParam === 'settings') {
+      router.replace('/settings');
+    } else {
+      // Otherwise use normal back navigation
+      router.back();
+    }
   };
 
   return (
