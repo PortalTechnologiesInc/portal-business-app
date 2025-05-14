@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, Dimensions, Animated } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { Colors } from '@/constants/Colors';
 
@@ -8,7 +8,37 @@ const CARD_WIDTH = width - 50; // Full width minus padding
 
 // Animated pulse component for skeleton loading effect
 const SkeletonPulse = ({ style }: { style: any }) => {
-  return <View style={[styles.pulse, style]} />;
+  const translateX = useRef(new Animated.Value(-100)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.timing(translateX, {
+        toValue: CARD_WIDTH,
+        duration: 1500,
+        useNativeDriver: true,
+      })
+    );
+    
+    animation.start();
+    
+    return () => {
+      animation.stop();
+    };
+  }, [translateX]);
+
+  return (
+    <View style={[styles.skeletonContainer, style]}>
+      <View style={[styles.pulse, style]} />
+      <Animated.View 
+        style={[
+          styles.shimmer,
+          {
+            transform: [{ translateX }],
+          },
+        ]} 
+      />
+    </View>
+  );
 };
 
 export const PendingRequestSkeletonCard: React.FC = () => {
@@ -34,10 +64,23 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
+  skeletonContainer: {
+    position: 'relative',
+    overflow: 'hidden',
+  },
   pulse: {
     backgroundColor: '#333333',
     borderRadius: 4,
     overflow: 'hidden',
+  },
+  shimmer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 60,
+    height: '100%',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    transform: [{ skewX: '-20deg' }],
   },
   requestTypeSkeleton: {
     height: 14,

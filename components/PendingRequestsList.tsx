@@ -3,6 +3,7 @@ import { View, StyleSheet, FlatList, Dimensions } from 'react-native';
 import { usePendingRequests } from '../context/PendingRequestsContext';
 import { PendingRequestCard } from './PendingRequestCard';
 import { PendingRequestSkeletonCard } from './PendingRequestSkeletonCard';
+import { FailedRequestCard } from './FailedRequestCard';
 import { PendingRequest, PendingRequestType } from '../models/PendingRequest';
 
 const { width } = Dimensions.get('window');
@@ -21,7 +22,14 @@ const createSkeletonRequest = (): PendingRequest => ({
 });
 
 export const PendingRequestsList: React.FC = () => {
-  const { pendingRequests, hasPending, isLoadingRequest } = usePendingRequests();
+  const { 
+    pendingRequests, 
+    hasPending, 
+    isLoadingRequest, 
+    requestFailed,
+    showSkeletonLoader, 
+    setRequestFailed 
+  } = usePendingRequests();
 
   // Only show requests with pending status
   const pendingOnly = pendingRequests.filter(req => req.status === 'pending');
@@ -32,14 +40,31 @@ export const PendingRequestsList: React.FC = () => {
   );
   
   // If nothing to show, return null
-  if (!hasPending && !isLoadingRequest) {
+  if (!hasPending && !isLoadingRequest && !requestFailed) {
     return null;
   }
 
-  // Create combined data - if loading, add a skeleton item at the beginning of the list
-  const combinedData = isLoadingRequest 
-    ? [createSkeletonRequest(), ...sortedRequests]
-    : sortedRequests;
+  // Create combined data
+  let combinedData;
+  
+  if (requestFailed || isLoadingRequest) {
+    // If request failed or loading, add a skeleton item at the beginning of the list
+    combinedData = [createSkeletonRequest(), ...sortedRequests];
+  } else {
+    // Just show the sorted pending requests
+    combinedData = sortedRequests;
+  }
+
+  // Handle retry
+  const handleRetry = () => {
+    setRequestFailed(false);
+    showSkeletonLoader();
+  };
+
+  // Handle cancel
+  const handleCancel = () => {
+    setRequestFailed(false);
+  };
 
   return (
     <View style={styles.container}>
@@ -48,7 +73,9 @@ export const PendingRequestsList: React.FC = () => {
         keyExtractor={item => item.id}
         renderItem={({ item }) => (
           <View style={styles.itemContainer}>
-            {item.id === 'skeleton' ? (
+            {item.id === 'skeleton' && requestFailed ? (
+              <FailedRequestCard onRetry={handleRetry} onCancel={handleCancel} />
+            ) : item.id === 'skeleton' ? (
               <PendingRequestSkeletonCard />
             ) : (
               <PendingRequestCard request={item} />
