@@ -21,13 +21,16 @@ export const FailedRequestCard: React.FC<FailedRequestCardProps> = ({
 }) => {
   return (
     <View style={styles.card}>
-      <View style={styles.iconContainer}>
-        <AlertTriangle size={32} color={WARNING_COLOR} />
+      {/* Request type row */}
+      <ThemedText style={styles.requestType}>Request Status</ThemedText>
+      
+      {/* Title row with icon */}
+      <View style={styles.titleRow}>
+        <AlertTriangle size={22} color={WARNING_COLOR} style={styles.titleIcon} />
+        <ThemedText style={styles.serviceName}>Request Failed</ThemedText>
       </View>
       
-      <ThemedText style={styles.title}>Request Failed</ThemedText>
-      
-      <ThemedText style={styles.description}>
+      <ThemedText style={styles.serviceInfo}>
         The request timed out. Would you like to try again?
       </ThemedText>
       
@@ -62,51 +65,52 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
-    alignItems: 'center',
   },
-  iconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(255, 177, 66, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: Colors.almostWhite,
+  requestType: {
+    color: '#8A8A8E',
+    fontSize: 14,
+    fontWeight: '400',
     marginBottom: 8,
   },
-  description: {
-    fontSize: 16,
-    color: Colors.dirtyWhite,
-    textAlign: 'center',
-    marginBottom: 24,
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  titleIcon: {
+    marginRight: 8
+  },
+  serviceName: {
+    color: '#FFFFFF',
+    fontSize: 26,
+    fontWeight: '600',
+  },
+  serviceInfo: {
+    color: '#8A8A8E',
+    fontSize: 14,
+    marginBottom: 20,
   },
   actions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '100%',
   },
   button: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
-    marginHorizontal: 8,
+    marginHorizontal: 4,
   },
   buttonText: {
     color: Colors.almostWhite,
-    fontSize: 16,
     fontWeight: '600',
+    marginLeft: 6,
   },
   buttonIcon: {
-    marginRight: 8,
+    marginRight: 2,
   },
   cancelButton: {
     backgroundColor: 'rgba(80, 80, 80, 0.6)',

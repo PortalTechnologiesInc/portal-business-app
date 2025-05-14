@@ -47,7 +47,11 @@ export const PendingRequestSkeletonCard: React.FC = () => {
       <SkeletonPulse style={styles.requestTypeSkeleton} />
       <SkeletonPulse style={styles.serviceNameSkeleton} />
       <SkeletonPulse style={styles.serviceInfoSkeleton} />
-      <SkeletonPulse style={styles.additionalInfoSkeleton} />
+      
+      {/* Add spacing to match the buttons area height */}
+      <View style={styles.actionsArea}>
+        <SkeletonPulse style={styles.actionsSkeleton} />
+      </View>
     </View>
   );
 };
@@ -56,7 +60,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#1E1E1E',
     borderRadius: 20,
-    padding: 14,
+    padding: 22,
     width: CARD_WIDTH,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -85,21 +89,24 @@ const styles = StyleSheet.create({
   requestTypeSkeleton: {
     height: 14,
     width: '40%',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   serviceNameSkeleton: {
     height: 26,
     width: '80%',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   serviceInfoSkeleton: {
     height: 14,
     width: '60%',
-    marginBottom: 12,
+    marginBottom: 20,
   },
-  additionalInfoSkeleton: {
-    height: 14,
-    width: '70%',
-    marginBottom: 4,
+  actionsArea: {
+    height: 40, // Match the height of the action buttons
+  },
+  actionsSkeleton: {
+    height: 15,
+    width: '90%',
+    opacity: 0.5,
   }
 }); 
