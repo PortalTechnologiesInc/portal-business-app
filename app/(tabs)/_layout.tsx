@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Tabs } from 'expo-router';
-import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import { Home, List, Receipt, Award, UserSquare2 } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { View, Platform, ToastAndroid } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,23 +8,23 @@ import { HapticTab } from '@/components/HapticTab';
 
 // Memoized tab icons to prevent unnecessary re-rendering
 const HomeIcon = React.memo(({ color }: { color: string }) => (
-  <FontAwesome6 name="house-chimney-user" size={24} color={color} />
+  <Home size={24} color={color} />
 ));
 
 const ActivityIcon = React.memo(({ color }: { color: string }) => (
-  <FontAwesome6 name="list" size={24} color={color} />
+  <List size={24} color={color} />
 ));
 
 const SubscriptionIcon = React.memo(({ color }: { color: string }) => (
-  <FontAwesome6 name="receipt" size={24} color={color} />
+  <Receipt size={24} color={color} />
 ));
 
 const CertificateIcon = React.memo(({ color }: { color: string }) => (
-  <FontAwesome6 name="certificate" size={24} color={color} />
+  <Award size={24} color={color} />
 ));
 
 const IdentityIcon = React.memo(({ color }: { color: string }) => (
-  <FontAwesome6 name="id-card" size={24} color={color} />
+  <UserSquare2 size={24} color={color} />
 ));
 
 // Memoized tab bar background to prevent unnecessary re-rendering

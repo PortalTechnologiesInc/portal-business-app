@@ -4,7 +4,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { useRouter } from 'expo-router';
-import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import { ArrowLeft, User, Pencil } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { useUserProfile } from '@/context/UserProfileContext';
@@ -102,7 +102,7 @@ export default function SettingsScreen() {
       <ThemedView style={styles.container}>
         <ThemedView style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <FontAwesome6 name="arrow-left" size={20} color={Colors.almostWhite} />
+            <ArrowLeft size={20} color={Colors.almostWhite} />
           </TouchableOpacity>
           <ThemedText
             style={styles.headerText}
@@ -121,11 +121,11 @@ export default function SettingsScreen() {
                 <Image source={{ uri: avatarUri }} style={styles.avatar} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
-                  <FontAwesome6 name="user" size={40} color={Colors.almostWhite} />
+                  <User size={40} color={Colors.almostWhite} />
                 </View>
               )}
               <View style={styles.avatarEditBadge}>
-                <FontAwesome6 name="pen" size={12} color={Colors.almostWhite} />
+                <Pencil size={12} color={Colors.almostWhite} />
               </View>
             </TouchableOpacity>
             

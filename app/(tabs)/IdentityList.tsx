@@ -7,7 +7,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { useRouter } from 'expo-router';
 import { getMockedIdentities } from '../../mocks/Identities';
 import { Colors } from '@/constants/Colors';
-import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import { Plus, Edit } from 'lucide-react-native';
 
 export type IdentityListProps = {
   onManageIdentity: (identity: Identity) => void;
@@ -37,8 +37,7 @@ export default function IdentityList({ onManageIdentity, onDeleteIdentity }: Ide
         </ThemedText>
       </View>
       <View style={styles.buttonsContainer}>
-        <FontAwesome6
-          name="pen-to-square"
+        <Edit
           size={16}
           color={Colors.almostWhite}
           onPress={() => onManageIdentity(item)}
@@ -64,7 +63,7 @@ export default function IdentityList({ onManageIdentity, onDeleteIdentity }: Ide
           </ThemedText>
         </ThemedView>
         <TouchableOpacity style={styles.fab} onPress={() => router.navigate('/')}>
-          <FontAwesome6 name="plus" size={24} color={Colors.darkerGray} />
+          <Plus size={24} color={Colors.darkerGray} />
         </TouchableOpacity>
 
         <FlatList

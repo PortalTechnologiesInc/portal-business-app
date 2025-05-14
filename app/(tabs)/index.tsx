@@ -8,7 +8,7 @@ import { UpcomingPaymentsList } from '@/components/UpcomingPaymentsList';
 import { RecentActivitiesList } from '@/components/RecentActivitiesList';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { useUserProfile } from '@/context/UserProfileContext';
-import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import { QrCode } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -72,7 +72,7 @@ export default function Home() {
               </ThemedText>
             </TouchableOpacity>
             <TouchableOpacity style={styles.qrButton} onPress={handleQrScan}>
-              <FontAwesome6 name="qrcode" size={25} color={Colors.almostWhite} />
+              <QrCode size={30} color={Colors.almostWhite} />
             </TouchableOpacity>
           </ThemedView>
 

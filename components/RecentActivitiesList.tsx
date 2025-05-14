@@ -6,7 +6,7 @@ import { Colors } from '@/constants/Colors';
 import { Activity, ActivityType } from '@/models/Activity';
 import { getMockedActivities } from '@/mocks/Activities';
 import { formatCentsToCurrency, formatDayAndDate, formatRelativeTime } from '@/utils';
-import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import { Key, BanknoteIcon } from 'lucide-react-native';
 
 // Preload activities data
 const PRELOADED_ACTIVITIES = getMockedActivities().slice(0, 5);
@@ -28,9 +28,9 @@ export const RecentActivitiesList: React.FC = () => {
       <View style={styles.activityCard}>
         <View style={styles.iconContainer}>
           {item.type === ActivityType.Auth ? (
-            <FontAwesome6 name="key" size={20} color={Colors.almostWhite} />
+            <Key size={20} color={Colors.almostWhite} />
           ) : (
-            <FontAwesome6 name="money-bill" size={20} color={Colors.almostWhite} />
+            <BanknoteIcon size={20} color={Colors.almostWhite} />
           )}
         </View>
         <View style={styles.activityInfo}>

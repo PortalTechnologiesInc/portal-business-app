@@ -3,7 +3,7 @@ import { Modal, StyleSheet, View, TouchableOpacity, Dimensions } from 'react-nat
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 import { Colors } from '@/constants/Colors';
-import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import { Key, BanknoteIcon } from 'lucide-react-native';
 
 type QRScanModalProps = {
   visible: boolean;
@@ -27,9 +27,9 @@ export function QRScanModal({ visible, onClose, onAccept, requestType, data }: Q
         <ThemedView style={styles.modalView}>
           <View style={styles.iconContainer}>
             {requestType === 'payment' ? (
-              <FontAwesome6 name="money-bill" size={32} color={Colors.green} />
+              <BanknoteIcon size={32} color={Colors.green} />
             ) : (
-              <FontAwesome6 name="key" size={32} color={Colors.almostWhite} />
+              <Key size={32} color={Colors.almostWhite} />
             )}
           </View>
 
