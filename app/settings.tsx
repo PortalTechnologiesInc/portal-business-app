@@ -4,16 +4,18 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, User, Pencil } from 'lucide-react-native';
+import { ArrowLeft, User, Pencil, X, QrCode, ChevronRight } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { useUserProfile } from '@/context/UserProfileContext';
+import { useWallet } from '@/context/WalletContext';
 import * as ImagePicker from 'expo-image-picker';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { resetOnboarding } = useOnboarding();
   const { username, avatarUri, setUsername, setAvatarUri } = useUserProfile();
+  const { isConnected } = useWallet();
   
   const [usernameInput, setUsernameInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -69,7 +71,7 @@ export default function SettingsScreen() {
 
   const handleClearAppData = () => {
     Alert.alert(
-      "Clear App Data",
+      "Reset App",
       "This will reset all app data and take you back to onboarding. Are you sure?",
       [
         {
@@ -89,12 +91,19 @@ export default function SettingsScreen() {
               await resetOnboarding();
             } catch (error) {
               console.error('Error clearing app data:', error);
-              Alert.alert('Error', 'Failed to clear app data. Please try again.');
+              Alert.alert('Error', 'Failed to Reset App. Please try again.');
             }
           }
         }
       ]
     );
+  };
+
+  const handleWalletCardPress = () => {
+    // Navigate to wallet management page
+    router.push({
+      pathname: '/wallet'
+    });
   };
 
   return (
@@ -115,57 +124,84 @@ export default function SettingsScreen() {
 
         <ThemedView style={styles.content}>
           {/* Profile Section */}
-          <ThemedView style={styles.profileSection}>
-            <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
-              {avatarUri ? (
-                <Image source={{ uri: avatarUri }} style={styles.avatar} />
-              ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <User size={40} color={Colors.almostWhite} />
+          <ThemedView style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>Profile</ThemedText>
+            <ThemedView style={styles.profileSection}>
+              <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress}>
+                {avatarUri ? (
+                  <Image source={{ uri: avatarUri }} style={styles.avatar} />
+                ) : (
+                  <View style={styles.avatarPlaceholder}>
+                    <User size={40} color={Colors.almostWhite} />
+                  </View>
+                )}
+                <View style={styles.avatarEditBadge}>
+                  <Pencil size={12} color={Colors.almostWhite} />
                 </View>
-              )}
-              <View style={styles.avatarEditBadge}>
-                <Pencil size={12} color={Colors.almostWhite} />
+              </TouchableOpacity>
+              
+              <View style={styles.usernameContainer}>
+                <TextInput
+                  style={styles.usernameInput}
+                  value={usernameInput}
+                  onChangeText={setUsernameInput}
+                  placeholder="username"
+                  placeholderTextColor={Colors.gray}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                <ThemedText style={styles.usernameSuffix}>@getportal.cc</ThemedText>
               </View>
-            </TouchableOpacity>
-            
-            <View style={styles.usernameContainer}>
-              <TextInput
-                style={styles.usernameInput}
-                value={usernameInput}
-                onChangeText={setUsernameInput}
-                placeholder="username"
-                placeholderTextColor={Colors.gray}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              <ThemedText style={styles.usernameSuffix}>@getportal.cc</ThemedText>
-            </View>
-            
-            <TouchableOpacity
-              style={styles.saveButton}
-              onPress={handleSaveProfile}
-              disabled={isLoading}
-            >
-              <ThemedText style={styles.saveButtonText}>
-                {isLoading ? 'Saving...' : 'Save Profile'}
-              </ThemedText>
-            </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSaveProfile}
+                disabled={isLoading}
+              >
+                <ThemedText style={styles.saveButtonText}>
+                  {isLoading ? 'Saving...' : 'Save Profile'}
+                </ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
           </ThemedView>
           
-          {/* Divider */}
-          <View style={styles.divider} />
+          {/* Wallet Section */}
+          <ThemedView style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>Wallet</ThemedText>
+            <ThemedView style={styles.walletSection}>
+              <TouchableOpacity
+                style={styles.walletCard}
+                onPress={handleWalletCardPress}
+                activeOpacity={0.7}
+              >
+                <View style={styles.walletCardContent}>
+                  <View style={styles.walletCardLeft}>
+                    <ThemedText style={styles.walletCardTitle}>
+                      Wallet Connect
+                    </ThemedText>
+                    <ThemedText style={styles.walletCardStatus}>
+                      {isConnected ? 'Connected' : 'Not connected'}
+                    </ThemedText>
+                  </View>
+                  <ChevronRight size={24} color={Colors.almostWhite} />
+                </View>
+              </TouchableOpacity>
+            </ThemedView>
+          </ThemedView>
           
-          {/* App Settings Section */}
-          <ThemedView style={styles.appSettingsSection}>
-            <TouchableOpacity 
-              style={styles.clearDataButton} 
-              onPress={handleClearAppData}
-            >
-              <ThemedText style={styles.clearDataButtonText}>
-                Clear App Data
-              </ThemedText>
-            </TouchableOpacity>
+          {/* Extra Section */}
+          <ThemedView style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>Extra</ThemedText>
+            <ThemedView style={styles.extraSection}>
+              <TouchableOpacity 
+                style={styles.clearDataButton} 
+                onPress={handleClearAppData}
+              >
+                <ThemedText style={styles.clearDataButtonText}>
+                  Reset App
+                </ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
           </ThemedView>
         </ThemedView>
       </ThemedView>
@@ -202,10 +238,52 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
+  section: {
+    marginBottom: 24,
+    width: '100%',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.almostWhite,
+    marginBottom: 12,
+  },
   profileSection: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 12,
     width: '100%',
+  },
+  walletSection: {
+    paddingVertical: 12,
+    width: '100%',
+  },
+  extraSection: {
+    paddingVertical: 12,
+    width: '100%',
+  },
+  walletCard: {
+    backgroundColor: Colors.darkGray,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  walletCardContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  walletCardLeft: {
+    flex: 1,
+  },
+  walletCardTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.almostWhite,
+    marginBottom: 4,
+  },
+  walletCardStatus: {
+    fontSize: 14,
+    color: Colors.dirtyWhite,
   },
   avatarContainer: {
     position: 'relative',
@@ -277,16 +355,6 @@ const styles = StyleSheet.create({
     color: Colors.almostWhite,
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.darkGray,
-    width: '100%',
-    marginVertical: 20,
-  },
-  appSettingsSection: {
-    alignItems: 'center',
-    width: '100%',
   },
   clearDataButton: {
     backgroundColor: '#FF3B30',

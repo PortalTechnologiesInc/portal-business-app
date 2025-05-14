@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { OnboardingProvider } from '@/context/OnboardingContext';
 import { PendingRequestsProvider } from '@/context/PendingRequestsContext';
 import { UserProfileProvider } from '@/context/UserProfileContext';
+import { WalletProvider } from '@/context/WalletContext';
 import { StatusBar } from 'expo-status-bar';
 import { Colors } from '@/constants/Colors';
 import { Asset } from 'expo-asset';
@@ -98,21 +99,24 @@ export default function RootLayout() {
       <StatusBar style="light" />
       <OnboardingProvider>
         <UserProfileProvider>
-          <PendingRequestsProvider>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: {
-                  backgroundColor: '#000000',
-                },
-              }}
-            >
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="index" />
-              <Stack.Screen name="onboarding" />
-              <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
-            </Stack>
-          </PendingRequestsProvider>
+          <WalletProvider>
+            <PendingRequestsProvider>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: {
+                    backgroundColor: '#000000',
+                  },
+                }}
+              >
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="index" />
+                <Stack.Screen name="onboarding" />
+                <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
+                <Stack.Screen name="wallet" options={{ presentation: 'modal' }} />
+              </Stack>
+            </PendingRequestsProvider>
+          </WalletProvider>
         </UserProfileProvider>
       </OnboardingProvider>
     </GestureHandlerRootView>
