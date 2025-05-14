@@ -21,8 +21,8 @@ export default function WalletManagementScreen() {
   }, [walletUrl]);
 
   const handleScanQrCode = () => {
-    // Navigate to QR scanner or open QR scanner modal
-    Alert.alert('QR Code', 'QR Code scanner will be implemented');
+    // Navigate to wallet QR scanner
+    router.push('/qr/wallet');
   };
 
   const handleClearInput = () => {
