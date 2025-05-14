@@ -46,34 +46,40 @@ export default function Home() {
       <ThemedView style={styles.container}>
         <ScrollView showsVerticalScrollIndicator={false}>
           <ThemedView style={styles.header}>
-            <TouchableOpacity style={styles.headerLeft} onPress={handleSettingsNavigate}>
-              <ThemedText
-                style={styles.welcomeText}
-                lightColor={Colors.darkGray}
-                darkColor={Colors.dirtyWhite}
-              >
-                Welcome back 👋
-              </ThemedText>
-              {username ? (
+            <View style={styles.headerContent}>
+              <TouchableOpacity style={styles.headerLeft} onPress={handleSettingsNavigate}>
                 <ThemedText
-                  style={styles.username}
+                  style={styles.welcomeText}
                   lightColor={Colors.darkGray}
-                  darkColor={Colors.almostWhite}
+                  darkColor={Colors.dirtyWhite}
                 >
-                  {username}
+                  Welcome back 👋
                 </ThemedText>
-              ) : null}
-              <ThemedText 
-                style={styles.publicKey} 
-                lightColor={username ? Colors.gray : Colors.darkGray} 
-                darkColor={username ? Colors.dirtyWhite : Colors.almostWhite}
-              >
-                {truncatedPublicKey}
-              </ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.qrButton} onPress={handleQrScan}>
-              <QrCode size={30} color={Colors.almostWhite} />
-            </TouchableOpacity>
+                <View style={styles.userInfoContainer}>
+                  <View style={styles.userTextContainer}>
+                    {username ? (
+                      <ThemedText
+                        style={styles.username}
+                        lightColor={Colors.darkGray}
+                        darkColor={Colors.almostWhite}
+                      >
+                        {username}
+                      </ThemedText>
+                    ) : null}
+                    <ThemedText 
+                      style={styles.publicKey} 
+                      lightColor={username ? Colors.gray : Colors.darkGray} 
+                      darkColor={username ? Colors.dirtyWhite : Colors.almostWhite}
+                    >
+                      {truncatedPublicKey}
+                    </ThemedText>
+                  </View>
+                  <TouchableOpacity style={styles.qrButton} onPress={handleQrScan}>
+                    <QrCode size={35} color={Colors.almostWhite} />
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            </View>
           </ThemedView>
 
           {/* Pending Requests Section */}
@@ -102,11 +108,11 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: Colors.darkerGray,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 12,
+    width: '100%',
+  },
+  headerContent: {
     width: '100%',
   },
   headerLeft: {
@@ -116,11 +122,20 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 14,
     fontWeight: '400',
+    marginBottom: 8,
+  },
+  userInfoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  userTextContainer: {
+    flex: 1,
   },
   username: {
     fontSize: 22,
     fontWeight: '600',
-    marginVertical: 4,
+    marginBottom: 4,
   },
   publicKey: {
     fontSize: 14,
@@ -133,7 +148,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.green,
     justifyContent: 'center',
     alignItems: 'center',
-    alignSelf: 'center',
+    marginLeft: 12,
   },
   button: {
     fontSize: 16,
