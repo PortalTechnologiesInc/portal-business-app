@@ -10,6 +10,7 @@ web-build/
 expo-env.d.ts
 android
 ios
+modules
 
 # Native
 *.orig.*
@@ -45,3 +46,6 @@ yarn-error.*
 app-example
 .aider*
 .env
+
+# portal lib
+portalBuild/*.tgz

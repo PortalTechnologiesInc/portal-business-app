@@ -5,15 +5,10 @@ import { ThemedText } from '@/components/ThemedText';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { Asset } from 'expo-asset';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { generateMnemonic } from 'portal-app-lib';
 
 // Preload all required assets
 const onboardingLogo = require('../assets/images/appLogo.png');
-
-// Temporary fake seed phrase words
-const TEMP_SEED_WORDS = [
-  'apple', 'banana', 'cherry', 'diamond', 'elephant', 'famous',
-  'guitar', 'hurdle', 'island', 'jungle', 'kitchen', 'lemon'
-];
 
 export default function Onboarding() {
   const { completeOnboarding } = useOnboarding();
@@ -23,6 +18,9 @@ export default function Onboarding() {
 
   // Preload assets when component mounts
   useEffect(() => {
+    const mnemonic = generateMnemonic().toString();
+    setSeedPhrase(mnemonic);
+
     async function loadAssets() {
       try {
         await Asset.loadAsync([onboardingLogo]);
@@ -139,7 +137,7 @@ export default function Onboarding() {
             </ThemedText>
 
             <View style={styles.seedContainer}>
-              {TEMP_SEED_WORDS.map((word, index) => (
+              {seedPhrase.split(' ').map((word, index) => (
                 <View key={index} style={styles.wordContainer}>
                   <ThemedText style={styles.wordText}>
                     {index + 1}. {word}
