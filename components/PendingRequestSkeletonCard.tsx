@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import type React from 'react';
+import { useEffect, useRef } from 'react';
 import { View, StyleSheet, Dimensions, Animated } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { Colors } from '@/constants/Colors';
@@ -18,9 +19,9 @@ const SkeletonPulse = ({ style }: { style: any }) => {
         useNativeDriver: true,
       })
     );
-    
+
     animation.start();
-    
+
     return () => {
       animation.stop();
     };
@@ -29,13 +30,13 @@ const SkeletonPulse = ({ style }: { style: any }) => {
   return (
     <View style={[styles.skeletonContainer, style]}>
       <View style={[styles.pulse, style]} />
-      <Animated.View 
+      <Animated.View
         style={[
           styles.shimmer,
           {
             transform: [{ translateX }],
           },
-        ]} 
+        ]}
       />
     </View>
   );
@@ -47,7 +48,7 @@ export const PendingRequestSkeletonCard: React.FC = () => {
       <SkeletonPulse style={styles.requestTypeSkeleton} />
       <SkeletonPulse style={styles.serviceNameSkeleton} />
       <SkeletonPulse style={styles.serviceInfoSkeleton} />
-      
+
       {/* Add spacing to match the buttons area height */}
       <View style={styles.actionsArea}>
         <SkeletonPulse style={styles.actionsSkeleton} />
@@ -108,5 +109,5 @@ const styles = StyleSheet.create({
     height: 15,
     width: '90%',
     opacity: 0.5,
-  }
-}); 
+  },
+});

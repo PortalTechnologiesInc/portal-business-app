@@ -1,12 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  ScrollView,
+  ActivityIndicator,
+  TouchableOpacity,
+  Alert,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
-import { getMockedSubscriptions, Subscription } from '@/mocks/Subscriptions';
-import { formatCentsToCurrency, formatDayAndDate, formatRelativeTime, getNextRecurrenceDay, getRemainingRecurrenceCount } from '@/utils';
+import { getMockedSubscriptions, type Subscription } from '@/mocks/Subscriptions';
+import {
+  formatCentsToCurrency,
+  formatDayAndDate,
+  formatRelativeTime,
+  getNextRecurrenceDay,
+  getRemainingRecurrenceCount,
+} from '@/utils';
 import { FontAwesome6 } from '@expo/vector-icons';
 
 // Mock payment history for a subscription
@@ -22,28 +35,28 @@ const getMockPaymentHistory = (subscriptionId: string): PaymentHistory[] => {
   // Create some mock payment history entries
   const today = new Date().getTime();
   const oneDay = 24 * 60 * 60 * 1000;
-  
+
   return [
     {
       id: `${subscriptionId}-1`,
       amount: 500,
       currency: 'EUR',
       status: 'completed',
-      date: today - (30 * oneDay),
+      date: today - 30 * oneDay,
     },
     {
       id: `${subscriptionId}-2`,
       amount: 500,
       currency: 'EUR',
       status: 'completed',
-      date: today - (60 * oneDay),
+      date: today - 60 * oneDay,
     },
     {
       id: `${subscriptionId}-3`,
       amount: 500,
       currency: 'EUR',
       status: 'completed',
-      date: today - (90 * oneDay),
+      date: today - 90 * oneDay,
     },
   ];
 };
@@ -59,13 +72,13 @@ export default function SubscriptionDetailScreen() {
       // Get the subscription with the matching ID
       const subscriptions = getMockedSubscriptions();
       const foundSubscription = subscriptions.find(sub => sub.id === id);
-      
+
       if (foundSubscription) {
         setSubscription(foundSubscription);
         // Get mock payment history for this subscription
         setPaymentHistory(getMockPaymentHistory(id as string));
       }
-      
+
       setLoading(false);
     }
   }, [id]);
@@ -76,24 +89,27 @@ export default function SubscriptionDetailScreen() {
 
   const handleStopSubscription = () => {
     if (!subscription) return;
-    
+
     Alert.alert(
-      "Cancel Subscription",
+      'Cancel Subscription',
       `Are you sure you want to cancel your subscription to ${subscription.serviceName}?`,
       [
         {
-          text: "No",
-          style: "cancel"
+          text: 'No',
+          style: 'cancel',
         },
-        { 
-          text: "Yes, Cancel", 
+        {
+          text: 'Yes, Cancel',
           onPress: () => {
             // In a real app, this would call an API to cancel the subscription
-            Alert.alert("Subscription Cancelled", "Your subscription has been cancelled successfully.");
+            Alert.alert(
+              'Subscription Cancelled',
+              'Your subscription has been cancelled successfully.'
+            );
             router.back();
           },
-          style: "destructive"
-        }
+          style: 'destructive',
+        },
       ]
     );
   };
@@ -126,10 +142,10 @@ export default function SubscriptionDetailScreen() {
       <SafeAreaView style={styles.safeArea}>
         <ThemedView style={styles.container}>
           <View style={styles.header}>
-            <FontAwesome6 
-              name="arrow-left" 
-              size={24} 
-              color={Colors.almostWhite} 
+            <FontAwesome6
+              name="arrow-left"
+              size={24}
+              color={Colors.almostWhite}
               onPress={handleBackPress}
               style={styles.backButton}
             />
@@ -149,10 +165,10 @@ export default function SubscriptionDetailScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ThemedView style={styles.container}>
         <View style={styles.header}>
-          <FontAwesome6 
-            name="arrow-left" 
-            size={24} 
-            color={Colors.almostWhite} 
+          <FontAwesome6
+            name="arrow-left"
+            size={24}
+            color={Colors.almostWhite}
             onPress={handleBackPress}
             style={styles.backButton}
           />
@@ -171,11 +187,11 @@ export default function SubscriptionDetailScreen() {
                 {subscription.currency} {formatCentsToCurrency(subscription.amount)}
               </ThemedText>
             </View>
-            
+
             <View style={styles.recurrencyBadge}>
               <ThemedText
                 style={styles.recurrency}
-                type='defaultSemiBold'
+                type="defaultSemiBold"
                 darkColor={Colors.dirtyWhite}
                 lightColor={Colors.dirtyWhite}
               >
@@ -196,7 +212,11 @@ export default function SubscriptionDetailScreen() {
                 darkColor={Colors.dirtyWhite}
                 lightColor={Colors.dirtyWhite}
               >
-                Next payment in {getNextRecurrenceDay(new Date(subscription.recurrence.firstPaymentDue ?? 0), subscription.recurrence.calendar)}
+                Next payment in{' '}
+                {getNextRecurrenceDay(
+                  new Date(subscription.recurrence.firstPaymentDue ?? 0),
+                  subscription.recurrence.calendar
+                )}
               </ThemedText>
               {subscription.amount && (
                 <ThemedText
@@ -204,7 +224,12 @@ export default function SubscriptionDetailScreen() {
                   darkColor={Colors.dirtyWhite}
                   lightColor={Colors.dirtyWhite}
                 >
-                  {getRemainingRecurrenceCount(new Date(subscription.recurrence.firstPaymentDue ?? 0), subscription.recurrence.calendar, subscription.recurrence.maxPayments ?? 0)} payments left
+                  {getRemainingRecurrenceCount(
+                    new Date(subscription.recurrence.firstPaymentDue ?? 0),
+                    subscription.recurrence.calendar,
+                    subscription.recurrence.maxPayments ?? 0
+                  )}{' '}
+                  payments left
                 </ThemedText>
               )}
               <ThemedText
@@ -216,20 +241,20 @@ export default function SubscriptionDetailScreen() {
               </ThemedText>
             </View>
           </View>
-          
-          <TouchableOpacity 
-            style={styles.stopButton} 
+
+          <TouchableOpacity
+            style={styles.stopButton}
             onPress={handleStopSubscription}
             activeOpacity={0.7}
           >
             <View style={styles.stopButtonContent}>
-              <FontAwesome6 
-                name="stop-circle" 
-                size={18} 
-                color={Colors.almostWhite} 
+              <FontAwesome6
+                name="stop-circle"
+                size={18}
+                color={Colors.almostWhite}
                 style={styles.stopIcon}
               />
-              <ThemedText 
+              <ThemedText
                 style={styles.stopButtonText}
                 darkColor={Colors.almostWhite}
                 lightColor={Colors.almostWhite}
@@ -243,7 +268,7 @@ export default function SubscriptionDetailScreen() {
             <ThemedText type="subtitle" style={styles.sectionTitle}>
               Payment History
             </ThemedText>
-            
+
             {paymentHistory.length > 0 ? (
               paymentHistory.map(payment => (
                 <View key={payment.id} style={styles.paymentItem}>
@@ -251,7 +276,7 @@ export default function SubscriptionDetailScreen() {
                     <ThemedText style={styles.paymentDate}>
                       {formatDayAndDate(new Date(payment.date))}
                     </ThemedText>
-                    <ThemedText 
+                    <ThemedText
                       style={styles.paymentStatus}
                       darkColor={getStatusColor(payment.status)}
                       lightColor={getStatusColor(payment.status)}
@@ -265,9 +290,7 @@ export default function SubscriptionDetailScreen() {
                 </View>
               ))
             ) : (
-              <ThemedText style={styles.noDataText}>
-                No payment history available
-              </ThemedText>
+              <ThemedText style={styles.noDataText}>No payment history available</ThemedText>
             )}
           </View>
         </ScrollView>
@@ -381,7 +404,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 24,
     alignItems: 'center',
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -402,4 +425,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-}); 
+});

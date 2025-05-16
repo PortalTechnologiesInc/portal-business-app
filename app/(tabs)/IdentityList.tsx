@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Identity } from '../../models/Identity';
+import type { Identity } from '../../models/Identity';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useRouter } from 'expo-router';
@@ -37,11 +37,7 @@ export default function IdentityList({ onManageIdentity, onDeleteIdentity }: Ide
         </ThemedText>
       </View>
       <View style={styles.buttonsContainer}>
-        <Edit
-          size={16}
-          color={Colors.almostWhite}
-          onPress={() => onManageIdentity(item)}
-        />
+        <Edit size={16} color={Colors.almostWhite} onPress={() => onManageIdentity(item)} />
       </View>
     </TouchableOpacity>
   );

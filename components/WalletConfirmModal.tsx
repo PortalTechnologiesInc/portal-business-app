@@ -12,7 +12,12 @@ type WalletConfirmModalProps = {
   walletUrl: string;
 };
 
-export function WalletConfirmModal({ visible, onClose, onConfirm, walletUrl }: WalletConfirmModalProps) {
+export function WalletConfirmModal({
+  visible,
+  onClose,
+  onConfirm,
+  walletUrl,
+}: WalletConfirmModalProps) {
   return (
     <Modal animationType="fade" transparent={true} visible={visible} onRequestClose={onClose}>
       <View style={styles.centeredView}>
@@ -21,15 +26,14 @@ export function WalletConfirmModal({ visible, onClose, onConfirm, walletUrl }: W
             <Link size={32} color={Colors.almostWhite} />
           </View>
 
-          <ThemedText style={styles.title}>
-            Connect Wallet
-          </ThemedText>
+          <ThemedText style={styles.title}>Connect Wallet</ThemedText>
 
           <ThemedText style={styles.walletUrlLabel}>Wallet URL:</ThemedText>
           <ThemedText style={styles.walletUrl}>{walletUrl}</ThemedText>
 
           <ThemedText style={styles.detail}>
-            Do you want to connect to this wallet? This will allow you to manage your assets and make transactions.
+            Do you want to connect to this wallet? This will allow you to manage your assets and
+            make transactions.
           </ThemedText>
 
           <View style={styles.buttonContainer}>
@@ -130,4 +134,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
   },
-}); 
+});

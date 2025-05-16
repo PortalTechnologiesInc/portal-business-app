@@ -1,4 +1,4 @@
-import React from 'react';
+import type React from 'react';
 import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { Colors } from '@/constants/Colors';
@@ -15,37 +15,28 @@ interface FailedRequestCardProps {
   onCancel: () => void;
 }
 
-export const FailedRequestCard: React.FC<FailedRequestCardProps> = ({
-  onRetry,
-  onCancel,
-}) => {
+export const FailedRequestCard: React.FC<FailedRequestCardProps> = ({ onRetry, onCancel }) => {
   return (
     <View style={styles.card}>
       {/* Request type row */}
       <ThemedText style={styles.requestType}>Request Status</ThemedText>
-      
+
       {/* Title row with icon */}
       <View style={styles.titleRow}>
         <AlertTriangle size={22} color={WARNING_COLOR} style={styles.titleIcon} />
         <ThemedText style={styles.serviceName}>Request Failed</ThemedText>
       </View>
-      
+
       <ThemedText style={styles.serviceInfo}>
         The request timed out. Would you like to try again?
       </ThemedText>
-      
+
       <View style={styles.actions}>
-        <TouchableOpacity 
-          style={[styles.button, styles.cancelButton]} 
-          onPress={onCancel}
-        >
+        <TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onCancel}>
           <ThemedText style={styles.buttonText}>Cancel</ThemedText>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={[styles.button, styles.retryButton]} 
-          onPress={onRetry}
-        >
+
+        <TouchableOpacity style={[styles.button, styles.retryButton]} onPress={onRetry}>
           <RefreshCw size={16} color={Colors.almostWhite} style={styles.buttonIcon} />
           <ThemedText style={styles.buttonText}>Retry</ThemedText>
         </TouchableOpacity>
@@ -78,7 +69,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   titleIcon: {
-    marginRight: 8
+    marginRight: 8,
   },
   serviceName: {
     color: '#FFFFFF',
@@ -118,4 +109,4 @@ const styles = StyleSheet.create({
   retryButton: {
     backgroundColor: Colors.light.tint,
   },
-}); 
+});

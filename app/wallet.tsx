@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { StyleSheet, TouchableOpacity, Alert, TextInput, View, Modal, BackHandler } from 'react-native';
+import {
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  TextInput,
+  View,
+  Modal,
+  BackHandler,
+} from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
@@ -32,7 +40,7 @@ export default function WalletManagementScreen() {
       setScannedUrl(scannedUrlParam);
       setShowConfirmModal(true);
       handledUrlRef.current = scannedUrlParam;
-      
+
       // Clear the URL parameter immediately to prevent re-processing
       // This prevents the infinite loop of rendering when the modal is displayed
       if (params.scannedUrl) {
@@ -61,8 +69,8 @@ export default function WalletManagementScreen() {
       pathname: '/qr/wallet',
       params: {
         source: 'wallet',
-        returnToWallet: 'true'
-      }
+        returnToWallet: 'true',
+      },
     });
   };
 
@@ -82,22 +90,22 @@ export default function WalletManagementScreen() {
       await setWalletUrl(urlToSave);
       setIsEditing(false);
       setShowConfirmModal(false);
-      
+
       // Reset the handled URL reference to prevent duplicate processing
       handledUrlRef.current = null;
 
       // Get source and return parameters
       const sourceParam = params.source as string | undefined;
       const returnToWalletParam = params.returnToWallet as string | undefined;
-      
+
       // Clear all params first to prevent infinite loops
       router.setParams({});
-      
+
       // Check if we should return to wallet management (from QR scan inside wallet management)
       if (returnToWalletParam === 'true') {
         // Already cleared params, so no need to navigate
         return;
-      } 
+      }
       // Otherwise, navigate back to the source screen if specified
       else if (sourceParam === 'settings') {
         setTimeout(() => {
@@ -130,17 +138,17 @@ export default function WalletManagementScreen() {
   const handleCloseModal = () => {
     setShowConfirmModal(false);
     setScannedUrl('');
-    
+
     // Get navigation parameters
     const sourceParam = params.source as string | undefined;
     const returnToWalletParam = params.returnToWallet as string | undefined;
-    
+
     // Clear the handled URL ref to prevent duplicate processing
     handledUrlRef.current = null;
-    
+
     // Clear all params first to prevent infinite loops
     router.setParams({});
-    
+
     // Check if we should return to wallet management (from QR scan inside wallet management)
     if (returnToWalletParam === 'true') {
       // Already cleared params, so no need to navigate
@@ -159,7 +167,7 @@ export default function WalletManagementScreen() {
     // Check navigation parameters
     const sourceParam = params.source as string | undefined;
     const returnToWalletParam = params.returnToWallet as string | undefined;
-    
+
     // If we have a source param and it's not a QR scan from wallet itself, navigate directly to that screen
     if (sourceParam === 'settings') {
       router.replace('/settings');
@@ -187,8 +195,8 @@ export default function WalletManagementScreen() {
 
         <ThemedView style={styles.content}>
           <ThemedText style={styles.description}>
-            Connect your wallet by entering the wallet URL below or scanning a QR code. 
-            This allows you to manage your crypto assets and make seamless transactions within the app.
+            Connect your wallet by entering the wallet URL below or scanning a QR code. This allows
+            you to manage your crypto assets and make seamless transactions within the app.
           </ThemedText>
 
           {/* Wallet URL Input with QR Code button */}
@@ -202,10 +210,7 @@ export default function WalletManagementScreen() {
                 placeholderTextColor={Colors.gray}
                 onFocus={() => setIsEditing(true)}
               />
-              <TouchableOpacity
-                style={styles.walletUrlAction}
-                onPress={handleIconPress}
-              >
+              <TouchableOpacity style={styles.walletUrlAction} onPress={handleIconPress}>
                 {!isEditing ? (
                   <Pencil size={20} color={Colors.almostWhite} />
                 ) : hasChanged ? (
@@ -238,23 +243,23 @@ export default function WalletManagementScreen() {
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
               <ThemedText style={styles.modalTitle}>Confirm Wallet URL</ThemedText>
-              
+
               <ThemedText style={styles.modalText}>
                 Do you want to connect to this wallet?
               </ThemedText>
-              
+
               <ThemedText style={styles.urlText}>{scannedUrl}</ThemedText>
-              
+
               <View style={styles.modalButtons}>
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.cancelButton]} 
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.cancelButton]}
                   onPress={handleCloseModal}
                 >
                   <ThemedText style={styles.buttonText}>Cancel</ThemedText>
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={[styles.modalButton, styles.confirmButton]} 
+
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.confirmButton]}
                   onPress={() => handleSaveWalletUrl(scannedUrl)}
                 >
                   <ThemedText style={styles.buttonText}>Connect</ThemedText>
@@ -400,4 +405,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-}); 
+});

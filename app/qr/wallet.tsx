@@ -24,23 +24,23 @@ export default function WalletQRScannerScreen() {
 
   const handleBarCodeScanned = (result: BarcodeResult) => {
     if (scanned) return;
-    
+
     const { data } = result;
     setScanned(true);
-    
+
     // Add a unique timestamp to ensure URL is processed as new
     const timestamp = Date.now();
-    
+
     // Use replace instead of push to remove the QR scanner from navigation history
     setTimeout(() => {
       router.replace({
         pathname: '/wallet',
-        params: { 
+        params: {
           scannedUrl: data,
           source: params.source || 'settings', // Maintain source parameter
           returnToWallet: params.returnToWallet || 'false', // Parameter to control navigation after confirmation
-          timestamp: timestamp.toString() // Add timestamp to ensure URL is unique each scan
-        }
+          timestamp: timestamp.toString(), // Add timestamp to ensure URL is unique each scan
+        },
       });
     }, 300); // Reduced timeout to minimize lag
   };
@@ -78,17 +78,20 @@ export default function WalletQRScannerScreen() {
         }}
       >
         <View style={styles.overlay}>
-          <TouchableOpacity style={styles.backButton} onPress={() => {
-            // Check if we came from wallet management
-            if (params.returnToWallet === 'true') {
-              router.back(); // Return to wallet management
-            } else {
-              // Return to original source (settings)
-              router.replace({
-                pathname: '/settings'
-              });
-            }
-          }}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => {
+              // Check if we came from wallet management
+              if (params.returnToWallet === 'true') {
+                router.back(); // Return to wallet management
+              } else {
+                // Return to original source (settings)
+                router.replace({
+                  pathname: '/settings',
+                });
+              }
+            }}
+          >
             <Ionicons name="arrow-back" size={28} color="white" />
           </TouchableOpacity>
           <View style={styles.upperSection} />
@@ -249,4 +252,4 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
   },
-}); 
+});

@@ -69,7 +69,7 @@ export default function RootLayout() {
       try {
         // Preload required assets
         await preloadImages();
-        
+
         // Add a shorter delay to ensure initialization is complete
         await new Promise(resolve => setTimeout(resolve, 300));
         setIsReady(true);

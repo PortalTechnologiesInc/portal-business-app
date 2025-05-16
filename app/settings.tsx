@@ -16,7 +16,7 @@ export default function SettingsScreen() {
   const { resetOnboarding } = useOnboarding();
   const { username, avatarUri, setUsername, setAvatarUri } = useUserProfile();
   const { isConnected } = useWallet();
-  
+
   const [usernameInput, setUsernameInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -29,19 +29,22 @@ export default function SettingsScreen() {
   const handleAvatarPress = async () => {
     try {
       const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
+
       if (!permissionResult.granted) {
-        Alert.alert('Permission Required', 'You need to allow access to your photos to change your avatar.');
+        Alert.alert(
+          'Permission Required',
+          'You need to allow access to your photos to change your avatar.'
+        );
         return;
       }
-      
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
-      
+
       if (!result.canceled) {
         await setAvatarUri(result.assets[0].uri);
       }
@@ -54,12 +57,12 @@ export default function SettingsScreen() {
   const handleSaveProfile = async () => {
     try {
       setIsLoading(true);
-      
+
       // Even if username is empty, we still append @getportal.cc
       // This ensures pubkey format is consistent regardless of username presence
       const fullUsername = usernameInput.trim() + '@getportal.cc';
       await setUsername(fullUsername);
-      
+
       Alert.alert('Success', 'Profile updated successfully');
     } catch (error) {
       console.error('Error saving profile:', error);
@@ -71,30 +74,30 @@ export default function SettingsScreen() {
 
   const handleClearAppData = () => {
     Alert.alert(
-      "Reset App",
-      "This will reset all app data and take you back to onboarding. Are you sure?",
+      'Reset App',
+      'This will reset all app data and take you back to onboarding. Are you sure?',
       [
         {
-          text: "Cancel",
-          style: "cancel"
+          text: 'Cancel',
+          style: 'cancel',
         },
-        { 
-          text: "Clear Data", 
-          style: "destructive",
+        {
+          text: 'Clear Data',
+          style: 'destructive',
           onPress: async () => {
             try {
               // Clear user profile data but maintain pubkey format
               await setUsername('');
               await setAvatarUri(null);
-              
+
               // Reset onboarding state (this navigates to onboarding screen)
               await resetOnboarding();
             } catch (error) {
               console.error('Error clearing app data:', error);
               Alert.alert('Error', 'Failed to Reset App. Please try again.');
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
@@ -104,8 +107,8 @@ export default function SettingsScreen() {
     router.push({
       pathname: '/wallet',
       params: {
-        source: 'settings'
-      }
+        source: 'settings',
+      },
     });
   };
 
@@ -142,7 +145,7 @@ export default function SettingsScreen() {
                   <Pencil size={12} color={Colors.almostWhite} />
                 </View>
               </TouchableOpacity>
-              
+
               <View style={styles.usernameContainer}>
                 <TextInput
                   style={styles.usernameInput}
@@ -155,7 +158,7 @@ export default function SettingsScreen() {
                 />
                 <ThemedText style={styles.usernameSuffix}>@getportal.cc</ThemedText>
               </View>
-              
+
               <TouchableOpacity
                 style={styles.saveButton}
                 onPress={handleSaveProfile}
@@ -167,7 +170,7 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </ThemedView>
           </ThemedView>
-          
+
           {/* Wallet Section */}
           <ThemedView style={styles.section}>
             <ThemedText style={styles.sectionTitle}>Wallet</ThemedText>
@@ -179,9 +182,7 @@ export default function SettingsScreen() {
               >
                 <View style={styles.walletCardContent}>
                   <View style={styles.walletCardLeft}>
-                    <ThemedText style={styles.walletCardTitle}>
-                      Wallet Connect
-                    </ThemedText>
+                    <ThemedText style={styles.walletCardTitle}>Wallet Connect</ThemedText>
                     <ThemedText style={styles.walletCardStatus}>
                       {isConnected ? 'Connected' : 'Not connected'}
                     </ThemedText>
@@ -191,18 +192,13 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </ThemedView>
           </ThemedView>
-          
+
           {/* Extra Section */}
           <ThemedView style={styles.section}>
             <ThemedText style={styles.sectionTitle}>Extra</ThemedText>
             <ThemedView style={styles.extraSection}>
-              <TouchableOpacity 
-                style={styles.clearDataButton} 
-                onPress={handleClearAppData}
-              >
-                <ThemedText style={styles.clearDataButtonText}>
-                  Reset App
-                </ThemedText>
+              <TouchableOpacity style={styles.clearDataButton} onPress={handleClearAppData}>
+                <ThemedText style={styles.clearDataButtonText}>Reset App</ThemedText>
               </TouchableOpacity>
             </ThemedView>
           </ThemedView>

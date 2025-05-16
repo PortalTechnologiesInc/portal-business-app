@@ -1,7 +1,7 @@
-import React from 'react';
+import type React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { PendingRequest } from '../models/PendingRequest';
+import type { PendingRequest } from '../models/PendingRequest';
 import { usePendingRequests } from '../context/PendingRequestsContext';
 
 const { width } = Dimensions.get('window');

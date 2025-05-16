@@ -7,13 +7,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HapticTab } from '@/components/HapticTab';
 
 // Memoized tab icons to prevent unnecessary re-rendering
-const HomeIcon = React.memo(({ color }: { color: string }) => (
-  <Home size={24} color={color} />
-));
+const HomeIcon = React.memo(({ color }: { color: string }) => <Home size={24} color={color} />);
 
-const ActivityIcon = React.memo(({ color }: { color: string }) => (
-  <List size={24} color={color} />
-));
+const ActivityIcon = React.memo(({ color }: { color: string }) => <List size={24} color={color} />);
 
 const SubscriptionIcon = React.memo(({ color }: { color: string }) => (
   <Receipt size={24} color={color} />
@@ -107,12 +103,8 @@ export default function TabLayout() {
         name="Certificates"
         listeners={{
           tabPress: e => {
-            e.preventDefault(); // <-- this function blocks 
-            ToastAndroid.showWithGravity(
-              'Coming soon!',
-              ToastAndroid.SHORT,
-              ToastAndroid.CENTER,
-            );
+            e.preventDefault(); // <-- this function blocks
+            ToastAndroid.showWithGravity('Coming soon!', ToastAndroid.SHORT, ToastAndroid.CENTER);
           },
         }}
         options={{

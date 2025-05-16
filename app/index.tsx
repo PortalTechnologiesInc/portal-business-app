@@ -20,7 +20,14 @@ export default function Index() {
   // Show a loading indicator while determining the route
   if (isLoading || initialRoute === null) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000000' }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#000000',
+        }}
+      >
         <ActivityIndicator size="large" color={Colors.almostWhite} />
       </View>
     );

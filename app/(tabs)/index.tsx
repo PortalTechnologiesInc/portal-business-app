@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function Home() {
   const { isOnboardingComplete, isLoading, resetOnboarding } = useOnboarding();
   const { username } = useUserProfile();
-  
+
   // This would come from a real user context in the future
   const [userPublicKey, setUserPublicKey] = useState(
     'npub1abcdef1234567890abcdef1234567890abcdef1234567890abcdef123456'
@@ -34,8 +34,8 @@ export default function Home() {
       pathname: '/qr',
       params: {
         source: 'homepage',
-        timestamp: Date.now() // Prevent caching issues
-      }
+        timestamp: Date.now(), // Prevent caching issues
+      },
     });
   }, []);
 
@@ -73,9 +73,9 @@ export default function Home() {
                         {username}
                       </ThemedText>
                     ) : null}
-                    <ThemedText 
-                      style={styles.publicKey} 
-                      lightColor={username ? Colors.gray : Colors.darkGray} 
+                    <ThemedText
+                      style={styles.publicKey}
+                      lightColor={username ? Colors.gray : Colors.darkGray}
                       darkColor={username ? Colors.dirtyWhite : Colors.almostWhite}
                     >
                       {truncatedPublicKey}

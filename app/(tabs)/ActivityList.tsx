@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '../../components/ThemedText';
 import { Key, BanknoteIcon } from 'lucide-react-native';
-import { Activity, ActivityType } from '../../models/Activity';
+import { type Activity, ActivityType } from '../../models/Activity';
 import { getMockedActivities } from '@/mocks/Activities';
 import { formatCentsToCurrency, formatRelativeTime } from '@/utils';
 import { ThemedView } from '@/components/ThemedView';

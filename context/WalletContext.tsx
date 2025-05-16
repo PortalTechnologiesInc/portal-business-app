@@ -1,4 +1,5 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import type React from 'react';
+import { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type WalletContextType = {
@@ -75,4 +76,4 @@ export const useWallet = (): WalletContextType => {
     throw new Error('useWallet must be used within a WalletProvider');
   }
   return context;
-}; 
+};

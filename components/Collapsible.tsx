@@ -1,4 +1,4 @@
-import { PropsWithChildren, ReactNode, useState } from 'react';
+import { type PropsWithChildren, type ReactNode, useState } from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import { ThemedText } from '@/components/ThemedText';
@@ -7,7 +7,12 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
-export function Collapsible({ children, header, darkColor, lightColor }: PropsWithChildren & { header: ReactNode, darkColor?: string, lightColor?: string }) {
+export function Collapsible({
+  children,
+  header,
+  darkColor,
+  lightColor,
+}: PropsWithChildren & { header: ReactNode; darkColor?: string; lightColor?: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const theme = useColorScheme() ?? 'light';
 
@@ -18,8 +23,7 @@ export function Collapsible({ children, header, darkColor, lightColor }: PropsWi
         onPress={() => setIsOpen(value => !value)}
         activeOpacity={0.8}
       >
-        <View
-          style={styles.iconContainer}>
+        <View style={styles.iconContainer}>
           <IconSymbol
             name="chevron.right"
             size={18}
@@ -30,7 +34,11 @@ export function Collapsible({ children, header, darkColor, lightColor }: PropsWi
         </View>
         <ThemedText type="defaultSemiBold">{header}</ThemedText>
       </TouchableOpacity>
-      {isOpen && <ThemedView lightColor={lightColor} darkColor={darkColor} style={styles.content}>{children}</ThemedView>}
+      {isOpen && (
+        <ThemedView lightColor={lightColor} darkColor={darkColor} style={styles.content}>
+          {children}
+        </ThemedView>
+      )}
     </ThemedView>
   );
 }

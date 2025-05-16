@@ -1,4 +1,4 @@
-import { Frequency } from "./models/Subscription";
+import type { Frequency } from './models/Subscription';
 
 // Convert cents to dollars by dividing by 100 and fix to 2 decimal places
 export function formatCentsToCurrency(cents: number): string {
@@ -64,7 +64,7 @@ export function getNextRecurrenceDay(
   today: Date = new Date()
 ): string {
   // Clone to avoid mutating inputs
-  let next = new Date(startDate);
+  const next = new Date(startDate);
 
   // bump until strictly after today
   const advance = () => {
@@ -104,7 +104,7 @@ export function getRemainingRecurrenceCount(
   today: Date = new Date()
 ): number {
   // Clone to avoid mutating inputs
-  let next = new Date(startDate);
+  const next = new Date(startDate);
 
   // bump until strictly after today
   const advance = () => {
@@ -128,7 +128,7 @@ export function getRemainingRecurrenceCount(
   // If the start date is already past, advance until it's > today
   while (next <= today) {
     advance();
-    pastRecurrenceCount++
+    pastRecurrenceCount++;
   }
 
   return recurrenceCount - pastRecurrenceCount;

@@ -1,4 +1,4 @@
-import { Currency } from './Activity';
+import type { Currency } from './Activity';
 
 export interface UpcomingPayment {
   id: string;

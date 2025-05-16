@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import type React from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
 
 const USERNAME_KEY = 'portal_username';
@@ -60,12 +61,14 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   return (
-    <UserProfileContext.Provider value={{
-      username,
-      avatarUri,
-      setUsername,
-      setAvatarUri
-    }}>
+    <UserProfileContext.Provider
+      value={{
+        username,
+        avatarUri,
+        setUsername,
+        setAvatarUri,
+      }}
+    >
       {children}
     </UserProfileContext.Provider>
   );
@@ -79,4 +82,4 @@ export const useUserProfile = () => {
   return context;
 };
 
-export default UserProfileProvider; 
+export default UserProfileProvider;

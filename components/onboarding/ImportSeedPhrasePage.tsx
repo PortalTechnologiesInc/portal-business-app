@@ -9,7 +9,11 @@ type ImportSeedPhrasePageProps = {
   containerStyles?: any;
 };
 
-export function ImportSeedPhrasePage({ pageWidth, containerStyles, onImport }: ImportSeedPhrasePageProps) {
+export function ImportSeedPhrasePage({
+  pageWidth,
+  containerStyles,
+  onImport,
+}: ImportSeedPhrasePageProps) {
   const [seedPhrase, setSeedPhrase] = useState('');
 
   const handleImport = () => {
@@ -25,9 +29,7 @@ export function ImportSeedPhrasePage({ pageWidth, containerStyles, onImport }: I
         <ThemedText type="title" style={styles.title}>
           Import Seed Phrase
         </ThemedText>
-        <ThemedText style={styles.subtitle}>
-          Enter your 12-word seed phrase
-        </ThemedText>
+        <ThemedText style={styles.subtitle}>Enter your 12-word seed phrase</ThemedText>
 
         <View style={styles.inputContainer}>
           <TextInput
@@ -99,4 +101,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: 'bold',
   },
-}); 
+});

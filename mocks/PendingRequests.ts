@@ -1,4 +1,4 @@
-import { PendingRequest } from '../models/PendingRequest';
+import type { PendingRequest } from '../models/PendingRequest';
 
 export const mockPendingRequests: PendingRequest[] = [
   {

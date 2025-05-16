@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import type React from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedText } from './ThemedText';
 import { Colors } from '@/constants/Colors';
-import { UpcomingPayment } from '@/models/UpcomingPayment';
+import type { UpcomingPayment } from '@/models/UpcomingPayment';
 import { getMockedUpcomingPayments } from '@/mocks/UpcomingPayments';
 import { formatCentsToCurrency, formatRelativeTime } from '@/utils';
 

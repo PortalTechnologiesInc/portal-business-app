@@ -13,22 +13,24 @@ export function IntroPage({ pageWidth, containerStyles }: IntroPageProps) {
   return (
     <View style={[styles.pageContainer, { width: pageWidth }, containerStyles]}>
       <ThemedView style={styles.contentContainer}>
-        <ThemedText type="title" style={styles.title}>Portal</ThemedText>
+        <ThemedText type="title" style={styles.title}>
+          Portal
+        </ThemedText>
         <ThemedText style={styles.subtitle}>Your digital Identity Provider</ThemedText>
-        
+
         <View style={styles.descriptionContainer}>
           <ThemedText style={styles.description}>
-            Secure your digital identity with cryptographic keys and take control of your personal data.
+            Secure your digital identity with cryptographic keys and take control of your personal
+            data.
           </ThemedText>
-          
+
           <ThemedText style={styles.description}>
-            Portal lets you securely authenticate with websites and services without exposing sensitive information.
+            Portal lets you securely authenticate with websites and services without exposing
+            sensitive information.
           </ThemedText>
         </View>
-        
-        <ThemedText style={styles.instruction}>
-          Swipe left to begin
-        </ThemedText>
+
+        <ThemedText style={styles.instruction}>Swipe left to begin</ThemedText>
       </ThemedView>
     </View>
   );

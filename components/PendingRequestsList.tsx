@@ -1,10 +1,10 @@
-import React from 'react';
+import type React from 'react';
 import { View, StyleSheet, FlatList, Dimensions } from 'react-native';
 import { usePendingRequests } from '../context/PendingRequestsContext';
 import { PendingRequestCard } from './PendingRequestCard';
 import { PendingRequestSkeletonCard } from './PendingRequestSkeletonCard';
 import { FailedRequestCard } from './FailedRequestCard';
-import { PendingRequest, PendingRequestType } from '../models/PendingRequest';
+import type { PendingRequest, PendingRequestType } from '../models/PendingRequest';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 48; // Full width minus padding
@@ -18,27 +18,27 @@ const createSkeletonRequest = (): PendingRequest => ({
   timestamp: new Date().toISOString(), // Current timestamp to ensure it's the most recent
   title: 'Loading...',
   description: 'Please wait...',
-  metadata: {}
+  metadata: {},
 });
 
 export const PendingRequestsList: React.FC = () => {
-  const { 
-    pendingRequests, 
-    hasPending, 
-    isLoadingRequest, 
+  const {
+    pendingRequests,
+    hasPending,
+    isLoadingRequest,
     requestFailed,
-    showSkeletonLoader, 
-    setRequestFailed 
+    showSkeletonLoader,
+    setRequestFailed,
   } = usePendingRequests();
 
   // Only show requests with pending status
   const pendingOnly = pendingRequests.filter(req => req.status === 'pending');
-  
+
   // Sort requests by timestamp (newest first)
-  const sortedRequests = [...pendingOnly].sort((a, b) => 
-    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  const sortedRequests = [...pendingOnly].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
-  
+
   // If nothing to show, return null
   if (!hasPending && !isLoadingRequest && !requestFailed) {
     return null;
@@ -46,7 +46,7 @@ export const PendingRequestsList: React.FC = () => {
 
   // Create combined data
   let combinedData;
-  
+
   if (requestFailed || isLoadingRequest) {
     // If request failed or loading, add a skeleton item at the beginning of the list
     combinedData = [createSkeletonRequest(), ...sortedRequests];
@@ -130,5 +130,5 @@ const styles = StyleSheet.create({
   cellRenderer: {
     alignItems: 'center',
     justifyContent: 'center',
-  }
+  },
 });

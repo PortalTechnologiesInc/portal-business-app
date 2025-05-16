@@ -1,4 +1,4 @@
-import { Identity } from '../models/Identity';
+import type { Identity } from '../models/Identity';
 
 export function getMockedIdentities(): Identity[] {
   return [

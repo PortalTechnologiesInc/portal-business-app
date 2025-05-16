@@ -25,7 +25,7 @@ export default function QRScannerScreen() {
       router.replace('/(tabs)');
       return true;
     });
-    
+
     return () => backHandler.remove();
   }, []);
 
@@ -36,7 +36,7 @@ export default function QRScannerScreen() {
   const handleBarCodeScanned = (result: BarcodeResult) => {
     // Prevent multiple scans
     if (scanned) return;
-    
+
     const { type, data } = result;
     setScanned(true);
     console.log(`Bar code with type ${type} and data ${data} has been scanned!`);

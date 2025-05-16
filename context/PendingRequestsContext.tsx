@@ -1,5 +1,14 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
-import { PendingRequest, PendingRequestType } from '../models/PendingRequest';
+import type React from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,type 
+  ReactNode,
+  useMemo,
+  useCallback,
+} from 'react'
+import type { PendingRequest, PendingRequestType } from '../models/PendingRequest';
 import { mockPendingRequests } from '../mocks/PendingRequests';
 
 // Preload mock data to avoid loading delay when the context is used
@@ -26,7 +35,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
   const [isLoadingRequest, setIsLoadingRequest] = useState(false);
   const [requestFailed, setRequestFailed] = useState(false);
   const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
-  
+
   // Memoize hasPending to avoid recalculation on every render
   const hasPending = useMemo(() => {
     return pendingRequests.some(req => req.status === 'pending') || isLoadingRequest;
@@ -42,13 +51,19 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
   }, [timeoutId]);
 
   // Memoize these functions to prevent recreation on every render
-  const getByType = useCallback((type: PendingRequestType) => {
-    return pendingRequests.filter(request => request.type === type);
-  }, [pendingRequests]);
+  const getByType = useCallback(
+    (type: PendingRequestType) => {
+      return pendingRequests.filter(request => request.type === type);
+    },
+    [pendingRequests]
+  );
 
-  const getById = useCallback((id: string) => {
-    return pendingRequests.find(request => request.id === id);
-  }, [pendingRequests]);
+  const getById = useCallback(
+    (id: string) => {
+      return pendingRequests.find(request => request.id === id);
+    },
+    [pendingRequests]
+  );
 
   const approve = useCallback((id: string) => {
     setPendingRequests(prev =>
@@ -75,40 +90,43 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
 
     setIsLoadingRequest(true);
     setRequestFailed(false);
-    
+
     // Set new timeout for 10 seconds
     const newTimeoutId = setTimeout(() => {
       setIsLoadingRequest(false);
       setRequestFailed(true);
     }, 10000);
-    
+
     setTimeoutId(newTimeoutId);
   }, [timeoutId]);
 
   // Memoize the context value to prevent recreation on every render
-  const contextValue = useMemo(() => ({
-    pendingRequests,
-    getByType,
-    getById,
-    approve,
-    deny,
-    hasPending,
-    isLoadingRequest,
-    requestFailed,
-    showSkeletonLoader,
-    setRequestFailed,
-  }), [
-    pendingRequests, 
-    getByType, 
-    getById, 
-    approve, 
-    deny, 
-    hasPending, 
-    isLoadingRequest, 
-    requestFailed,
-    showSkeletonLoader,
-    setRequestFailed
-  ]);
+  const contextValue = useMemo(
+    () => ({
+      pendingRequests,
+      getByType,
+      getById,
+      approve,
+      deny,
+      hasPending,
+      isLoadingRequest,
+      requestFailed,
+      showSkeletonLoader,
+      setRequestFailed,
+    }),
+    [
+      pendingRequests,
+      getByType,
+      getById,
+      approve,
+      deny,
+      hasPending,
+      isLoadingRequest,
+      requestFailed,
+      showSkeletonLoader,
+      setRequestFailed,
+    ]
+  );
 
   return (
     <PendingRequestsContext.Provider value={contextValue}>

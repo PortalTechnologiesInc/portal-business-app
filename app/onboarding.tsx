@@ -12,7 +12,9 @@ const onboardingLogo = require('../assets/images/appLogo.png');
 
 export default function Onboarding() {
   const { completeOnboarding } = useOnboarding();
-  const [currentPage, setCurrentPage] = useState<'intro' | 'generate' | 'import' | 'splash'>('intro');
+  const [currentPage, setCurrentPage] = useState<'intro' | 'generate' | 'import' | 'splash'>(
+    'intro'
+  );
   const [seedPhrase, setSeedPhrase] = useState('');
   const [assetsLoaded, setAssetsLoaded] = useState(false);
 
@@ -52,7 +54,7 @@ export default function Onboarding() {
     if (seedPhrase.trim()) {
       // Show splash screen before completing onboarding
       setCurrentPage('splash');
-      
+
       // Complete onboarding after a short delay
       setTimeout(() => {
         completeOnboarding();
@@ -63,7 +65,7 @@ export default function Onboarding() {
   const handleGenerateComplete = () => {
     // Show splash screen before completing onboarding
     setCurrentPage('splash');
-    
+
     // Complete onboarding after a short delay
     setTimeout(() => {
       completeOnboarding();
@@ -83,11 +85,7 @@ export default function Onboarding() {
   if (currentPage === 'splash') {
     return (
       <ThemedView style={[styles.container, styles.splashContainer]}>
-        <Image
-          source={onboardingLogo}
-          style={styles.splashLogo}
-          resizeMode="contain"
-        />
+        <Image source={onboardingLogo} style={styles.splashLogo} resizeMode="contain" />
       </ThemedView>
     );
   }
@@ -96,11 +94,7 @@ export default function Onboarding() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ThemedView style={styles.container}>
         <View style={styles.logoContainer}>
-          <Image
-            source={onboardingLogo}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+          <Image source={onboardingLogo} style={styles.logo} resizeMode="contain" />
         </View>
 
         {currentPage === 'intro' && (
@@ -108,19 +102,13 @@ export default function Onboarding() {
             <ThemedText type="title" style={styles.mainTitle}>
               Your identity in your inventory
             </ThemedText>
-            
+
             <View style={styles.buttonGroup}>
-              <TouchableOpacity 
-                style={styles.button} 
-                onPress={() => setCurrentPage('generate')}
-              >
+              <TouchableOpacity style={styles.button} onPress={() => setCurrentPage('generate')}>
                 <ThemedText style={styles.buttonText}>Generate your private key</ThemedText>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.button} 
-                onPress={() => setCurrentPage('import')}
-              >
+
+              <TouchableOpacity style={styles.button} onPress={() => setCurrentPage('import')}>
                 <ThemedText style={styles.buttonText}>Import existing seed</ThemedText>
               </TouchableOpacity>
             </View>
@@ -146,8 +134,8 @@ export default function Onboarding() {
               ))}
             </View>
 
-            <TouchableOpacity 
-              style={[styles.button, styles.finishButton]} 
+            <TouchableOpacity
+              style={[styles.button, styles.finishButton]}
               onPress={handleGenerateComplete}
             >
               <ThemedText style={styles.buttonText}>Finish</ThemedText>
@@ -160,9 +148,7 @@ export default function Onboarding() {
             <ThemedText type="title" style={styles.title}>
               Import Seed Phrase
             </ThemedText>
-            <ThemedText style={styles.subtitle}>
-              Enter your 12-word seed phrase
-            </ThemedText>
+            <ThemedText style={styles.subtitle}>Enter your 12-word seed phrase</ThemedText>
 
             <View style={styles.inputContainer}>
               <TextInput
@@ -178,10 +164,7 @@ export default function Onboarding() {
               />
             </View>
 
-            <TouchableOpacity 
-              style={[styles.button, styles.finishButton]} 
-              onPress={handleImport}
-            >
+            <TouchableOpacity style={[styles.button, styles.finishButton]} onPress={handleImport}>
               <ThemedText style={styles.buttonText}>Import</ThemedText>
             </TouchableOpacity>
           </View>
@@ -225,7 +208,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 'auto',
     textAlign: 'center',
-    marginTop: 'auto'
+    marginTop: 'auto',
   },
   mainSubtitle: {
     fontSize: 18,

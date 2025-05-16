@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import type React from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedText } from './ThemedText';
 import { Colors } from '@/constants/Colors';
-import { Activity, ActivityType } from '@/models/Activity';
+import { type Activity, ActivityType } from '@/models/Activity';
 import { getMockedActivities } from '@/mocks/Activities';
 import { formatCentsToCurrency, formatDayAndDate, formatRelativeTime } from '@/utils';
 import { Key, BanknoteIcon } from 'lucide-react-native';

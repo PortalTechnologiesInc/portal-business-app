@@ -1,5 +1,5 @@
 import { Currency } from '@/models/Activity';
-import { UpcomingPayment } from '@/models/UpcomingPayment';
+import type { UpcomingPayment } from '@/models/UpcomingPayment';
 
 export function getMockedUpcomingPayments(): UpcomingPayment[] {
   // Create future dates
