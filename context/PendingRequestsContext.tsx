@@ -9,12 +9,8 @@ import {
   useCallback,
 } from 'react'
 import type { PendingRequest, PendingRequestType } from '../models/PendingRequest';
-import { mockPendingRequests } from '../mocks/PendingRequests';
 import { getNostrServiceInstance, LocalAuthChallengeListener } from '../services/nostr/NostrService'
 import { AuthChallengeEvent } from 'portal-app-lib';
-
-// Preload mock data to avoid loading delay when the context is used
-const PRELOADED_REQUESTS = mockPendingRequests;
 
 interface PendingRequestsContextType {
   pendingRequests: PendingRequest[];
@@ -33,7 +29,7 @@ const PendingRequestsContext = createContext<PendingRequestsContextType | undefi
 
 export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Use preloaded data to avoid loading delay on mount
-  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>(PRELOADED_REQUESTS);
+  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [isLoadingRequest, setIsLoadingRequest] = useState(false);
   const [requestFailed, setRequestFailed] = useState(false);
   const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
@@ -73,7 +69,14 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
     // aggiorna lista
     const id = "randomId";
 
-    console.log(event)
+    setPendingRequests(prev => [...prev, {
+      id,
+      metadata: event,
+      timestamp: new Date().toISOString(),
+      status: 'pending',
+      type: 'login'
+    }])
+
     return new Promise((resolve) => {
       resolvers.set(id, resolve)
       setResolvers(resolvers)

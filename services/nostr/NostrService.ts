@@ -143,6 +143,17 @@ class NostrService {
     public isInitialized(): boolean {
         return this.portalApp !== null;
     }
+
+    public getServiceName(publicKey: string) {
+        if (!this.portalApp) {
+            throw new Error('PortalApp not initialized. Call initialize() first.');
+        }
+
+        const service = this.portalApp.fetchProfile(publicKey);
+        if (service) {
+            return service;
+        }
+    }
 }
 
 // Export a single instance

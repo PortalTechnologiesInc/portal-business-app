@@ -5,6 +5,7 @@ import { PendingRequestCard } from './PendingRequestCard';
 import { PendingRequestSkeletonCard } from './PendingRequestSkeletonCard';
 import { FailedRequestCard } from './FailedRequestCard';
 import type { PendingRequest, PendingRequestType } from '../models/PendingRequest';
+import { AuthChallengeEvent } from 'portal-app-lib';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 48; // Full width minus padding
@@ -13,12 +14,9 @@ const CARD_MARGIN = 12; // Margin between cards
 // Create a skeleton request that adheres to the PendingRequest interface
 const createSkeletonRequest = (): PendingRequest => ({
   id: 'skeleton',
-  type: 'login' as PendingRequestType, // TypeScript needs explicit type
+  metadata: {} as AuthChallengeEvent,
   status: 'pending',
-  timestamp: new Date().toISOString(), // Current timestamp to ensure it's the most recent
-  title: 'Loading...',
-  description: 'Please wait...',
-  metadata: {},
+  timestamp: new Date().toISOString(),
 });
 
 export const PendingRequestsList: React.FC = () => {
