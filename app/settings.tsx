@@ -10,6 +10,7 @@ import { useOnboarding } from '@/context/OnboardingContext';
 import { useUserProfile } from '@/context/UserProfileContext';
 import { useWallet } from '@/context/WalletContext';
 import * as ImagePicker from 'expo-image-picker';
+import { deleteMnemonic } from '@/services/SecureStorageService';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -92,6 +93,7 @@ export default function SettingsScreen() {
 
               // Reset onboarding state (this navigates to onboarding screen)
               await resetOnboarding();
+              deleteMnemonic();
             } catch (error) {
               console.error('Error clearing app data:', error);
               Alert.alert('Error', 'Failed to Reset App. Please try again.');
