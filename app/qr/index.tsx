@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
 import { router } from 'expo-router';
 import { usePendingRequests } from '@/context/PendingRequestsContext';
+import { parseAuthInitUrl } from 'portal-app-lib';
+import { getNostrServiceInstance } from '@/services/nostr/NostrService';
 
 // Define the type for the barcode scanner result
 type BarcodeResult = {
@@ -43,6 +45,7 @@ export default function QRScannerScreen() {
 
     // Show the skeleton loader
     showSkeletonLoader();
+    getNostrServiceInstance().sendAuthInit(data)
 
     // Use router.replace to completely replace the navigation stack
     // This will make it so that when the user gets to the home page,

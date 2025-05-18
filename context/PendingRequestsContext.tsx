@@ -73,6 +73,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
     // aggiorna lista
     const id = "randomId";
 
+    console.log(event)
     return new Promise((resolve) => {
       resolvers.set(id, resolve)
       setResolvers(resolvers)

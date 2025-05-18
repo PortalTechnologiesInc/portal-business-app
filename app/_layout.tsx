@@ -15,6 +15,7 @@ import { Colors } from '@/constants/Colors';
 import { Asset } from 'expo-asset';
 import { mnemonicEvents } from '@/services/SecureStorageService';
 import { PortalApp, Mnemonic, parseAuthInitUrl } from 'portal-app-lib';
+import { getNostrServiceInstance } from '@/services/nostr/NostrService';
 
 // Define the mnemonic key constant to match the one in SecureStorageService.ts
 const MNEMONIC_KEY = 'portal_mnemonic';
@@ -128,25 +129,8 @@ export default function RootLayout() {
     const initPortalApp = async () => {
       if (mnemonic) {
         console.log('Initializing PortalApp with mnemonic');
-
         const mnemonicObj = new Mnemonic(mnemonic);
-
-        const keypair = mnemonicObj.getKeypair();
-
-        const publicKey = keypair.publicKey();
-
-        console.log('Public key:', publicKey.toString());
-
-
-        const portalInstance = await PortalApp.create(keypair, ['wss://relay.nostr.net']);
-        portalInstance.listen();
-
-        setTimeout(() => {
-          const parsedUrl = parseAuthInitUrl('portal://npub1ek206p7gwgqzgc6s7sfedmlu87cz9894jzzq0283t72lhz3uuxwsgn9stz?relays=wss%3A%2F%2Frelay.nostr.net&token=7fe469d4-4624-4319-8da2-8835c51ea870');
-          portalInstance.sendAuthInit(parsedUrl);
-          console.log(parsedUrl);
-        }, 2000);
-
+        getNostrServiceInstance(mnemonicObj)
 
       } else {
         console.log('Mnemonic does not exist');
