@@ -3,13 +3,15 @@ import {
   createContext,
   useContext,
   useState,
-  useEffect,type 
-  ReactNode,
+  useEffect, type
+    ReactNode,
   useMemo,
   useCallback,
 } from 'react'
 import type { PendingRequest, PendingRequestType } from '../models/PendingRequest';
 import { mockPendingRequests } from '../mocks/PendingRequests';
+import { getNostrServiceInstance, LocalAuthChallengeListener } from '../services/nostr/NostrService'
+import { AuthChallengeEvent } from 'portal-app-lib';
 
 // Preload mock data to avoid loading delay when the context is used
 const PRELOADED_REQUESTS = mockPendingRequests;
@@ -35,6 +37,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
   const [isLoadingRequest, setIsLoadingRequest] = useState(false);
   const [requestFailed, setRequestFailed] = useState(false);
   const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [resolvers, setResolvers] = useState<Map<string, (value: boolean) => void>>(new Map());
 
   // Memoize hasPending to avoid recalculation on every render
   const hasPending = useMemo(() => {
@@ -65,20 +68,39 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
     [pendingRequests]
   );
 
+  getNostrServiceInstance().setAuthChallengeListener(new LocalAuthChallengeListener((event: AuthChallengeEvent) => {
+
+    // aggiorna lista
+    const id = "randomId";
+
+    return new Promise((resolve) => {
+      resolvers.set(id, resolve)
+      setResolvers(resolvers)
+    })
+  }))
+
   const approve = useCallback((id: string) => {
     setPendingRequests(prev =>
       prev.map(request => (request.id === id ? { ...request, status: 'approved' } : request))
     );
-    // In a real implementation, you would send this to an API
-    console.log(`Request ${id} approved`);
+    const resolver = resolvers.get(id)
+    if (resolver) {
+      resolver(true)
+      resolvers.delete(id)
+      setResolvers(resolvers)
+    }
   }, []);
 
   const deny = useCallback((id: string) => {
     setPendingRequests(prev =>
       prev.map(request => (request.id === id ? { ...request, status: 'denied' } : request))
     );
-    // In a real implementation, you would send this to an API
-    console.log(`Request ${id} denied`);
+    const resolver = resolvers.get(id)
+    if (resolver) {
+      resolver(false)
+      resolvers.delete(id)
+      setResolvers(resolvers)
+    }
   }, []);
 
   // Show skeleton loader and set timeout for request

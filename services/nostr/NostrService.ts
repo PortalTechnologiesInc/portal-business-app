@@ -6,7 +6,7 @@ const DEFAULT_RELAYS = [
     'wss://relay.nostr.net'
 ];
 
-class LocalAuthChallengeListener implements AuthChallengeListener {
+export class LocalAuthChallengeListener implements AuthChallengeListener {
 
     private callback: (event: AuthChallengeEvent) => Promise<boolean>;
 
@@ -19,7 +19,7 @@ class LocalAuthChallengeListener implements AuthChallengeListener {
     }
 }
 
-class LocalPaymentRequestListener implements PaymentRequestListener {
+export class LocalPaymentRequestListener implements PaymentRequestListener {
 
     private singleCb: (event: SinglePaymentRequest) => Promise<PaymentStatusContent>;
 
@@ -53,9 +53,10 @@ class NostrService {
         // Private constructor to prevent direct construction calls with 'new'
     }
 
-    public static getInstance(mnemonic: Mnemonic): NostrService {
+    public static getInstance(mnemonic: Mnemonic | null = null): NostrService {
         if (!NostrService.instance) {
             NostrService.instance = new NostrService();
+            if (!mnemonic) throw Error("Not yet initialized, pass the mnemonic as argument.")
             NostrService.instance.initialize(mnemonic);
         }
         return NostrService.instance;
@@ -145,4 +146,6 @@ class NostrService {
 }
 
 // Export a single instance
-export default NostrService.getInstance
+export function getNostrServiceInstance(mnemonic: Mnemonic | null = null) {
+    return NostrService.getInstance(mnemonic)
+}
