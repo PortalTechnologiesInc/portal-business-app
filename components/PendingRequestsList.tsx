@@ -6,6 +6,7 @@ import { PendingRequestSkeletonCard } from './PendingRequestSkeletonCard';
 import { FailedRequestCard } from './FailedRequestCard';
 import type { PendingRequest, PendingRequestType } from '../models/PendingRequest';
 import { AuthChallengeEvent } from 'portal-app-lib';
+import { getNostrServiceInstance } from '@/services/nostr/NostrService';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 48; // Full width minus padding
@@ -25,6 +26,7 @@ export const PendingRequestsList: React.FC = () => {
     hasPending,
     isLoadingRequest,
     requestFailed,
+    pendingUrl,
     showSkeletonLoader,
     setRequestFailed,
   } = usePendingRequests();
@@ -56,7 +58,9 @@ export const PendingRequestsList: React.FC = () => {
   // Handle retry
   const handleRetry = () => {
     setRequestFailed(false);
-    showSkeletonLoader();
+    const url = pendingUrl!;
+    showSkeletonLoader(url);
+    getNostrServiceInstance().sendAuthInit(url.toString());
   };
 
   // Handle cancel

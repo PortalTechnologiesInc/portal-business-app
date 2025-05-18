@@ -10,7 +10,7 @@ import {
 } from 'react'
 import type { PendingRequest, PendingRequestType } from '../models/PendingRequest';
 import { getNostrServiceInstance, LocalAuthChallengeListener } from '../services/nostr/NostrService'
-import { AuthChallengeEvent } from 'portal-app-lib';
+import { AuthChallengeEvent, AuthInitUrl } from 'portal-app-lib';
 
 interface PendingRequestsContextType {
   pendingRequests: PendingRequest[];
@@ -21,7 +21,8 @@ interface PendingRequestsContextType {
   hasPending: boolean;
   isLoadingRequest: boolean;
   requestFailed: boolean;
-  showSkeletonLoader: () => void;
+  pendingUrl: AuthInitUrl | undefined;
+  showSkeletonLoader: (parsedUrl: AuthInitUrl) => void;
   setRequestFailed: (failed: boolean) => void;
 }
 
@@ -31,6 +32,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
   // Use preloaded data to avoid loading delay on mount
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [isLoadingRequest, setIsLoadingRequest] = useState(false);
+  const [pendingUrl, setPendingUrl] = useState<AuthInitUrl | undefined>(undefined);
   const [requestFailed, setRequestFailed] = useState(false);
   const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
   const [resolvers, setResolvers] = useState<Map<string, (value: boolean) => void>>(new Map());
@@ -75,7 +77,11 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
       timestamp: new Date().toISOString(),
       status: 'pending',
       type: 'login'
-    }])
+    }]);
+
+    if (pendingUrl?.mainKey === event.serviceKey) {
+      cancelSkeletonLoader();
+    }
 
     return new Promise((resolve) => {
       resolvers.set(id, resolve)
@@ -108,13 +114,14 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
   }, []);
 
   // Show skeleton loader and set timeout for request
-  const showSkeletonLoader = useCallback(() => {
+  const showSkeletonLoader = useCallback((parsedUrl: AuthInitUrl) => {
     // Clean up any existing timeout
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
 
     setIsLoadingRequest(true);
+    setPendingUrl(parsedUrl);
     setRequestFailed(false);
 
     // Set new timeout for 10 seconds
@@ -124,6 +131,15 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
     }, 10000);
 
     setTimeoutId(newTimeoutId);
+  }, [timeoutId]);
+
+  const cancelSkeletonLoader = useCallback(() => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+
+    setIsLoadingRequest(false);
+    setRequestFailed(false);
   }, [timeoutId]);
 
   // Memoize the context value to prevent recreation on every render
@@ -137,6 +153,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
       hasPending,
       isLoadingRequest,
       requestFailed,
+      pendingUrl,
       showSkeletonLoader,
       setRequestFailed,
     }),
@@ -149,6 +166,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
       hasPending,
       isLoadingRequest,
       requestFailed,
+      pendingUrl,
       showSkeletonLoader,
       setRequestFailed,
     ]

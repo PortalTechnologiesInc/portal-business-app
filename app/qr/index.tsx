@@ -45,7 +45,8 @@ export default function QRScannerScreen() {
     console.log(`Bar code with type ${type} and data ${data} has been scanned!`);
 
     // Show the skeleton loader
-    showSkeletonLoader();
+    const parsedUrl = parseAuthInitUrl(data);
+    showSkeletonLoader(parsedUrl);
     getNostrServiceInstance().sendAuthInit(data)
 
     // Use router.replace to completely replace the navigation stack
