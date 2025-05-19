@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
-import { Text, View, Platform, SafeAreaView, AppState } from "react-native";
+import { Text, View, SafeAreaView, AppState } from "react-native";
 import type { AppStateStatus } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import * as Linking from "expo-linking";
 import * as SplashScreen from "expo-splash-screen";
-import * as SecureStore from "expo-secure-store";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { OnboardingProvider } from "@/context/OnboardingContext";
 import { UserProfileProvider } from "@/context/UserProfileContext";
@@ -19,57 +18,27 @@ import { getNostrServiceInstance } from "@/services/nostr/NostrService";
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
-// Preload all commonly used images
+// Function to preload images for performance
 const preloadImages = async () => {
-	const images = [
-		require("../assets/images/appLogo.png"),
-		require("../assets/images/logoFull.png"),
-	];
-
-	return Asset.loadAsync(images);
+	try {
+		// Preload any local assets needed on startup
+		const assetPromises = [
+			Asset.loadAsync(require("../assets/images/appLogo.png")),
+			// Add any other assets that need to be preloaded here
+		];
+		
+		await Promise.all(assetPromises);
+		console.log("Assets preloaded successfully");
+	} catch (error) {
+		console.error("Error preloading assets:", error);
+	}
 };
 
 export default function RootLayout() {
 	const [isReady, setIsReady] = useState(false);
 	const [mnemonic, setMnemonic] = useState<string | null>(null);
 	const [walletURL, setWalletURL] = useState<string | null>(null);
-
 	const router = useRouter();
-
-	useEffect(() => {
-		// Handle links when app is already running
-		const subscription = Linking.addEventListener("url", (event) => {
-			const { path, queryParams } = Linking.parse(event.url);
-			console.log("Received link:", path, queryParams);
-
-			// Update the navigation line
-			if (path) {
-				// Cast to any since we're getting dynamic path from deep link
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				router.navigate(path as any);
-
-				// Or check for specific routes you know exist:
-				if (path === "onboarding") {
-					router.navigate("/onboarding");
-				} else if (path === "login") {
-					router.navigate("/"); // Or wherever login should go
-				}
-			}
-		});
-
-		// Check for initial URL that launched the app
-		const checkInitialLink = async () => {
-			const initialUrl = await Linking.getInitialURL();
-			if (initialUrl) {
-				const { path, queryParams } = Linking.parse(initialUrl);
-				console.log("Initial link:", path, queryParams);
-				// Handle the initial link
-			}
-		};
-
-		checkInitialLink();
-		return () => subscription.remove();
-	}, [router]);
 
 	useEffect(() => {
 		async function prepare() {
@@ -89,6 +58,33 @@ export default function RootLayout() {
 
 		prepare();
 	}, []);
+
+	// Handle deeplinks
+	useEffect(() => {
+		// Handle links when app is already running
+		const subscription = Linking.addEventListener("url", (event) => {
+			console.log("Received link:", event.url);
+			router.push({
+				pathname: "/deeplink",
+				params: { url: event.url }
+			});
+		});
+
+		// Check for initial URL that launched the app
+		const checkInitialLink = async () => {
+			const initialUrl = await Linking.getInitialURL();
+			if (initialUrl) {
+				console.log("Initial link:", initialUrl);
+				router.push({
+					pathname: "/deeplink",
+					params: { url: initialUrl }
+				});
+			}
+		};
+
+		checkInitialLink();
+		return () => subscription.remove();
+	}, [router]);
 
 	// Check for mnemonic and wallet URL existence and log their status
 	useEffect(() => {
@@ -229,6 +225,7 @@ export default function RootLayout() {
 								options={{ presentation: "fullScreenModal" }}
 							/>
 							<Stack.Screen name="subscription" />
+							<Stack.Screen name="deeplink" />
 						</Stack>
 					</PendingRequestsProvider>
 				</UserProfileProvider>

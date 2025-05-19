@@ -19,7 +19,8 @@
     "ios": {
       "supportsTablet": true,
       "userInterfaceStyle": "dark",
-      "bundleIdentifier": "com.twentytwo.portal"
+      "bundleIdentifier": "com.twentytwo.portal",
+      "associatedDomains": ["applinks:portal.app"]
     },
     "android": {
       "adaptiveIcon": {
@@ -38,7 +39,19 @@
       "colors": {
         "navigationBar": "#000000",
         "statusBar": "#000000"
-      }
+      },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "portal"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "bundler": "metro",
