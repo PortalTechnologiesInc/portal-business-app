@@ -61,6 +61,8 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({
 
 	const calendarObj = type === "subscription" ? (metadata as RecurringPaymentRequest)?.content?.recurrence.calendar : null;
 
+	const recurrence = calendarObj?.inner.toHumanReadable(false);
+
 	useEffect(() => {
 		// Check if we have a cached name for this service
 		if (serviceNameCache[metadata.serviceKey]) {
@@ -108,10 +110,14 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({
 
 			{(isPaymentRequest || isSubscriptionRequest) && amount !== null && (
 				<View style={styles.amountContainer}>
-					<Text style={styles.amountText}>
-						{Number(amount) / 1000} sats
-						{isSubscriptionRequest && <Text style={styles.monthlyText}> monthly</Text>}
-					</Text>
+					{isSubscriptionRequest ? (
+						<View style={styles.amountRow}>
+							<Text style={styles.amountText}>{Number(amount) / 1000} sats</Text>
+							<Text style={styles.recurranceText}>{recurrence?.toLowerCase()}</Text>
+						</View>
+					) : (
+						<Text style={styles.amountText}>{Number(amount) / 1000} sats</Text>
+					)}
 				</View>
 			)}
 
@@ -177,16 +183,25 @@ const styles = StyleSheet.create({
 		marginBottom: 20,
 		width: "100%",
 	},
+	amountRow: {
+		flexDirection: "row",
+		justifyContent: "center",
+		alignItems: "flex-end",
+		width: "100%",
+	},
 	amountText: {
 		color: "#FFFFFF",
 		fontSize: 30,
 		fontWeight: "700",
 		textAlign: "center",
 	},
-	monthlyText: {
+	recurranceText: {
 		color: "#FFFFFF",
-		fontSize: 20,
+		fontSize: 15,
 		fontWeight: "400",
+		marginLeft: 15,
+		alignSelf: "flex-end",
+		paddingBottom: 5
 	},
 	actions: {
 		flexDirection: "row",
