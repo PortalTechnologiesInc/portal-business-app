@@ -58,9 +58,10 @@ export const PendingRequestsList: React.FC = () => {
   // Handle retry
   const handleRetry = () => {
     setRequestFailed(false);
-    const url = pendingUrl!;
-    showSkeletonLoader(url);
-    getNostrServiceInstance().sendAuthInit(url.toString());
+    if (pendingUrl) {
+      showSkeletonLoader(pendingUrl);
+      getNostrServiceInstance().sendAuthInit(pendingUrl);
+    }
   };
 
   // Handle cancel

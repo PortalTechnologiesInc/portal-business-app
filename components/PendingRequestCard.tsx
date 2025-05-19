@@ -11,9 +11,10 @@ import { Ionicons } from "@expo/vector-icons";
 import type { PendingRequest } from "../models/PendingRequest";
 import { usePendingRequests } from "../context/PendingRequestsContext";
 import { getNostrServiceInstance } from "@/services/nostr/NostrService";
+import type { SinglePaymentRequest, RecurringPaymentRequest } from "portal-app-lib";
 
 const { width } = Dimensions.get("window");
-const CARD_WIDTH = width - 50; // Full width minus padding
+const CARD_WIDTH = width - 50;
 
 interface PendingRequestCardProps {
 	request: PendingRequest;
@@ -25,6 +26,8 @@ const getRequestTypeText = (type: string) => {
 			return "Login Request";
 		case "payment":
 			return "Payment Request";
+		case "subscription":
+			return "Subscription Request";
 		case "certificate":
 			return "Certificate Request";
 		case "identity":
@@ -34,25 +37,19 @@ const getRequestTypeText = (type: string) => {
 	}
 };
 
-const getIconName = (type: string) => {
-	switch (type) {
-		case "login":
-			return "login";
-		case "payment":
-			return "payment";
-		case "certificate":
-			return "verified";
-		case "identity":
-			return "person";
-		default:
-			return "error";
-	}
-};
-
 // Function to truncate a pubkey to the format: "npub1...123456"
 const truncatePubkey = (pubkey: string | undefined) => {
 	if (!pubkey) return "";
 	return `${pubkey.substring(0, 16)}...${pubkey.substring(pubkey.length - 16)}`;
+};
+
+// Function to format a payment amount with currency symbol
+const formatAmount = (amount: number, currency = "EUR") => {
+	// Format the amount to show 2 decimal places and add the currency symbol
+	return new Intl.NumberFormat("en-US", {
+		style: "currency",
+		currency: typeof currency === "string" ? currency : "EUR",
+	}).format(amount);
 };
 
 export const PendingRequestCard: FC<PendingRequestCardProps> = ({
@@ -60,7 +57,7 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({
 }) => {
 	const { approve, deny } = usePendingRequests();
 	const { id, metadata, type } = request;
-	const [serviceName, setServiceName] = useState<string>("Unknown Service");
+	const [serviceName, setServiceName] = useState<string | undefined>(undefined);
 
 	useEffect(() => {
 		const fetchServiceName = async () => {
@@ -68,6 +65,7 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({
 				const name = await getNostrServiceInstance().getServiceName(
 					metadata.serviceKey,
 				);
+				console.log(name)
 				setServiceName(name?.nip05 ? name.nip05 : "Unknown Service");
 			} catch (error) {
 				console.error("Error fetching service name:", error);
@@ -79,6 +77,14 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({
 
 	const recipientPubkey = metadata.recipient;
 
+	// Extract payment information if this is a payment request
+	const isPaymentRequest = type === "payment";
+
+	const amount = (metadata as SinglePaymentRequest)?.content?.amount ||
+			(metadata as RecurringPaymentRequest)?.content?.amount;
+
+			console.log(amount)
+
 	return (
 		<View style={styles.card}>
 			<Text style={styles.requestType}>{getRequestTypeText(type)}</Text>
@@ -86,6 +92,14 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({
 			<Text style={styles.serviceName}>{serviceName}</Text>
 
 			<Text style={styles.serviceInfo}>{truncatePubkey(recipientPubkey)}</Text>
+
+			{isPaymentRequest && amount !== null && (
+				<View style={styles.amountContainer}>
+					<Text style={styles.amountText}>
+						{Number(amount) / 1000} sats
+					</Text>
+				</View>
+			)}
 
 			<View style={styles.actions}>
 				<TouchableOpacity
@@ -134,7 +148,24 @@ const styles = StyleSheet.create({
 	serviceInfo: {
 		color: "#8A8A8E",
 		fontSize: 14,
+		marginBottom: 12,
+	},
+	amountContainer: {
+		borderWidth: 1,
+		borderColor: "#8A8A8E",
+		textAlign: "center",
+		borderRadius: 8,
+		paddingHorizontal: 10,
+		paddingVertical: 20,
+		alignSelf: "center",
 		marginBottom: 20,
+		width: "100%",
+	},
+	amountText: {
+		color: "#FFFFFF",
+		fontSize: 30,
+		fontWeight: "700",
+		textAlign: "center",
 	},
 	actions: {
 		flexDirection: "row",

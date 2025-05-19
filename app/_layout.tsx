@@ -13,7 +13,7 @@ import { WalletProvider } from '@/context/WalletContext';
 import { StatusBar } from 'expo-status-bar';
 import { Colors } from '@/constants/Colors';
 import { Asset } from 'expo-asset';
-import { mnemonicEvents } from '@/services/SecureStorageService';
+import { getMnemonic, mnemonicEvents } from '@/services/SecureStorageService';
 import { PortalApp, Mnemonic, parseAuthInitUrl } from 'portal-app-lib';
 import { getNostrServiceInstance } from '@/services/nostr/NostrService';
 
@@ -96,9 +96,12 @@ export default function RootLayout() {
   // Check for mnemonic existence and log its status
   useEffect(() => {
     const checkMnemonic = async () => {
-      console.log('Checking mnemonic status...');
-      const mnemonicValue = await SecureStore.getItemAsync(MNEMONIC_KEY);
-      setMnemonic(mnemonicValue);
+      try {
+        const mnemonicValue = await SecureStore.getItemAsync(MNEMONIC_KEY);
+        setMnemonic(mnemonicValue);
+      } catch (error) {
+        console.error('SecureStore access failed:', error);
+      }
     };
 
     // Check on initial load
@@ -126,7 +129,7 @@ export default function RootLayout() {
 
   // Log whenever mnemonic changes
   useEffect(() => {
-    const initPortalApp = async () => {
+    console.log('Mnemonic value:', mnemonic);
       if (mnemonic) {
         console.log('Initializing PortalApp with mnemonic');
         const mnemonicObj = new Mnemonic(mnemonic);
@@ -135,11 +138,6 @@ export default function RootLayout() {
       } else {
         console.log('Mnemonic does not exist');
       }
-    };
-
-    initPortalApp().catch(error => {
-      console.error('Error initializing PortalApp:', error);
-    });
   }, [mnemonic]);
 
   if (!isReady) {

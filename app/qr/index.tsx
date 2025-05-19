@@ -33,7 +33,6 @@ export default function QRScannerScreen() {
 
   const toggleTorch = () => {
     setEnableTorch(!enableTorch);
-    handleBarCodeScanned({ type: 'qr', data: 'portal://npub1ek206p7gwgqzgc6s7sfedmlu87cz9894jzzq0283t72lhz3uuxwsgn9stz?relays=wss%3A%2F%2Frelay.nostr.net&token=2a7795e9-35b9-4241-8832-2f2932228430' });
   };
 
   const handleBarCodeScanned = (result: BarcodeResult) => {
@@ -47,7 +46,7 @@ export default function QRScannerScreen() {
     // Show the skeleton loader
     const parsedUrl = parseAuthInitUrl(data);
     showSkeletonLoader(parsedUrl);
-    getNostrServiceInstance().sendAuthInit(data)
+    getNostrServiceInstance().sendAuthInit(parsedUrl)
 
     // Use router.replace to completely replace the navigation stack
     // This will make it so that when the user gets to the home page,

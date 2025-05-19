@@ -1,5 +1,5 @@
-import portalLib, { AuthChallengeEvent, Mnemonic, parseAuthInitUrl, PaymentStatusContent, RecurringPaymentStatusContent } from 'portal-app-lib';
-import type { AuthChallengeListener, PaymentRequestListener, PortalAppInterface, RecurringPaymentRequest, SinglePaymentRequest } from 'portal-app-lib/lib/typescript/src/generated/app';
+import portalLib, { AuthChallengeEvent, AuthInitUrl, Mnemonic, parseAuthInitUrl, PaymentResponseContent, PaymentStatusContent, RecurringPaymentResponseContent, RecurringPaymentStatusContent } from 'portal-app-lib';
+import { AuthChallengeListener, LookupInvoiceResponse, Nwc, PaymentRequestListener, PortalAppInterface, RecurringPaymentRequest, SinglePaymentRequest } from 'portal-app-lib/lib/typescript/src/generated/app';
 
 const DEFAULT_RELAYS = [
     'wss://relay.damus.io',
@@ -21,20 +21,20 @@ export class LocalAuthChallengeListener implements AuthChallengeListener {
 
 export class LocalPaymentRequestListener implements PaymentRequestListener {
 
-    private singleCb: (event: SinglePaymentRequest) => Promise<PaymentStatusContent>;
+    private singleCb: (event: SinglePaymentRequest) => Promise<PaymentResponseContent>;
 
-    private recurringCb: (event: RecurringPaymentRequest) => Promise<RecurringPaymentStatusContent>;
+    private recurringCb: (event: RecurringPaymentRequest) => Promise<RecurringPaymentResponseContent>;
 
-    constructor(singleCb: (event: SinglePaymentRequest) => Promise<PaymentStatusContent>, recurringCb: (event: RecurringPaymentRequest) => Promise<RecurringPaymentStatusContent>) {
+    constructor(singleCb: (event: SinglePaymentRequest) => Promise<PaymentResponseContent>, recurringCb: (event: RecurringPaymentRequest) => Promise<RecurringPaymentResponseContent>) {
         this.singleCb = singleCb;
         this.recurringCb = recurringCb;
     }
 
-    onSinglePaymentRequest(event: SinglePaymentRequest): Promise<PaymentStatusContent> {
+    onSinglePaymentRequest(event: SinglePaymentRequest): Promise<PaymentResponseContent> {
         return this.singleCb(event);
     }
 
-    onRecurringPaymentRequest(event: RecurringPaymentRequest): Promise<RecurringPaymentStatusContent> {
+    onRecurringPaymentRequest(event: RecurringPaymentRequest): Promise<RecurringPaymentResponseContent> {
         return this.recurringCb(event);
     }
 }
@@ -62,6 +62,58 @@ class NostrService {
         return NostrService.instance;
     }
 
+    private nwcWallet: Nwc | null = null; // Replace 'any' with proper NWC type when available
+
+    /**
+     * Connect to a Nostr Wallet (NWC) using the provided URL
+     * This is separate from NostrService initialization and can be called anytime
+     */
+    public connectNWC(nwcUrl: string): Nwc {
+        try {
+            // Assuming NWC is available from your portalLib or needs to be imported
+            this.nwcWallet = new portalLib.app.Nwc(nwcUrl);
+            return this.nwcWallet;
+        } catch (error) {
+            console.error('Failed to initialize NWC wallet:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Checks if an NWC wallet is currently connected
+     */
+    public isNWCConnected(): boolean {
+        return this.nwcWallet !== null;
+    }
+
+    /**
+     * Disconnects the currently connected NWC wallet
+     */
+    public disconnectNWC(): void {
+        this.nwcWallet = null;
+    }
+
+    public async payInvoice(invoice: string): Promise<string> {
+        if (!this.nwcWallet) {
+            throw new Error('NWC wallet not connected. Call connectNWC() first.');
+        }
+        return this.nwcWallet.payInvoice(invoice);
+    }
+
+    public async lookupInvoice(invoice: string): Promise<LookupInvoiceResponse> {
+        if (!this.nwcWallet) {
+            throw new Error('NWC wallet not connected. Call connectNWC() first.');
+        }
+        return this.nwcWallet.lookupInvoice(invoice);
+    }
+
+    public getNWCWallet(): Nwc {
+        if (!this.nwcWallet) {
+            throw new Error('NWC wallet not connected. Call connectNWC() first.');
+        }
+        return this.nwcWallet;
+    }
+
     public async initialize(mnemonic: Mnemonic): Promise<void> {
         try {
             if (this.initialized) {
@@ -82,25 +134,14 @@ class NostrService {
             const _self = this;
             this.portalApp.listenForAuthChallenge(new LocalAuthChallengeListener((event) => {
                 console.log('Auth challenge event', event);
-                if (_self.dedup.has(event.challenge)) {
-                    return Promise.resolve(false);
-                }
-                _self.dedup.set(event.challenge, true);
                 return _self.authChallengeListener?.onAuthChallenge(event) ?? Promise.resolve(false);
             }));
             this.portalApp.listenForPaymentRequest(new LocalPaymentRequestListener((singleEvent) => {
                 console.log('Single payment request', singleEvent);
-                if (_self.dedup.has(singleEvent.content.invoice)) {
-                    return Promise.resolve(new PaymentStatusContent.Rejected({ reason: 'Duplicate payment request' }));
-                }
-                _self.dedup.set(singleEvent.content.invoice, true);
+                console.log(_self.paymentRequestListener, 'ciao');
                 return _self.paymentRequestListener?.onSinglePaymentRequest(singleEvent) ?? Promise.resolve(new PaymentStatusContent.Rejected({ reason: 'Not implemented' }));
             }, (recurringEvent) => {
                 const key = `${recurringEvent.serviceKey.toString()}-${recurringEvent.content.amount.toString()}-${recurringEvent.expiresAt.toString()}`;
-                if (_self.dedup.has(key)) {
-                    return Promise.resolve(new RecurringPaymentStatusContent.Rejected({ reason: 'Duplicate recurring payment request' }));
-                }
-                _self.dedup.set(key, true);
                 console.log('Recurring payment request', recurringEvent);
                 return _self.paymentRequestListener?.onRecurringPaymentRequest(recurringEvent) ?? Promise.resolve(new RecurringPaymentStatusContent.Rejected({ reason: 'Not implemented' }));
             }));
@@ -126,10 +167,9 @@ class NostrService {
         return this.portalApp;
     }
 
-    public sendAuthInit(url: string): Promise<void> {
+    public sendAuthInit(url: AuthInitUrl): Promise<void> {
         console.log('Sending auth init', url);
-        const parsedUrl = parseAuthInitUrl(url);
-        return this.checkInitialized().sendAuthInit(parsedUrl);
+        return this.checkInitialized().sendAuthInit(url);
     }
 
     public getPortalApp(): PortalAppInterface {
