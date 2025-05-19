@@ -30,6 +30,16 @@ export default function Home() {
 	// This would come from a real user context in the future
 	const [userPublicKey, setUserPublicKey] = useState("unknown pubkey");
 
+	// Function to mark the welcome screen as viewed
+	const markWelcomeAsViewed = useCallback(async () => {
+		try {
+			await SecureStore.setItemAsync(FIRST_LAUNCH_KEY, "true");
+			setIsFirstLaunch(false);
+		} catch (e) {
+			console.error("Failed to mark welcome as viewed:", e);
+		}
+	}, []);
+
 	useEffect(() => {
 		const publicKey = getNostrServiceInstance().getPublicKey();
 		setUserPublicKey(publicKey || "unknown pubkey");
@@ -40,11 +50,7 @@ export default function Home() {
 				const firstLaunchCompleted =
 					await SecureStore.getItemAsync(FIRST_LAUNCH_KEY);
 				setIsFirstLaunch(firstLaunchCompleted !== "true");
-
-				// If this is the first launch, set the flag for future launches
-				if (firstLaunchCompleted !== "true") {
-					await SecureStore.setItemAsync(FIRST_LAUNCH_KEY, "true");
-				}
+				// We no longer set the flag here - we'll set it after user interaction
 			} catch (e) {
 				console.error("Failed to check first launch status:", e);
 			}
@@ -69,7 +75,12 @@ export default function Home() {
 				timestamp: Date.now(), // Prevent caching issues
 			},
 		});
-	}, []);
+
+		// Mark welcome as viewed when user scans QR code
+		if (isFirstLaunch) {
+			markWelcomeAsViewed();
+		}
+	}, [isFirstLaunch, markWelcomeAsViewed]);
 
 	const handleSettingsNavigate = useCallback(() => {
 		router.push("/settings");
@@ -186,6 +197,19 @@ export default function Home() {
 										<ArrowRight size={18} color={Colors.almostWhite} />
 									</TouchableOpacity>
 								</View>
+
+								<TouchableOpacity
+									style={styles.dismissButton}
+									onPress={markWelcomeAsViewed}
+								>
+									<ThemedText
+										style={styles.dismissText}
+										darkColor={Colors.dirtyWhite}
+										lightColor={Colors.darkGray}
+									>
+										Dismiss Welcome
+									</ThemedText>
+								</TouchableOpacity>
 							</View>
 						</View>
 					) : (
@@ -325,5 +349,14 @@ const styles = StyleSheet.create({
 		marginVertical: 10,
 		width: "80%",
 		textAlign: "center",
+	},
+	dismissButton: {
+		marginTop: 20,
+		alignItems: "center",
+		paddingVertical: 8,
+	},
+	dismissText: {
+		fontSize: 14,
+		fontWeight: "500",
 	},
 });

@@ -4,6 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import { router } from 'expo-router';
 
 const ONBOARDING_KEY = 'portal_onboarding_complete';
+const FIRST_LAUNCH_KEY = 'portal_first_launch_completed';
 
 type OnboardingContextType = {
   isOnboardingComplete: boolean;
@@ -35,7 +36,12 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, []);
 
   const completeOnboarding = async () => {
+    // Mark onboarding as complete
     await SecureStore.setItemAsync(ONBOARDING_KEY, 'true');
+    
+    // Reset first launch flag to ensure welcome card appears 
+    await SecureStore.deleteItemAsync(FIRST_LAUNCH_KEY);
+    
     setIsOnboardingComplete(true);
     router.replace('/');
   };
