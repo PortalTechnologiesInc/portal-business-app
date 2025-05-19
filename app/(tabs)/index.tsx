@@ -146,7 +146,7 @@ export default function Home() {
 												lightColor={Colors.darkGray}
 												darkColor={Colors.almostWhite}
 											>
-												{username}
+												{`${username}@getportal.cc`}
 											</ThemedText>
 										) : null}
 										<ThemedText

@@ -24,7 +24,7 @@ export default function SettingsScreen() {
 
   useEffect(() => {
     if (username) {
-      setUsernameInput(username.replace('@getportal.cc', ''));
+      setUsernameInput(username);
     }
   }, [username]);
 
@@ -62,8 +62,7 @@ export default function SettingsScreen() {
 
       // Even if username is empty, we still append @getportal.cc
       // This ensures pubkey format is consistent regardless of username presence
-      const fullUsername = `${usernameInput.trim()}@getportal.cc`;
-      await setUsername(fullUsername);
+      await setUsername(usernameInput);
 
       Alert.alert('Success', 'Profile updated successfully');
     } catch (error) {

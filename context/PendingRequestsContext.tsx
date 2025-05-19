@@ -161,7 +161,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({
 						metadata: event,
 						timestamp: new Date().toISOString(),
 						status: "pending",
-						type: "login",
+						type: "subscription",
 					},
 				]);
 

@@ -140,7 +140,6 @@ class NostrService {
                 console.log(this.paymentRequestListener, 'sono il request listener');
                 return this.paymentRequestListener?.onSinglePaymentRequest(singleEvent) ?? Promise.resolve(new PaymentStatusContent.Rejected({ reason: 'Not implemented' }));
             }, (recurringEvent) => {
-                const key = `${recurringEvent.serviceKey.toString()}-${recurringEvent.content.amount.toString()}-${recurringEvent.expiresAt.toString()}`;
                 console.log('Recurring payment request', recurringEvent);
                 return this.paymentRequestListener?.onRecurringPaymentRequest(recurringEvent) ?? Promise.resolve(new RecurringPaymentStatusContent.Rejected({ reason: 'Not implemented' }));
             }));
