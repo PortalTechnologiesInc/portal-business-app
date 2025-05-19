@@ -16,6 +16,7 @@ import { Asset } from "expo-asset";
 import { getMnemonic, mnemonicEvents } from "@/services/SecureStorageService";
 import { Mnemonic } from "portal-app-lib";
 import { getNostrServiceInstance } from "@/services/nostr/NostrService";
+import { SQLiteDatabase, SQLiteProvider } from "expo-sqlite";
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -176,39 +177,103 @@ export default function RootLayout() {
 	return (
 		<GestureHandlerRootView style={{ flex: 1, backgroundColor: "#000000" }}>
 			<StatusBar style="light" />
-			<OnboardingProvider>
-				<UserProfileProvider>
-					<WalletProvider>
-						<PendingRequestsProvider>
-							<Stack
-								screenOptions={{
-									headerShown: false,
-									contentStyle: {
-										backgroundColor: "#000000",
-									},
-								}}
-							>
-								<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-								<Stack.Screen name="index" />
-								<Stack.Screen name="onboarding" />
-								<Stack.Screen
-									name="settings"
-									options={{ presentation: "modal" }}
-								/>
-								<Stack.Screen
-									name="wallet"
-									options={{ presentation: "modal" }}
-								/>
-								<Stack.Screen
-									name="qr"
-									options={{ presentation: "fullScreenModal" }}
-								/>
-								<Stack.Screen name="subscription" />
-							</Stack>
-						</PendingRequestsProvider>
-					</WalletProvider>
-				</UserProfileProvider>
-			</OnboardingProvider>
+            <SQLiteProvider databaseName="portal-app.db" onInit={migrateDbIfNeeded}>
+			  <OnboardingProvider>
+			  	<UserProfileProvider>
+			  		<WalletProvider>
+			  			<PendingRequestsProvider>
+			  				<Stack
+			  					screenOptions={{
+			  						headerShown: false,
+			  						contentStyle: {
+			  							backgroundColor: "#000000",
+			  						},
+			  					}}
+			  				>
+			  					<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+			  					<Stack.Screen name="index" />
+			  					<Stack.Screen name="onboarding" />
+			  					<Stack.Screen
+			  						name="settings"
+			  						options={{ presentation: "modal" }}
+			  					/>
+			  					<Stack.Screen
+			  						name="wallet"
+			  						options={{ presentation: "modal" }}
+			  					/>
+			  					<Stack.Screen
+			  						name="qr"
+			  						options={{ presentation: "fullScreenModal" }}
+			  					/>
+			  					<Stack.Screen name="subscription" />
+			  				</Stack>
+			  			</PendingRequestsProvider>
+			  		</WalletProvider>
+			  	</UserProfileProvider>
+			  </OnboardingProvider>
+            </SQLiteProvider>
 		</GestureHandlerRootView>
 	);
+
+  async function migrateDbIfNeeded(db: SQLiteDatabase) {
+    const DATABASE_VERSION = 2;
+    let { user_version: currentDbVersion } = await db.getFirstAsync<{ user_version: number }>(
+      'PRAGMA user_version'
+    ) ?? { user_version: 0 };
+
+    if (currentDbVersion >= DATABASE_VERSION) {
+      return;
+    }
+
+    if (currentDbVersion <= 0) {
+      await db.execAsync(`
+        PRAGMA journal_mode = 'wal';
+      `);
+      currentDbVersion = 1;
+    }
+
+    if (currentDbVersion <= 1) {
+      // Create activities table
+      await db.execAsync(`
+        CREATE TABLE IF NOT EXISTS activities (
+          id TEXT PRIMARY KEY NOT NULL,
+          type TEXT NOT NULL CHECK (type IN ('auth', 'pay')), -- Maps to ActivityType enum
+          service_name TEXT NOT NULL,
+          service_key TEXT NOT NULL,
+          detail TEXT NOT NULL,
+          date INTEGER NOT NULL, -- Unix timestamp
+          amount INTEGER, -- NULL for Auth type
+          currency TEXT, -- NULL for Auth type
+          request_id TEXT NOT NULL, -- Reference to the original request if applicable
+          created_at INTEGER NOT NULL -- Unix timestamp
+        );
+
+        -- Create subscriptions table for recurring payments
+        CREATE TABLE IF NOT EXISTS subscriptions (
+          id TEXT PRIMARY KEY NOT NULL,
+          request_id TEXT NOT NULL, -- Reference to the original subscription request
+          service_name TEXT NOT NULL,
+          service_key TEXT NOT NULL,
+          amount INTEGER NOT NULL,
+          currency TEXT NOT NULL,
+          recurrence_calendar TEXT NOT NULL,
+          recurrence_max_payments INTEGER,
+          recurrence_until INTEGER,
+          recurrence_first_payment_due INTEGER NOT NULL,
+          status TEXT NOT NULL CHECK (status IN ('active', 'paused', 'cancelled', 'expired')),
+          last_payment_date INTEGER, -- Unix timestamp of last successful payment
+          next_payment_date INTEGER, -- Unix timestamp of next scheduled payment
+          created_at INTEGER NOT NULL -- Unix timestamp
+        );
+
+        -- Create indexes for better query performance
+        CREATE INDEX IF NOT EXISTS idx_activities_date ON activities(date);
+        CREATE INDEX IF NOT EXISTS idx_activities_type ON activities(type);
+        CREATE INDEX IF NOT EXISTS idx_subscriptions_next_payment ON subscriptions(next_payment_date);
+      `);
+      currentDbVersion = 2;
+    }
+
+    await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
+  }
 }

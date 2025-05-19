@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '../../components/ThemedText';
 import { Key, BanknoteIcon } from 'lucide-react-native';
@@ -7,11 +7,22 @@ import { formatCentsToCurrency, formatRelativeTime } from '@/utils';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSQLiteContext } from 'expo-sqlite';
+import { DatabaseService, ActivityWithDates } from '@/services/database';
 
 const ItemList: React.FC = () => {
   // Initialize with empty array - will be populated with real data later
-  const [items, setItems] = useState<Activity[]>([]);
+  const db = new DatabaseService(useSQLiteContext());
+  const [items, setItems] = useState<ActivityWithDates[]>([]);
   const [filter, setFilter] = useState<ActivityType | null>(null);
+
+  useEffect(() => {
+    const fetchActivities = async () => {
+      const activities = await db.getActivities();
+      setItems(activities);
+    };
+    fetchActivities();
+  }, []);
 
   // Memoize filtered items to prevent recalculation on every render
   const filteredItems = useMemo(
@@ -30,7 +41,7 @@ const ItemList: React.FC = () => {
         acc[dateString].push(item);
         return acc;
       },
-      {} as Record<string, Activity[]>
+      {} as Record<string, ActivityWithDates[]>
     );
   }, [filteredItems]);
 
@@ -42,7 +53,7 @@ const ItemList: React.FC = () => {
 
   // Memoize renderItem to prevent recreation on every render
   const renderItem = useCallback(
-    ({ activity }: { activity: Activity }) => (
+    ({ activity }: { activity: ActivityWithDates }) => (
       <View style={styles.activityCard}>
         <View style={styles.iconContainer}>
           {activity.type === ActivityType.Auth ? (
@@ -57,7 +68,7 @@ const ItemList: React.FC = () => {
             darkColor={Colors.almostWhite}
             lightColor={Colors.almostWhite}
           >
-            {activity.name}
+            {activity.service_name}
           </ThemedText>
           <ThemedText
             style={styles.typeText}
@@ -71,10 +82,10 @@ const ItemList: React.FC = () => {
           {activity.type === ActivityType.Pay && (
             <ThemedText
               style={styles.amount}
-              darkColor={activity.amount < 0 ? Colors.red : Colors.green}
-              lightColor={activity.amount < 0 ? Colors.red : Colors.green}
+              darkColor={activity.amount ? activity.amount < 0 ? Colors.red : Colors.green : Colors.dirtyWhite}
+              lightColor={activity.amount ? activity.amount < 0 ? Colors.red : Colors.green : Colors.dirtyWhite}
             >
-              {formatCentsToCurrency(activity.amount)} {activity.currency}
+              {activity.amount ? formatCentsToCurrency(activity.amount) : ''} {activity.currency}
             </ThemedText>
           )}
           <ThemedText
@@ -111,11 +122,11 @@ const ItemList: React.FC = () => {
 
   // Memoize list item renderer
   const listItemRenderer = useCallback(
-    ({ item }: { item: { title: string; data: Activity[] } }) => (
+    ({ item }: { item: { title: string; data: ActivityWithDates[] } }) => (
       <>
         {renderSectionHeader({ section: { title: item.title } })}
-        {item.data.map((activity: Activity) => (
-          <React.Fragment key={`${activity.name}-${activity.date.getTime()}`}>{renderItem({ activity })}</React.Fragment>
+        {item.data.map((activity: ActivityWithDates) => (
+          <React.Fragment key={`${activity.detail}-${activity.date.getTime()}`}>{renderItem({ activity })}</React.Fragment>
         ))}
       </>
     ),

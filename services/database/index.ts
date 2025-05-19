@@ -1,0 +1,300 @@
+import { SQLiteDatabase } from 'expo-sqlite';
+import { ActivityType, Currency } from '@/models/Activity';
+import type { Activity } from '@/models/Activity';
+import type { UpcomingPayment } from '@/models/UpcomingPayment';
+
+// Timestamp utilities
+const toUnixSeconds = (date: Date | number): number => {
+  const ms = date instanceof Date ? date.getTime() : date;
+  return Math.floor(ms / 1000);
+};
+
+const fromUnixSeconds = (seconds: number): Date => {
+  return new Date(seconds * 1000);
+};
+
+// Database record types (as stored in SQLite)
+export interface ActivityRecord {
+  id: string;
+  type: 'auth' | 'pay';
+  service_name: string;
+  service_key: string;
+  detail: string;
+  date: number;  // Unix timestamp in seconds
+  amount: number | null;
+  currency: string | null;
+  request_id: string;
+  created_at: number;  // Unix timestamp in seconds
+}
+
+export interface SubscriptionRecord {
+  id: string;
+  request_id: string;
+  service_name: string;
+  service_key: string;
+  amount: number;
+  currency: string;
+  recurrence_calendar: string;
+  recurrence_max_payments: number | null;
+  recurrence_until: number | null;  // Unix timestamp in seconds
+  recurrence_first_payment_due: number;  // Unix timestamp in seconds
+  status: 'active' | 'paused' | 'cancelled' | 'expired';
+  last_payment_date: number | null;  // Unix timestamp in seconds
+  next_payment_date: number | null;  // Unix timestamp in seconds
+  created_at: number;  // Unix timestamp in seconds
+}
+
+// Application layer types (with Date objects)
+export interface ActivityWithDates extends Omit<ActivityRecord, 'date' | 'created_at'> {
+  date: Date;
+  created_at: Date;
+}
+
+export interface SubscriptionWithDates extends Omit<SubscriptionRecord, 
+  'recurrence_until' | 'recurrence_first_payment_due' | 'last_payment_date' | 'next_payment_date' | 'created_at'> {
+  recurrence_until: Date | null;
+  recurrence_first_payment_due: Date;
+  last_payment_date: Date | null;
+  next_payment_date: Date | null;
+  created_at: Date;
+}
+
+export class DatabaseService {
+  constructor(private db: SQLiteDatabase) {}
+
+  // Activity methods
+  async addActivity(activity: Omit<ActivityWithDates, 'id' | 'created_at'>): Promise<string> {
+    const id = crypto.randomUUID();
+    const now = toUnixSeconds(Date.now());
+
+    await this.db.runAsync(
+      `INSERT INTO activities (
+        id, type, service_name, service_key, detail, date, amount, currency, request_id, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        activity.type,
+        activity.service_name,
+        activity.service_key,
+        activity.detail,
+        toUnixSeconds(activity.date),
+        activity.amount,
+        activity.currency,
+        activity.request_id,
+        now,
+      ]
+    );
+
+    return id;
+  }
+
+  async getActivity(id: string): Promise<ActivityWithDates | null> {
+    const record = await this.db.getFirstAsync<ActivityRecord>(
+      'SELECT * FROM activities WHERE id = ?',
+      [id]
+    );
+
+    if (!record) return null;
+
+    return {
+      ...record,
+      date: fromUnixSeconds(record.date),
+      created_at: fromUnixSeconds(record.created_at),
+    };
+  }
+
+  async getActivities(options: {
+    type?: ActivityType;
+    serviceKey?: string;
+    limit?: number;
+    offset?: number;
+    fromDate?: Date | number;
+    toDate?: Date | number;
+  } = {}): Promise<ActivityWithDates[]> {
+    const conditions: string[] = [];
+    const params: any[] = [];
+
+    if (options.type !== undefined) {
+      conditions.push('type = ?');
+      params.push(options.type);
+    }
+    if (options.serviceKey) {
+      conditions.push('service_key = ?');
+      params.push(options.serviceKey);
+    }
+    if (options.fromDate) {
+      conditions.push('date >= ?');
+      params.push(toUnixSeconds(options.fromDate));
+    }
+    if (options.toDate) {
+      conditions.push('date <= ?');
+      params.push(toUnixSeconds(options.toDate));
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const limitClause = options.limit ? `LIMIT ${options.limit}` : '';
+    const offsetClause = options.offset ? `OFFSET ${options.offset}` : '';
+
+    const records = await this.db.getAllAsync<ActivityRecord>(
+      `SELECT * FROM activities ${whereClause} ORDER BY date DESC ${limitClause} ${offsetClause}`,
+      params
+    );
+
+    return records.map(record => ({
+      ...record,
+      date: fromUnixSeconds(record.date),
+      created_at: fromUnixSeconds(record.created_at),
+    }));
+  }
+
+  // Subscription methods
+  async addSubscription(subscription: Omit<SubscriptionWithDates, 'id' | 'created_at'>): Promise<string> {
+    const id = crypto.randomUUID();
+    const now = toUnixSeconds(Date.now());
+
+    await this.db.runAsync(
+      `INSERT INTO subscriptions (
+        id, request_id, service_name, service_key, amount, currency,
+        recurrence_calendar, recurrence_max_payments, recurrence_until,
+        recurrence_first_payment_due, status, last_payment_date,
+        next_payment_date, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        subscription.request_id,
+        subscription.service_name,
+        subscription.service_key,
+        subscription.amount,
+        subscription.currency,
+        subscription.recurrence_calendar,
+        subscription.recurrence_max_payments,
+        subscription.recurrence_until ? toUnixSeconds(subscription.recurrence_until) : null,
+        toUnixSeconds(subscription.recurrence_first_payment_due),
+        subscription.status,
+        subscription.last_payment_date ? toUnixSeconds(subscription.last_payment_date) : null,
+        subscription.next_payment_date ? toUnixSeconds(subscription.next_payment_date) : null,
+        now,
+      ]
+    );
+
+    return id;
+  }
+
+  async getSubscription(id: string): Promise<SubscriptionWithDates | null> {
+    const record = await this.db.getFirstAsync<SubscriptionRecord>(
+      'SELECT * FROM subscriptions WHERE id = ?',
+      [id]
+    );
+
+    if (!record) return null;
+
+    return {
+      ...record,
+      recurrence_until: record.recurrence_until ? fromUnixSeconds(record.recurrence_until) : null,
+      recurrence_first_payment_due: fromUnixSeconds(record.recurrence_first_payment_due),
+      last_payment_date: record.last_payment_date ? fromUnixSeconds(record.last_payment_date) : null,
+      next_payment_date: record.next_payment_date ? fromUnixSeconds(record.next_payment_date) : null,
+      created_at: fromUnixSeconds(record.created_at),
+    };
+  }
+
+  async getSubscriptions(options: {
+    serviceKey?: string;
+    status?: SubscriptionRecord['status'];
+    activeOnly?: boolean;
+    limit?: number;
+    offset?: number;
+  } = {}): Promise<SubscriptionWithDates[]> {
+    const conditions: string[] = [];
+    const params: any[] = [];
+
+    if (options.serviceKey) {
+      conditions.push('service_key = ?');
+      params.push(options.serviceKey);
+    }
+    if (options.status) {
+      conditions.push('status = ?');
+      params.push(options.status);
+    } else if (options.activeOnly) {
+      conditions.push('status = ?');
+      params.push('active');
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const limitClause = options.limit ? `LIMIT ${options.limit}` : '';
+    const offsetClause = options.offset ? `OFFSET ${options.offset}` : '';
+
+    const records = await this.db.getAllAsync<SubscriptionRecord>(
+      `SELECT * FROM subscriptions ${whereClause} ORDER BY next_payment_date ASC ${limitClause} ${offsetClause}`,
+      params
+    );
+
+    return records.map(record => ({
+      ...record,
+      recurrence_until: record.recurrence_until ? fromUnixSeconds(record.recurrence_until) : null,
+      recurrence_first_payment_due: fromUnixSeconds(record.recurrence_first_payment_due),
+      last_payment_date: record.last_payment_date ? fromUnixSeconds(record.last_payment_date) : null,
+      next_payment_date: record.next_payment_date ? fromUnixSeconds(record.next_payment_date) : null,
+      created_at: fromUnixSeconds(record.created_at),
+    }));
+  }
+
+  async updateSubscriptionStatus(
+    id: string,
+    status: SubscriptionRecord['status'],
+    nextPaymentDate?: Date | number | null
+  ): Promise<void> {
+    const updates: string[] = ['status = ?'];
+    const params: any[] = [status];
+
+    if (nextPaymentDate !== undefined) {
+      updates.push('next_payment_date = ?');
+      params.push(nextPaymentDate ? toUnixSeconds(nextPaymentDate) : null);
+    }
+
+    params.push(id);
+
+    await this.db.runAsync(
+      `UPDATE subscriptions SET ${updates.join(', ')} WHERE id = ?`,
+      params
+    );
+  }
+
+  async updateSubscriptionLastPayment(
+    id: string,
+    lastPaymentDate: Date | number,
+    nextPaymentDate: Date | number | null
+  ): Promise<void> {
+    await this.db.runAsync(
+      `UPDATE subscriptions 
+       SET last_payment_date = ?, next_payment_date = ? 
+       WHERE id = ?`,
+      [
+        toUnixSeconds(lastPaymentDate),
+        nextPaymentDate ? toUnixSeconds(nextPaymentDate) : null,
+        id
+      ]
+    );
+  }
+
+  // Helper method to get upcoming payments
+  async getUpcomingPayments(limit: number = 5): Promise<UpcomingPayment[]> {
+    const now = toUnixSeconds(Date.now());
+    const subscriptions = await this.db.getAllAsync<SubscriptionRecord>(
+      `SELECT * FROM subscriptions 
+       WHERE status = 'active' 
+       AND next_payment_date > ? 
+       ORDER BY next_payment_date ASC 
+       LIMIT ?`,
+      [now, limit]
+    );
+
+    return subscriptions.map(sub => ({
+      id: sub.id,
+      serviceName: sub.service_name,
+      amount: sub.amount,
+      currency: sub.currency as Currency,
+      dueDate: fromUnixSeconds(sub.next_payment_date!),
+    }));
+  }
+} 
