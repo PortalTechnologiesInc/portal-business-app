@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { StyleSheet, View, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -11,15 +11,19 @@ import { useUserProfile } from '@/context/UserProfileContext';
 import { QrCode } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { getNostrServiceInstance } from '@/services/nostr/NostrService';
 
 export default function Home() {
-  const { isOnboardingComplete, isLoading, resetOnboarding } = useOnboarding();
+  const { isLoading } = useOnboarding();
   const { username } = useUserProfile();
 
   // This would come from a real user context in the future
-  const [userPublicKey, setUserPublicKey] = useState(
-    'npub1abcdef1234567890abcdef1234567890abcdef1234567890abcdef123456'
-  );
+  const [userPublicKey, setUserPublicKey] = useState('unknown pubkey');
+
+  useEffect(() => {
+    const publicKey = getNostrServiceInstance().getPublicKey();
+    setUserPublicKey(publicKey || 'unknown pubkey');
+  }, []);
 
   // Memoize the truncated key to prevent recalculation on every render
   const truncatedPublicKey = useMemo(() => {

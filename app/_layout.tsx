@@ -14,11 +14,8 @@ import { StatusBar } from 'expo-status-bar';
 import { Colors } from '@/constants/Colors';
 import { Asset } from 'expo-asset';
 import { getMnemonic, mnemonicEvents } from '@/services/SecureStorageService';
-import { PortalApp, Mnemonic, parseAuthInitUrl } from 'portal-app-lib';
+import { Mnemonic } from 'portal-app-lib';
 import { getNostrServiceInstance } from '@/services/nostr/NostrService';
-
-// Define the mnemonic key constant to match the one in SecureStorageService.ts
-const MNEMONIC_KEY = 'portal_mnemonic';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -97,7 +94,7 @@ export default function RootLayout() {
   useEffect(() => {
     const checkMnemonic = async () => {
       try {
-        const mnemonicValue = await SecureStore.getItemAsync(MNEMONIC_KEY);
+        const mnemonicValue = await getMnemonic();
         setMnemonic(mnemonicValue);
       } catch (error) {
         console.error('SecureStore access failed:', error);

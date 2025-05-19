@@ -138,7 +138,7 @@ class NostrService {
             }));
             this.portalApp.listenForPaymentRequest(new LocalPaymentRequestListener((singleEvent) => {
                 console.log('Single payment request', singleEvent);
-                console.log(_self.paymentRequestListener, 'ciao');
+                console.log(_self.paymentRequestListener, 'sono il request listener');
                 return _self.paymentRequestListener?.onSinglePaymentRequest(singleEvent) ?? Promise.resolve(new PaymentStatusContent.Rejected({ reason: 'Not implemented' }));
             }, (recurringEvent) => {
                 const key = `${recurringEvent.serviceKey.toString()}-${recurringEvent.content.amount.toString()}-${recurringEvent.expiresAt.toString()}`;
@@ -192,6 +192,10 @@ class NostrService {
         const service = await this.portalApp.fetchProfile(publicKey);
         console.log('Service in nostrservice:', service);
         return service;
+    }
+
+    public getPublicKey(): string | null {
+        return this.publicKey;
     }
 }
 
