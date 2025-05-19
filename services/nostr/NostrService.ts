@@ -178,6 +178,11 @@ class NostrService {
 
     public async reset(): Promise<void> {
         this.portalApp = null;
+        this.publicKey = null;
+        this.initialized = false;
+        this.authChallengeListener = null;
+        this.paymentRequestListener = null;
+        this.nwcWallet = null;
     }
 
     public isInitialized(): boolean {
