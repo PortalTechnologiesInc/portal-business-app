@@ -131,19 +131,18 @@ class NostrService {
             this.portalApp.listen(); // Listen asynchronously
             console.log('Portal app initialized', this.portalApp);
 
-            const _self = this;
             this.portalApp.listenForAuthChallenge(new LocalAuthChallengeListener((event) => {
                 console.log('Auth challenge event', event);
-                return _self.authChallengeListener?.onAuthChallenge(event) ?? Promise.resolve(false);
+                return this.authChallengeListener?.onAuthChallenge(event) ?? Promise.resolve(false);
             }));
             this.portalApp.listenForPaymentRequest(new LocalPaymentRequestListener((singleEvent) => {
                 console.log('Single payment request', singleEvent);
-                console.log(_self.paymentRequestListener, 'sono il request listener');
-                return _self.paymentRequestListener?.onSinglePaymentRequest(singleEvent) ?? Promise.resolve(new PaymentStatusContent.Rejected({ reason: 'Not implemented' }));
+                console.log(this.paymentRequestListener, 'sono il request listener');
+                return this.paymentRequestListener?.onSinglePaymentRequest(singleEvent) ?? Promise.resolve(new PaymentStatusContent.Rejected({ reason: 'Not implemented' }));
             }, (recurringEvent) => {
                 const key = `${recurringEvent.serviceKey.toString()}-${recurringEvent.content.amount.toString()}-${recurringEvent.expiresAt.toString()}`;
                 console.log('Recurring payment request', recurringEvent);
-                return _self.paymentRequestListener?.onRecurringPaymentRequest(recurringEvent) ?? Promise.resolve(new RecurringPaymentStatusContent.Rejected({ reason: 'Not implemented' }));
+                return this.paymentRequestListener?.onRecurringPaymentRequest(recurringEvent) ?? Promise.resolve(new RecurringPaymentStatusContent.Rejected({ reason: 'Not implemented' }));
             }));
         } catch (error) {
             console.error('Failed to initialize NostrService:', error);

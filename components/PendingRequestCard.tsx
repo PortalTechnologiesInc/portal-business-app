@@ -17,7 +17,6 @@ import type {
 } from "portal-app-lib";
 
 const { width } = Dimensions.get("window");
-const CARD_WIDTH = width - 50;
 
 interface PendingRequestCardProps {
 	request: PendingRequest;
@@ -57,6 +56,11 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({
 	const [serviceName, setServiceName] = useState<string>("Unknown Service");
 	const isMounted = useRef(true);
 
+	// Add debug logging when a card is rendered
+	console.log(`Rendering card ${id} of type ${type} with status ${request.status}`);
+
+	const calendarObj = type === "subscription" ? (metadata as RecurringPaymentRequest)?.content?.recurrence.calendar : null;
+
 	useEffect(() => {
 		// Check if we have a cached name for this service
 		if (serviceNameCache[metadata.serviceKey]) {
@@ -86,6 +90,7 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({
 
 	// Extract payment information if this is a payment request
 	const isPaymentRequest = type === "payment";
+	const isSubscriptionRequest = type === "subscription";
 
 	const amount =
 		(metadata as SinglePaymentRequest)?.content?.amount ||
@@ -101,9 +106,12 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({
 
 			<Text style={styles.serviceInfo}>{truncatePubkey(recipientPubkey)}</Text>
 
-			{isPaymentRequest && amount !== null && (
+			{(isPaymentRequest || isSubscriptionRequest) && amount !== null && (
 				<View style={styles.amountContainer}>
-					<Text style={styles.amountText}>{Number(amount) / 1000} sats</Text>
+					<Text style={styles.amountText}>
+						{Number(amount) / 1000} sats
+						{isSubscriptionRequest && <Text style={styles.monthlyText}> monthly</Text>}
+					</Text>
 				</View>
 			)}
 
@@ -132,7 +140,9 @@ const styles = StyleSheet.create({
 		backgroundColor: "#1E1E1E",
 		borderRadius: 20,
 		padding: 14,
-		width: CARD_WIDTH,
+		width: "100%",
+		minWidth: width - 90, // Ensure minimum width
+		marginHorizontal: 5, // Add margin to ensure separation
 		shadowColor: "#000",
 		shadowOffset: { width: 0, height: 2 },
 		shadowOpacity: 0.1,
@@ -172,6 +182,11 @@ const styles = StyleSheet.create({
 		fontSize: 30,
 		fontWeight: "700",
 		textAlign: "center",
+	},
+	monthlyText: {
+		color: "#FFFFFF",
+		fontSize: 20,
+		fontWeight: "400",
 	},
 	actions: {
 		flexDirection: "row",
