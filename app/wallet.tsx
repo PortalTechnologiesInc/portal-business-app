@@ -14,24 +14,48 @@ import { Colors } from '@/constants/Colors';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Pencil, X, QrCode, Check } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useWallet } from '@/context/WalletContext';
+import { getWalletUrl, saveWalletUrl, isWalletConnected, walletUrlEvents } from '@/services/SecureStorageService';
 
 export default function WalletManagementScreen() {
   const router = useRouter();
-  const { walletUrl, setWalletUrl, isConnected } = useWallet();
-  const [inputValue, setInputValue] = useState(walletUrl);
+  const [walletUrl, setWalletUrlState] = useState('');
+  const [isConnected, setIsConnected] = useState(false);
+  const [inputValue, setInputValue] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [scannedUrl, setScannedUrl] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   const hasChanged = inputValue !== walletUrl;
   const params = useLocalSearchParams();
   // Use a ref to track if we've handled the current scannedUrl
   const handledUrlRef = useRef<string | null>(null);
 
+  // Load wallet data on mount
   useEffect(() => {
-    // Update input value when walletUrl changes
-    setInputValue(walletUrl);
-  }, [walletUrl]);
+    const loadWalletData = async () => {
+      try {
+        const url = await getWalletUrl();
+        const connected = await isWalletConnected();
+        setWalletUrlState(url);
+        setInputValue(url);
+        setIsConnected(connected);
+      } catch (error) {
+        console.error('Error loading wallet data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadWalletData();
+
+    // Subscribe to wallet URL changes
+    const subscription = walletUrlEvents.addListener('walletUrlChanged', async (newUrl) => {
+      setWalletUrlState(newUrl || '');
+      setIsConnected(Boolean(newUrl?.trim()));
+    });
+
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     // Handle scanned URL from QR code - only process if it's not the same URL we've already handled
@@ -48,7 +72,7 @@ export default function WalletManagementScreen() {
         router.setParams(restParams);
       }
     }
-  }, [params.scannedUrl]);
+  }, [params, router]);
 
   // Handle hardware back button
   useEffect(() => {
@@ -78,7 +102,9 @@ export default function WalletManagementScreen() {
     setInputValue('');
     try {
       // Clear the wallet URL in storage
-      await setWalletUrl('');
+      await saveWalletUrl('');
+      setWalletUrlState('');
+      setIsConnected(false);
     } catch (error) {
       console.error('Error clearing wallet URL:', error);
       Alert.alert('Error', 'Failed to clear wallet URL. Please try again.');
@@ -87,7 +113,9 @@ export default function WalletManagementScreen() {
 
   const handleSaveWalletUrl = async (urlToSave = inputValue) => {
     try {
-      await setWalletUrl(urlToSave);
+      await saveWalletUrl(urlToSave);
+      setWalletUrlState(urlToSave);
+      setIsConnected(Boolean(urlToSave.trim()));
       setIsEditing(false);
       setShowConfirmModal(false);
 
@@ -106,8 +134,9 @@ export default function WalletManagementScreen() {
         // Already cleared params, so no need to navigate
         return;
       }
+      
       // Otherwise, navigate back to the source screen if specified
-      else if (sourceParam === 'settings') {
+      if (sourceParam === 'settings') {
         setTimeout(() => {
           router.replace('/settings');
         }, 100);
@@ -154,8 +183,9 @@ export default function WalletManagementScreen() {
       // Already cleared params, so no need to navigate
       return;
     }
+    
     // Otherwise, navigate back to the source screen if specified
-    else if (sourceParam === 'settings') {
+    if (sourceParam === 'settings') {
       setTimeout(() => {
         router.replace('/settings');
       }, 100);
@@ -176,6 +206,27 @@ export default function WalletManagementScreen() {
       router.back();
     }
   };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <ThemedView style={styles.container}>
+          <ThemedView style={styles.header}>
+            <ThemedText
+              style={styles.headerText}
+              lightColor={Colors.darkGray}
+              darkColor={Colors.almostWhite}
+            >
+              Wallet Management
+            </ThemedText>
+          </ThemedView>
+          <ThemedView style={styles.content}>
+            <ThemedText>Loading...</ThemedText>
+          </ThemedView>
+        </ThemedView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -248,21 +299,20 @@ export default function WalletManagementScreen() {
                 Do you want to connect to this wallet?
               </ThemedText>
 
-              <ThemedText style={styles.urlText}>{scannedUrl}</ThemedText>
+              <ThemedText style={styles.modalUrl}>{scannedUrl}</ThemedText>
 
               <View style={styles.modalButtons}>
                 <TouchableOpacity
-                  style={[styles.modalButton, styles.cancelButton]}
+                  style={[styles.modalButton, styles.modalButtonCancel]}
                   onPress={handleCloseModal}
                 >
-                  <ThemedText style={styles.buttonText}>Cancel</ThemedText>
+                  <ThemedText style={styles.modalButtonText}>Cancel</ThemedText>
                 </TouchableOpacity>
-
                 <TouchableOpacity
-                  style={[styles.modalButton, styles.confirmButton]}
+                  style={[styles.modalButton, styles.modalButtonConfirm]}
                   onPress={() => handleSaveWalletUrl(scannedUrl)}
                 >
-                  <ThemedText style={styles.buttonText}>Connect</ThemedText>
+                  <ThemedText style={styles.modalButtonText}>Connect</ThemedText>
                 </TouchableOpacity>
               </View>
             </View>
@@ -372,7 +422,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: 'center',
   },
-  urlText: {
+  modalUrl: {
     fontSize: 14,
     color: Colors.light.tint,
     marginBottom: 24,
@@ -392,15 +442,15 @@ const styles = StyleSheet.create({
     minWidth: 100,
     alignItems: 'center',
   },
-  cancelButton: {
+  modalButtonCancel: {
     backgroundColor: Colors.darkGray,
     marginRight: 8,
   },
-  confirmButton: {
+  modalButtonConfirm: {
     backgroundColor: Colors.light.tint,
     marginLeft: 8,
   },
-  buttonText: {
+  modalButtonText: {
     color: Colors.almostWhite,
     fontSize: 16,
     fontWeight: 'bold',

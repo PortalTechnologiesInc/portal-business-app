@@ -7,13 +7,12 @@ import * as SplashScreen from "expo-splash-screen";
 import * as SecureStore from "expo-secure-store";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { OnboardingProvider } from "@/context/OnboardingContext";
-import { PendingRequestsProvider } from "@/context/PendingRequestsContext";
 import { UserProfileProvider } from "@/context/UserProfileContext";
-import { WalletProvider } from "@/context/WalletContext";
+import { PendingRequestsProvider } from "@/context/PendingRequestsContext";
 import { StatusBar } from "expo-status-bar";
 import { Colors } from "@/constants/Colors";
 import { Asset } from "expo-asset";
-import { getMnemonic, mnemonicEvents } from "@/services/SecureStorageService";
+import { getMnemonic, mnemonicEvents, getWalletUrl, walletUrlEvents } from "@/services/SecureStorageService";
 import { Mnemonic } from "portal-app-lib";
 import { getNostrServiceInstance } from "@/services/nostr/NostrService";
 
@@ -33,6 +32,7 @@ const preloadImages = async () => {
 export default function RootLayout() {
 	const [isReady, setIsReady] = useState(false);
 	const [mnemonic, setMnemonic] = useState<string | null>(null);
+	const [walletURL, setWalletURL] = useState<string | null>(null);
 
 	const router = useRouter();
 
@@ -90,27 +90,30 @@ export default function RootLayout() {
 		prepare();
 	}, []);
 
-	// Check for mnemonic existence and log its status
+	// Check for mnemonic and wallet URL existence and log their status
 	useEffect(() => {
-		const checkMnemonic = async () => {
+		const checkSecureStorage = async () => {
 			try {
 				const mnemonicValue = await getMnemonic();
 				setMnemonic(mnemonicValue);
+
+				const walletUrlValue = await getWalletUrl();
+				setWalletURL(walletUrlValue || null);
 			} catch (error) {
 				console.error("SecureStore access failed:", error);
 			}
 		};
 
 		// Check on initial load
-		checkMnemonic();
+		checkSecureStorage();
 
 		// Also check when app returns to foreground
 		const appStateSubscription = AppState.addEventListener(
 			"change",
 			(nextAppState: AppStateStatus) => {
 				if (nextAppState === "active") {
-					console.log("App became active, checking mnemonic...");
-					checkMnemonic();
+					console.log("App became active, checking secure storage...");
+					checkSecureStorage();
 				}
 			},
 		);
@@ -120,13 +123,23 @@ export default function RootLayout() {
 			"mnemonicChanged",
 			(newMnemonicValue) => {
 				console.log("Mnemonic change event received!");
-				setMnemonic(newMnemonicValue);
+				setMnemonic(newMnemonicValue as string | null);
+			},
+		);
+
+		// Subscribe to wallet URL change events
+		const walletUrlSubscription = walletUrlEvents.addListener(
+			"walletUrlChanged",
+			(newWalletUrl) => {
+				console.log("Wallet URL change event received!");
+				setWalletURL(newWalletUrl as string | null);
 			},
 		);
 
 		return () => {
 			appStateSubscription.remove();
 			mnemonicSubscription.remove();
+			walletUrlSubscription.remove();
 		};
 	}, []);
 
@@ -145,6 +158,19 @@ export default function RootLayout() {
 						await nostrService.initialize(mnemonicObj);
 					}
 
+					// Initialize wallet if wallet URL is available
+					if (walletURL) {
+						console.log("Connecting to wallet with URL");
+						try {
+							nostrService.connectNWC(walletURL);
+							console.log("Wallet connected successfully");
+						} catch (error) {
+							console.error("Failed to connect wallet:", error);
+						}
+					} else {
+						console.log("No wallet URL available, skipping wallet connection");
+					}
+
 					console.log(
 						"NostrService initialized successfully with public key:",
 						nostrService.getPublicKey(),
@@ -158,7 +184,7 @@ export default function RootLayout() {
 		};
 
 		initializeNostrService();
-	}, [mnemonic]);
+	}, [mnemonic, walletURL]); // Add walletURL to dependencies to reinitialize if it changes
 
 	if (!isReady) {
 		return (
@@ -178,35 +204,33 @@ export default function RootLayout() {
 			<StatusBar style="light" />
 			<OnboardingProvider>
 				<UserProfileProvider>
-					<WalletProvider>
-						<PendingRequestsProvider>
-							<Stack
-								screenOptions={{
-									headerShown: false,
-									contentStyle: {
-										backgroundColor: "#000000",
-									},
-								}}
-							>
-								<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-								<Stack.Screen name="index" />
-								<Stack.Screen name="onboarding" />
-								<Stack.Screen
-									name="settings"
-									options={{ presentation: "modal" }}
-								/>
-								<Stack.Screen
-									name="wallet"
-									options={{ presentation: "modal" }}
-								/>
-								<Stack.Screen
-									name="qr"
-									options={{ presentation: "fullScreenModal" }}
-								/>
-								<Stack.Screen name="subscription" />
-							</Stack>
-						</PendingRequestsProvider>
-					</WalletProvider>
+					<PendingRequestsProvider>
+						<Stack
+							screenOptions={{
+								headerShown: false,
+								contentStyle: {
+									backgroundColor: "#000000",
+								},
+							}}
+						>
+							<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+							<Stack.Screen name="index" />
+							<Stack.Screen name="onboarding" />
+							<Stack.Screen
+								name="settings"
+								options={{ presentation: "modal" }}
+							/>
+							<Stack.Screen
+								name="wallet"
+								options={{ presentation: "modal" }}
+							/>
+							<Stack.Screen
+								name="qr"
+								options={{ presentation: "fullScreenModal" }}
+							/>
+							<Stack.Screen name="subscription" />
+						</Stack>
+					</PendingRequestsProvider>
 				</UserProfileProvider>
 			</OnboardingProvider>
 		</GestureHandlerRootView>

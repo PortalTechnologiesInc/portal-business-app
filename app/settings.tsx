@@ -8,19 +8,41 @@ import { ArrowLeft, User, Pencil, X, QrCode, ChevronRight } from 'lucide-react-n
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { useUserProfile } from '@/context/UserProfileContext';
-import { useWallet } from '@/context/WalletContext';
+import { isWalletConnected, walletUrlEvents, deleteMnemonic } from '@/services/SecureStorageService';
 import * as ImagePicker from 'expo-image-picker';
-import { deleteMnemonic } from '@/services/SecureStorageService';
 import { getNostrServiceInstance } from '@/services/nostr/NostrService';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { resetOnboarding } = useOnboarding();
   const { username, avatarUri, setUsername, setAvatarUri } = useUserProfile();
-  const { isConnected } = useWallet();
-
+  const [isConnected, setIsConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [usernameInput, setUsernameInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [profileIsLoading, setProfileIsLoading] = useState(false);
+
+  // Initialize wallet connection status
+  useEffect(() => {
+    const checkWalletConnection = async () => {
+      try {
+        const connected = await isWalletConnected();
+        setIsConnected(connected);
+      } catch (error) {
+        console.error('Error checking wallet connection:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    checkWalletConnection();
+    
+    // Subscribe to wallet URL changes
+    const subscription = walletUrlEvents.addListener('walletUrlChanged', async (newUrl) => {
+      setIsConnected(Boolean(newUrl?.trim()));
+    });
+    
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     if (username) {
@@ -58,7 +80,7 @@ export default function SettingsScreen() {
 
   const handleSaveProfile = async () => {
     try {
-      setIsLoading(true);
+      setProfileIsLoading(true);
 
       // Even if username is empty, we still append @getportal.cc
       // This ensures pubkey format is consistent regardless of username presence
@@ -69,7 +91,7 @@ export default function SettingsScreen() {
       console.error('Error saving profile:', error);
       Alert.alert('Error', 'Failed to save profile. Please try again.');
     } finally {
-      setIsLoading(false);
+      setProfileIsLoading(false);
     }
   };
 
@@ -114,6 +136,30 @@ export default function SettingsScreen() {
       },
     });
   };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <ThemedView style={styles.container}>
+          <ThemedView style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <ArrowLeft size={20} color={Colors.almostWhite} />
+            </TouchableOpacity>
+            <ThemedText
+              style={styles.headerText}
+              lightColor={Colors.darkGray}
+              darkColor={Colors.almostWhite}
+            >
+              Settings
+            </ThemedText>
+          </ThemedView>
+          <ThemedView style={styles.content}>
+            <ThemedText>Loading...</ThemedText>
+          </ThemedView>
+        </ThemedView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -165,10 +211,10 @@ export default function SettingsScreen() {
               <TouchableOpacity
                 style={styles.saveButton}
                 onPress={handleSaveProfile}
-                disabled={isLoading}
+                disabled={profileIsLoading}
               >
                 <ThemedText style={styles.saveButtonText}>
-                  {isLoading ? 'Saving...' : 'Save Profile'}
+                  {profileIsLoading ? 'Saving...' : 'Save Profile'}
                 </ThemedText>
               </TouchableOpacity>
             </ThemedView>
