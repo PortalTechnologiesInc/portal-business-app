@@ -41,8 +41,27 @@ export default function Home() {
 	}, []);
 
 	useEffect(() => {
-		const publicKey = getNostrServiceInstance().getPublicKey();
-		setUserPublicKey(publicKey || "unknown pubkey");
+		const fetchPublicKey = async () => {
+			try {
+				const nostrService = getNostrServiceInstance();
+				let publicKey = nostrService.getPublicKey();
+
+				// If no public key is available yet, try again after a short delay
+				if (!publicKey || publicKey === "unknown pubkey") {
+					// Wait a bit for NostrService to initialize
+					await new Promise((resolve) => setTimeout(resolve, 1000));
+					publicKey = nostrService.getPublicKey();
+				}
+
+				setUserPublicKey(publicKey || "unknown pubkey");
+				console.log("Current public key:", publicKey);
+			} catch (e) {
+				console.error("Failed to get public key:", e);
+				setUserPublicKey("unknown pubkey");
+			}
+		};
+
+		fetchPublicKey();
 
 		// Check if this is the user's first launch after onboarding
 		const checkFirstLaunch = async () => {
@@ -57,7 +76,18 @@ export default function Home() {
 		};
 
 		checkFirstLaunch();
-	}, []);
+
+		// Set up an interval to periodically check for the public key if it's not available
+		let intervalId: NodeJS.Timeout | null = null;
+
+		if (!userPublicKey || userPublicKey === "unknown pubkey") {
+			intervalId = setInterval(fetchPublicKey, 2000);
+		}
+
+		return () => {
+			if (intervalId) clearInterval(intervalId);
+		};
+	}, [userPublicKey]);
 
 	// Memoize the truncated key to prevent recalculation on every render
 	const truncatedPublicKey = useMemo(() => {
