@@ -1,4 +1,4 @@
-import portalLib, { AuthChallengeEvent, AuthInitUrl, Mnemonic, parseAuthInitUrl, PaymentResponseContent, PaymentStatusContent, RecurringPaymentResponseContent, RecurringPaymentStatusContent } from 'portal-app-lib';
+import portalLib, { AuthChallengeEvent, AuthInitUrl, Mnemonic, parseAuthInitUrl, PaymentResponseContent, PaymentStatusContent, Profile, RecurringPaymentResponseContent, RecurringPaymentStatusContent } from 'portal-app-lib';
 import { AuthChallengeListener, LookupInvoiceResponse, Nwc, PaymentRequestListener, PortalAppInterface, RecurringPaymentRequest, SinglePaymentRequest } from 'portal-app-lib/lib/typescript/src/generated/app';
 
 const DEFAULT_RELAYS = [
@@ -184,15 +184,14 @@ class NostrService {
         return this.portalApp !== null;
     }
 
-    public getServiceName(publicKey: string) {
+    public async getServiceName(publicKey: string): Promise<Profile | undefined> {
         if (!this.portalApp) {
             throw new Error('PortalApp not initialized. Call initialize() first.');
         }
 
-        const service = this.portalApp.fetchProfile(publicKey);
-        if (service) {
-            return service;
-        }
+        const service = await this.portalApp.fetchProfile(publicKey);
+        console.log('Service in nostrservice:', service);
+        return service;
     }
 }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { FC } from "react";
 import {
 	View,
@@ -11,7 +11,10 @@ import { Ionicons } from "@expo/vector-icons";
 import type { PendingRequest } from "../models/PendingRequest";
 import { usePendingRequests } from "../context/PendingRequestsContext";
 import { getNostrServiceInstance } from "@/services/nostr/NostrService";
-import type { SinglePaymentRequest, RecurringPaymentRequest } from "portal-app-lib";
+import type {
+	SinglePaymentRequest,
+	RecurringPaymentRequest,
+} from "portal-app-lib";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 50;
@@ -43,36 +46,40 @@ const truncatePubkey = (pubkey: string | undefined) => {
 	return `${pubkey.substring(0, 16)}...${pubkey.substring(pubkey.length - 16)}`;
 };
 
-// Function to format a payment amount with currency symbol
-const formatAmount = (amount: number, currency = "EUR") => {
-	// Format the amount to show 2 decimal places and add the currency symbol
-	return new Intl.NumberFormat("en-US", {
-		style: "currency",
-		currency: typeof currency === "string" ? currency : "EUR",
-	}).format(amount);
-};
+// Global cache for service names
+const serviceNameCache: Record<string, string> = {};
 
 export const PendingRequestCard: FC<PendingRequestCardProps> = ({
 	request,
 }) => {
 	const { approve, deny } = usePendingRequests();
 	const { id, metadata, type } = request;
-	const [serviceName, setServiceName] = useState<string | undefined>(undefined);
+	const [serviceName, setServiceName] = useState<string>("Unknown Service");
+	const isMounted = useRef(true);
 
 	useEffect(() => {
-		const fetchServiceName = async () => {
-			try {
-				const name = await getNostrServiceInstance().getServiceName(
-					metadata.serviceKey,
-				);
-				console.log(name)
-				setServiceName(name?.nip05 ? name.nip05 : "Unknown Service");
-			} catch (error) {
-				console.error("Error fetching service name:", error);
-			}
-		};
+		// Check if we have a cached name for this service
+		if (serviceNameCache[metadata.serviceKey]) {
+			setServiceName(serviceNameCache[metadata.serviceKey]);
+		} else {
+			getNostrServiceInstance()
+				.getServiceName(metadata.serviceKey)
+				.then((profile) => {
+					// Only update if the component is still mounted
+					if (isMounted.current && profile?.nip05) {
+						const name = profile.nip05;
+						// Save to global cache
+						serviceNameCache[metadata.serviceKey] = name;
+						// Update state
+						setServiceName(name);
+					}
+				});
+		}
 
-		fetchServiceName();
+		// Cleanup function to prevent state updates after unmount
+		return () => {
+			isMounted.current = false;
+		};
 	}, [metadata.serviceKey]);
 
 	const recipientPubkey = metadata.recipient;
@@ -80,10 +87,11 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({
 	// Extract payment information if this is a payment request
 	const isPaymentRequest = type === "payment";
 
-	const amount = (metadata as SinglePaymentRequest)?.content?.amount ||
-			(metadata as RecurringPaymentRequest)?.content?.amount;
+	const amount =
+		(metadata as SinglePaymentRequest)?.content?.amount ||
+		(metadata as RecurringPaymentRequest)?.content?.amount;
 
-			console.log(amount)
+	console.log(amount);
 
 	return (
 		<View style={styles.card}>
@@ -95,9 +103,7 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({
 
 			{isPaymentRequest && amount !== null && (
 				<View style={styles.amountContainer}>
-					<Text style={styles.amountText}>
-						{Number(amount) / 1000} sats
-					</Text>
+					<Text style={styles.amountText}>{Number(amount) / 1000} sats</Text>
 				</View>
 			)}
 
