@@ -1,0 +1,15 @@
+import { Stack } from 'expo-router';
+import { Colors } from '@/constants/Colors';
+
+export default function QrLayout() {
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: Colors.darkerGray },
+        animation: 'slide_from_right',
+        presentation: 'fullScreenModal'
+      }}
+    />
+  );
+} 

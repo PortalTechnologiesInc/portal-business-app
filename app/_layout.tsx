@@ -169,7 +169,7 @@ export default function RootLayout() {
                 <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
                 <Stack.Screen name="wallet" options={{ presentation: 'modal' }} />
                 <Stack.Screen name="qr" options={{ presentation: 'fullScreenModal' }} />
-                <Stack.Screen name="qr/wallet" options={{ presentation: 'fullScreenModal' }} />
+                <Stack.Screen name="subscription" />
               </Stack>
             </PendingRequestsProvider>
           </WalletProvider>
