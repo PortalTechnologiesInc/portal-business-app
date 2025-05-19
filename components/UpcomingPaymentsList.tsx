@@ -1,24 +1,20 @@
 import type React from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedText } from './ThemedText';
 import { Colors } from '@/constants/Colors';
 import type { UpcomingPayment } from '@/models/UpcomingPayment';
-import { getMockedUpcomingPayments } from '@/mocks/UpcomingPayments';
 import { formatCentsToCurrency, formatRelativeTime } from '@/utils';
 
 export const UpcomingPaymentsList: React.FC = () => {
-  const [upcomingPayments, setUpcomingPayments] = useState<UpcomingPayment[]>([]);
-
-  useEffect(() => {
-    setUpcomingPayments(getMockedUpcomingPayments());
-  }, []);
+  // Initialize with empty array - will be populated with real data later
+  const [upcomingPayments] = useState<UpcomingPayment[]>([]);
 
   const handleSeeAll = useCallback(() => {
     // Will be implemented when we have a dedicated page
     // Currently just an alert or placeholder
-    console.log('Navigate to upcoming payments page');
+    router.push('/(tabs)/Subscriptions');
   }, []);
 
   const renderPaymentItem = useCallback(
@@ -50,10 +46,6 @@ export const UpcomingPaymentsList: React.FC = () => {
     []
   );
 
-  if (upcomingPayments.length === 0) {
-    return null;
-  }
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -76,12 +68,24 @@ export const UpcomingPaymentsList: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={upcomingPayments}
-        keyExtractor={item => item.id}
-        renderItem={renderPaymentItem}
-        scrollEnabled={false}
-      />
+      {upcomingPayments.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <ThemedText
+            style={styles.emptyText}
+            darkColor={Colors.dirtyWhite}
+            lightColor={Colors.darkGray}
+          >
+            No upcoming payments
+          </ThemedText>
+        </View>
+      ) : (
+        <FlatList
+          data={upcomingPayments}
+          keyExtractor={item => item.id}
+          renderItem={renderPaymentItem}
+          scrollEnabled={false}
+        />
+      )}
     </View>
   );
 };
@@ -127,5 +131,17 @@ const styles = StyleSheet.create({
   dueDate: {
     fontSize: 12,
     marginTop: 4,
+  },
+  emptyContainer: {
+    backgroundColor: '#1E1E1E',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 100,
+  },
+  emptyText: {
+    fontSize: 16,
+    textAlign: 'center',
   },
 });

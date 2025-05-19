@@ -1,20 +1,16 @@
 import type React from 'react';
-import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useCallback, useState, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedText } from './ThemedText';
 import { Colors } from '@/constants/Colors';
 import { type Activity, ActivityType } from '@/models/Activity';
-import { getMockedActivities } from '@/mocks/Activities';
 import { formatCentsToCurrency, formatDayAndDate, formatRelativeTime } from '@/utils';
 import { Key, BanknoteIcon } from 'lucide-react-native';
 
-// Preload activities data
-const PRELOADED_ACTIVITIES = getMockedActivities().slice(0, 5);
-
 export const RecentActivitiesList: React.FC = () => {
-  // Use preloaded data to avoid loading delay on mount
-  const [activities] = useState<Activity[]>(PRELOADED_ACTIVITIES);
+  // Use empty array instead of mocked data - will be populated with real data later
+  const [activities] = useState<Activity[]>([]);
 
   const handleSeeAll = useCallback(() => {
     router.push('/ActivityList');
@@ -73,10 +69,6 @@ export const RecentActivitiesList: React.FC = () => {
     []
   );
 
-  if (activities.length === 0) {
-    return null;
-  }
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -99,22 +91,36 @@ export const RecentActivitiesList: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      <ThemedText
-        style={styles.dateHeader}
-        darkColor={Colors.dirtyWhite}
-        lightColor={Colors.dirtyWhite}
-      >
-        {today}
-      </ThemedText>
+      {activities.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <ThemedText
+            style={styles.emptyText}
+            darkColor={Colors.dirtyWhite}
+            lightColor={Colors.darkGray}
+          >
+            No recent activities
+          </ThemedText>
+        </View>
+      ) : (
+        <>
+          <ThemedText
+            style={styles.dateHeader}
+            darkColor={Colors.dirtyWhite}
+            lightColor={Colors.dirtyWhite}
+          >
+            {today}
+          </ThemedText>
 
-      <FlatList
-        data={activities}
-        keyExtractor={(_, index) => index.toString()}
-        renderItem={renderActivityItem}
-        scrollEnabled={false}
-        removeClippedSubviews={false}
-        initialNumToRender={5}
-      />
+          <FlatList
+            data={activities}
+            keyExtractor={(_, index) => index.toString()}
+            renderItem={renderActivityItem}
+            scrollEnabled={false}
+            removeClippedSubviews={false}
+            initialNumToRender={5}
+          />
+        </>
+      )}
     </View>
   );
 };
@@ -181,5 +187,17 @@ const styles = StyleSheet.create({
   timeAgo: {
     fontSize: 12,
     marginTop: 4,
+  },
+  emptyContainer: {
+    backgroundColor: '#1E1E1E',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 100,
+  },
+  emptyText: {
+    fontSize: 16,
+    textAlign: 'center',
   },
 });

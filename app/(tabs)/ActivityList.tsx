@@ -1,15 +1,15 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '../../components/ThemedText';
 import { Key, BanknoteIcon } from 'lucide-react-native';
 import { type Activity, ActivityType } from '../../models/Activity';
-import { getMockedActivities } from '@/mocks/Activities';
 import { formatCentsToCurrency, formatRelativeTime } from '@/utils';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ItemList: React.FC = () => {
+  // Initialize with empty array - will be populated with real data later
   const [items, setItems] = useState<Activity[]>([]);
   const [filter, setFilter] = useState<ActivityType | null>(null);
 
@@ -39,10 +39,6 @@ const ItemList: React.FC = () => {
     () => Object.entries(groupedItems).map(([title, data]) => ({ title, data })),
     [groupedItems]
   );
-
-  useEffect(() => {
-    setItems(getMockedActivities());
-  }, []);
 
   // Memoize renderItem to prevent recreation on every render
   const renderItem = useCallback(
@@ -118,8 +114,8 @@ const ItemList: React.FC = () => {
     ({ item }: { item: { title: string; data: Activity[] } }) => (
       <>
         {renderSectionHeader({ section: { title: item.title } })}
-        {item.data.map((activity: Activity, index: number) => (
-          <React.Fragment key={index}>{renderItem({ activity })}</React.Fragment>
+        {item.data.map((activity: Activity) => (
+          <React.Fragment key={`${activity.name}-${activity.date.getTime()}`}>{renderItem({ activity })}</React.Fragment>
         ))}
       </>
     ),
@@ -173,18 +169,31 @@ const ItemList: React.FC = () => {
             </ThemedText>
           </TouchableOpacity>
         </View>
-        <FlatList
-          showsVerticalScrollIndicator={false}
-          data={listData}
-          renderItem={listItemRenderer}
-          keyExtractor={(item, index) => index.toString()}
-          ListHeaderComponent={ListHeaderComponent}
-          ListFooterComponent={ListFooterComponent}
-          removeClippedSubviews={true}
-          maxToRenderPerBatch={10}
-          windowSize={10}
-          initialNumToRender={8}
-        />
+        
+        {listData.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <ThemedText
+              style={styles.emptyText}
+              darkColor={Colors.dirtyWhite}
+              lightColor={Colors.darkGray}
+            >
+              No activities found
+            </ThemedText>
+          </View>
+        ) : (
+          <FlatList
+            showsVerticalScrollIndicator={false}
+            data={listData}
+            renderItem={listItemRenderer}
+            keyExtractor={(item) => item.title}
+            ListHeaderComponent={ListHeaderComponent}
+            ListFooterComponent={ListFooterComponent}
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={10}
+            windowSize={10}
+            initialNumToRender={8}
+          />
+        )}
       </ThemedView>
     </SafeAreaView>
   );
@@ -266,6 +275,19 @@ const styles = StyleSheet.create({
   date: {
     marginBottom: 6,
     color: Colors.dirtyWhite,
+  },
+  emptyContainer: {
+    flex: 1,
+    backgroundColor: '#1E1E1E',
+    borderRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    textAlign: 'center',
   },
 });
 
