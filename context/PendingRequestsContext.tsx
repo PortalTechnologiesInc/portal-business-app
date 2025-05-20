@@ -17,7 +17,6 @@ import {
 import type {
   AuthChallengeEvent,
   AuthInitUrl,
-  PaymentRequestEvent,
   PaymentResponseContent,
   RecurringPaymentRequest,
   RecurringPaymentResponseContent,
@@ -257,22 +256,45 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
           // aggiorna lista
           const id = uuid.v4();
 
-          setPendingRequests(prev => [
-            ...prev,
-            {
-              id,
-              metadata: event,
-              timestamp: new Date().toISOString(),
-              status: 'pending',
-              type: 'payment',
-            },
-          ]);
+          const showPendingPayment = () => {
+            setPendingRequests(prev => [
+              ...prev,
+              {
+                id,
+                metadata: event,
+                timestamp: new Date().toISOString(),
+                status: 'pending',
+                type: 'payment',
+              },
+            ]);
 
-          if (pendingUrl?.mainKey === event.serviceKey) {
-            cancelSkeletonLoader();
-          }
+            if (pendingUrl?.mainKey === event.serviceKey) {
+              cancelSkeletonLoader();
+            }
+          };
 
           return new Promise(resolve => {
+            if (event.content.subscriptionId && db) {
+              db.getSubscription(event.content.subscriptionId)
+                .then(subscription => {
+                  if (subscription) {
+                    // TODO: check amount
+                    resolve({
+                      status: new PaymentStatus.Pending(),
+                      requestId: event.content.requestId,
+                    });
+
+                    getNostrServiceInstance().payInvoice(
+                      event.content.invoice
+                    );
+                  } else {
+                    showPendingPayment();
+                  }
+                });
+            } else {
+              showPendingPayment();
+            }
+
             resolvers.set(
               id,
               resolve as (
