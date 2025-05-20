@@ -1,15 +1,14 @@
 import portalLib, {
-  AuthChallengeEvent,
-  AuthInitUrl,
-  Mnemonic,
-  parseAuthInitUrl,
-  PaymentResponseContent,
-  PaymentStatusContent,
-  Profile,
-  RecurringPaymentResponseContent,
-  RecurringPaymentStatusContent,
+  PaymentStatus,
+  RecurringPaymentStatus,
+  type AuthChallengeEvent,
+  type AuthInitUrl,
+  type Mnemonic,
+  type PaymentResponseContent,
+  type Profile,
+  type RecurringPaymentResponseContent,
 } from 'portal-app-lib';
-import {
+import type {
   AuthChallengeListener,
   LookupInvoiceResponse,
   Nwc,
@@ -18,6 +17,7 @@ import {
   RecurringPaymentRequest,
   SinglePaymentRequest,
 } from 'portal-app-lib/lib/typescript/src/generated/app';
+/* import { PaymentStatusContent, RecurringPaymentStatusContent } from 'portal-app-lib'; */
 
 const DEFAULT_RELAYS = ['wss://relay.damus.io', 'wss://relay.nostr.net'];
 
@@ -162,16 +162,20 @@ export class NostrService {
             console.log(this.paymentRequestListener, 'sono il request listener');
             return (
               this.paymentRequestListener?.onSinglePaymentRequest(singleEvent) ??
-              Promise.resolve(new PaymentStatusContent.Rejected({ reason: 'Not implemented' }))
+              Promise.resolve({
+                status: new PaymentStatus.Rejected({ reason: 'User rejected' }),
+                requestId: singleEvent.content.requestId,
+              })
             );
           },
           recurringEvent => {
             console.log('Recurring payment request', recurringEvent);
             return (
               this.paymentRequestListener?.onRecurringPaymentRequest(recurringEvent) ??
-              Promise.resolve(
-                new RecurringPaymentStatusContent.Rejected({ reason: 'Not implemented' })
-              )
+              Promise.resolve({
+                status: new RecurringPaymentStatus.Rejected({ reason: 'User rejected' }),
+                requestId: recurringEvent.content.requestId,
+              })
             );
           }
         )
