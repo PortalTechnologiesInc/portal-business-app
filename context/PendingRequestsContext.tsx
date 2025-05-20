@@ -29,6 +29,7 @@ import { DatabaseService, fromUnixSeconds } from '@/services/database';
 import type { ActivityWithDates, SubscriptionWithDates } from '@/services/database';
 import { useDatabaseStatus } from '@/services/database/DatabaseProvider';
 import { useActivities } from '@/context/ActivitiesContext';
+import { prefetchServiceName } from '@/components/PendingRequestCard';
 
 // Define a type for pending activities
 type PendingActivity = Omit<ActivityWithDates, 'id' | 'created_at'>;
@@ -218,6 +219,9 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
 
       console.log('auth challenge', event);
 
+      // Prefetch service name as soon as we receive the event
+      prefetchServiceName(event.serviceKey);
+
       setPendingRequests(prev => [
         ...prev,
         {
@@ -252,6 +256,9 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
         const id = uuid.v4();
 
         const showPendingPayment = () => {
+          // Prefetch service name as soon as we receive the event
+          prefetchServiceName(event.serviceKey);
+          
           setPendingRequests(prev => [
             ...prev,
             {
@@ -322,6 +329,9 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
       (event: RecurringPaymentRequest) => {
         // aggiorna lista
         const id = uuid.v4();
+
+        // Prefetch service name as soon as we receive the event
+        prefetchServiceName(event.serviceKey);
 
         setPendingRequests(prev => [
           ...prev,

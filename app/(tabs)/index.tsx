@@ -90,7 +90,7 @@ export default function Home() {
     const screenWidth = Dimensions.get('window').width;
 
     // Adjust number of characters based on screen width
-    let charsToShow = 16;
+    let charsToShow = 15;
     if (screenWidth < 375) {
       charsToShow = 8;
     } else if (screenWidth < 414) {
@@ -113,7 +113,8 @@ export default function Home() {
   };
 
   // Memoize the username display logic
-  const truncatedUsername = useMemo(() => {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+    const truncatedUsername = useMemo(() => {
     if (!username) return '';
 
     // Check if username is likely to exceed 80% of screen width
