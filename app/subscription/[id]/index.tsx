@@ -368,6 +368,8 @@ const styles = StyleSheet.create({
   },
   paymentStatus: {
     fontSize: 14,
+    fontWeight: '600',
+    color: '#3d8c40'
   },
   paymentAmount: {
     fontSize: 16,

@@ -35,7 +35,7 @@ export const ActivityRow: React.FC<ActivityRowProps> = ({ activity }) => {
       </View>
       <View style={styles.activityDetails}>
         {activity.type === ActivityType.Pay && activity.amount !== null && (
-          <ThemedText style={styles.amount} darkColor={Colors.red} lightColor={Colors.red}>
+          <ThemedText style={styles.amount} darkColor={Colors.almostWhite} lightColor={Colors.almostWhite}>
             {activity.amount} sats
           </ThemedText>
         )}
@@ -59,6 +59,7 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
     minHeight: 72,
+    alignItems: 'center',
   },
   iconContainer: {
     width: 40,
@@ -68,6 +69,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
+    alignSelf: 'center',
   },
   activityInfo: {
     flex: 1,
