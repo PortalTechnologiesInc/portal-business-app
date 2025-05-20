@@ -26,6 +26,7 @@ export interface ActivityRecord {
   currency: string | null;
   request_id: string;
   created_at: number; // Unix timestamp in seconds
+  subscription_id: string | null;
 }
 
 export interface SubscriptionRecord {
@@ -345,6 +346,23 @@ export class DatabaseService {
       amount: sub.amount,
       currency: sub.currency as Currency,
       dueDate: fromUnixSeconds(sub.next_payment_date!),
+    }));
+  }
+
+  // Get payment activities for a specific subscription
+  async getSubscriptionPayments(subscriptionId: string): Promise<ActivityWithDates[]> {
+    const records = await this.db.getAllAsync<ActivityRecord>(
+      `SELECT * FROM activities
+       WHERE subscription_id = ?
+       AND type = 'pay'
+       ORDER BY date DESC`,
+      [subscriptionId]
+    );
+
+    return records.map(record => ({
+      ...record,
+      date: fromUnixSeconds(record.date),
+      created_at: fromUnixSeconds(record.created_at),
     }));
   }
 }

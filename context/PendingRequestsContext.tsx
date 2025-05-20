@@ -302,6 +302,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
                   amount: null,
                   currency: null,
                   request_id: id,
+                  subscription_id: null,
                 });
               });
             break;
@@ -343,6 +344,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
                     amount: Number(amount) / 1000,
                     currency,
                     request_id: id,
+                    subscription_id: null,
                   });
                 });
             } catch (err) {

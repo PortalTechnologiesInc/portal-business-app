@@ -103,7 +103,7 @@ export const DatabaseProvider = ({ children }: DatabaseProviderProps) => {
   const migrateDbIfNeeded = useCallback(async (db: SQLiteDatabase) => {
     console.log('Database initialization started');
     setIsDbInitializing(true);
-    const DATABASE_VERSION = 2;
+    const DATABASE_VERSION = 3;
 
     try {
       let { user_version: currentDbVersion } = (await db.getFirstAsync<{
@@ -167,6 +167,18 @@ export const DatabaseProvider = ({ children }: DatabaseProviderProps) => {
         `);
         currentDbVersion = 2;
         console.log('Created tables - now at version 2');
+      }
+
+      if (currentDbVersion <= 2) {
+        await db.execAsync(`
+          -- Add subscription_id column to activities
+          ALTER TABLE activities ADD COLUMN subscription_id TEXT REFERENCES subscriptions(id) ON DELETE SET NULL;
+
+          -- Create index for subscription_id
+          CREATE INDEX IF NOT EXISTS idx_activities_subscription ON activities(subscription_id);
+        `);
+        currentDbVersion = 3;
+        console.log('Added subscription_id to activities - now at version 3');
       }
 
       await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
