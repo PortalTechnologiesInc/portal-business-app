@@ -1,50 +1,94 @@
-# Welcome to your Expo app 👋
+# Portal App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+![Portal App](./assets/images/logoFull.png)
 
-## Get started
+Portal is a mobile identity wallet for secure authentication and payments using [Nostr](https://nostr.com) protocol. It puts you in complete control of your digital identity and personal data.
 
-1. Install dependencies
+## Features
 
+- **Nostr Authentication**: Securely authenticate with websites and services without exposing sensitive information
+- **Payment Management**: Make one-time payments and manage subscription payments
+- **Wallet Integration**: Connect to your Nostr wallet (NWC) for seamless transactions
+- **Activity Tracking**: View and manage your authentication and payment history
+- **Subscription Management**: Monitor and control recurring payments
+- **Secure Storage**: Your keys never leave your device, ensuring maximum security
+
+## Technology Stack
+
+- **React Native** with **Expo** for cross-platform mobile development
+- **Nostr Protocol** for decentralized authentication and payments
+- **SQLite** for local secure data storage
+- **TypeScript** for type safety
+- Our [Rust library](https://github.com/PortalTechnologiesInc/lib) for the logic
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v16+)
+- npm or yarn
+- Expo CLI
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/Portal-App.git
+   cd Portal-App
+   ```
+
+2. Install dependencies:
    ```bash
    npm install
    ```
 
-2. Start the app
-
+3. Start the development server:
    ```bash
-    npx expo start
+   npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+## Usage
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+1. **First-time Setup**:
+   - Generate a new private key or import an existing seed phrase
+   - Set up your profile information
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+2. **Authentication**:
+   - Scan a Portal QR code from a website
+   - Review the authentication request details
+   - Approve or deny the request
 
-## Get a fresh project
+3. **Payments**:
+   - Review payment requests from services
+   - Process one-time payments
+   - Approve subscription requests
 
-When you're ready, run:
+4. **Wallet Connection**:
+   - Connect your NWC-compatible wallet for payments
 
-```bash
-npm run reset-project
-```
+## Development
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Project Structure
 
-## Learn more
+- `/app`: Main application screens using Expo Router
+- `/components`: Reusable UI components
+- `/context`: React context providers for state management
+- `/models`: TypeScript interfaces and types
+- `/services`: Core functionality including database, Nostr, and secure storage
 
-To learn more about developing your project with Expo, look at the following resources:
+### Commands
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- `npm start`: Start the development server
+- `npm run android`: Run on Android emulator/device
+- `npm run ios`: Run on iOS simulator/device
 
-## Join the community
+## License
 
-Join our community of developers creating universal apps.
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Security
+
+Portal prioritizes your security and privacy:
+- All private keys are stored securely on your device
+- Authentication is cryptographically verified
+- No personal data is shared without your explicit consent
