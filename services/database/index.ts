@@ -1,6 +1,5 @@
-import { SQLiteDatabase } from 'expo-sqlite';
-import { ActivityType, Currency } from '@/models/Activity';
-import type { Activity } from '@/models/Activity';
+import type { SQLiteDatabase } from 'expo-sqlite';
+import type { ActivityType, Currency } from '@/models/Activity';
 import type { UpcomingPayment } from '@/models/UpcomingPayment';
 import uuid from 'react-native-uuid';
 

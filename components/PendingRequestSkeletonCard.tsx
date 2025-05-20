@@ -1,6 +1,13 @@
 import type React from 'react';
 import { useEffect, useRef } from 'react';
-import { View, StyleSheet, Dimensions, Animated } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Dimensions,
+  Animated,
+  type ViewStyle,
+  type StyleProp,
+} from 'react-native';
 import { ThemedText } from './ThemedText';
 import { Colors } from '@/constants/Colors';
 
@@ -8,7 +15,7 @@ const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 50; // Full width minus padding
 
 // Animated pulse component for skeleton loading effect
-const SkeletonPulse = ({ style }: { style: any }) => {
+const SkeletonPulse = ({ style }: { style: StyleProp<ViewStyle> }) => {
   const translateX = useRef(new Animated.Value(-100)).current;
 
   useEffect(() => {

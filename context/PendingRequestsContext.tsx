@@ -26,14 +26,15 @@ import type {
 import { Mnemonic, PaymentStatus, RecurringPaymentStatus } from 'portal-app-lib';
 import uuid from 'react-native-uuid';
 import { useSQLiteContext } from 'expo-sqlite';
-import { DatabaseService } from '@/services/database';
-import type { ActivityWithDates } from '@/services/database';
+import { DatabaseService, fromUnixSeconds } from '@/services/database';
+import type { ActivityWithDates, SubscriptionWithDates } from '@/services/database';
 import { useDatabaseStatus } from '@/services/database/DatabaseProvider';
 import { NostrService } from '@/services/nostr/NostrService';
 import { mnemonicEvents } from '@/services/SecureStorageService';
 
 // Define a type for pending activities
 type PendingActivity = Omit<ActivityWithDates, 'id' | 'created_at'>;
+type PendingSubscription = Omit<SubscriptionWithDates, 'id' | 'created_at'>;
 
 interface PendingRequestsContextType {
   pendingRequests: PendingRequest[];
@@ -72,7 +73,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
 
   // Queue for activities that couldn't be recorded due to DB not being ready
   const [pendingActivities, setPendingActivities] = useState<PendingActivity[]>([]);
-
+  const [pendingSubscriptions, setPendingSubscriptions] = useState<PendingSubscription[]>([]);
   // Get database initialization status
   const dbStatus = useDatabaseStatus();
 
@@ -149,6 +150,26 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
       } catch (error) {
         console.error('Exception while trying to record activity, queuing for later:', error);
         setPendingActivities(prev => [...prev, activity]);
+      }
+    },
+    [db]
+  );
+
+  // Helper function to add a subscription with fallback to queue
+  const addSubscriptionWithFallback = useCallback(
+    (subscription: PendingSubscription) => {
+      if (!db) {
+        console.log('Database not ready, queuing subscription for later recording');
+        setPendingSubscriptions(prev => [...prev, subscription]);
+        return;
+      }
+
+      try {
+        console.log('Adding subscription to database:', subscription.request_id);
+        db.addSubscription(subscription);
+      } catch (error) {
+        console.error('Exception while trying to record subscription, queuing for later:', error);
+        setPendingSubscriptions(prev => [...prev, subscription]);
       }
     },
     [db]
@@ -394,34 +415,37 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
             // Add subscription activity
             try {
               // Convert BigInt to number if needed
+              const req = request.metadata as RecurringPaymentRequest;
               const amount =
-                typeof (request.metadata as RecurringPaymentRequest).content.amount === 'bigint'
-                  ? Number((request.metadata as RecurringPaymentRequest).content.amount)
-                  : (request.metadata as RecurringPaymentRequest).content.amount;
+                typeof req.content.amount === 'bigint'
+                  ? Number(req.content.amount)
+                  : req.content.amount;
 
               // Extract currency symbol from the Currency object
-              let currency: string | null = null;
-              const currencyObj = (request.metadata as RecurringPaymentRequest).content.currency;
-              if (currencyObj) {
-                // If it's a simple string, use it directly
-                if (typeof currencyObj === 'string') {
-                  currency = currencyObj;
-                } else {
-                  // Otherwise try to get the symbol - default to € if can't determine
-                  currency = '€';
-                }
-              }
+              const currencyObj = req.content.currency;
 
-              addActivityWithFallback({
-                type: 'pay',
-                service_key: request.metadata.serviceKey,
-                service_name: request.metadata.serviceKey,
-                detail: 'Subscription approved',
-                date: new Date(),
-                currency,
-                amount: Number(amount) / 1000,
-                request_id: id,
-              });
+              getNostrServiceInstance()
+                .getServiceName(request.metadata.serviceKey)
+                .then(serviceName => {
+                  addSubscriptionWithFallback({
+                    request_id: id,
+                    service_name: serviceName?.nip05 ?? 'Unknown Service',
+                    service_key: request.metadata.serviceKey,
+                    amount: Number(amount) / 1000,
+                    currency: 'sats',
+                    status: 'active',
+                    recurrence_until: req.content.recurrence.until
+                      ? fromUnixSeconds(req.content.recurrence.until)
+                      : null,
+                    recurrence_first_payment_due: fromUnixSeconds(
+                      req.content.recurrence.firstPaymentDue
+                    ),
+                    last_payment_date: null,
+                    next_payment_date: fromUnixSeconds(req.content.recurrence.firstPaymentDue),
+                    recurrence_calendar: req.content.recurrence.calendar.inner.toCalendarString(),
+                    recurrence_max_payments: req.content.recurrence.maxPayments || null,
+                  });
+                });
             } catch (err) {
               console.log('Error adding subscription activity:', err);
             }
@@ -432,7 +456,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
         setResolvers(resolvers);
       }
     },
-    [getById, resolvers, addActivityWithFallback]
+    [getById, resolvers, addActivityWithFallback, addSubscriptionWithFallback]
   );
 
   const deny = useCallback(

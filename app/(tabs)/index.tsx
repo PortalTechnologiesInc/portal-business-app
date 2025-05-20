@@ -91,7 +91,9 @@ export default function Home() {
   // Memoize the truncated username to prevent recalculation on every render
   const truncatedUsername = useMemo(() => {
     if (!username) return '';
-    return username.length > 12 ? `${username.substring(0, 8)}...${username.substring(username.length - 4)}` : username;
+    return username.length > 12
+      ? `${username.substring(0, 8)}...${username.substring(username.length - 4)}`
+      : username;
   }, [username]);
 
   // Memoize handlers to prevent recreation on every render
@@ -152,7 +154,7 @@ export default function Home() {
                         style={[
                           styles.username,
                           username.length > 15 && { fontSize: 18 },
-                          username.length > 20 && { fontSize: 16 }
+                          username.length > 20 && { fontSize: 16 },
                         ]}
                         numberOfLines={1}
                         ellipsizeMode="tail"

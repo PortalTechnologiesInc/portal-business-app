@@ -22,11 +22,7 @@ export const ActivityRow: React.FC<ActivityRowProps> = ({ activity }) => {
         )}
       </View>
       <View style={styles.activityInfo}>
-        <ThemedText
-          type="subtitle"
-          darkColor={Colors.almostWhite}
-          lightColor={Colors.almostWhite}
-        >
+        <ThemedText type="subtitle" darkColor={Colors.almostWhite} lightColor={Colors.almostWhite}>
           {activity.service_name}
         </ThemedText>
         <ThemedText
@@ -39,11 +35,7 @@ export const ActivityRow: React.FC<ActivityRowProps> = ({ activity }) => {
       </View>
       <View style={styles.activityDetails}>
         {activity.type === ActivityType.Pay && activity.amount !== null && (
-          <ThemedText
-            style={styles.amount}
-            darkColor={Colors.red}
-            lightColor={Colors.red}
-          >
+          <ThemedText style={styles.amount} darkColor={Colors.red} lightColor={Colors.red}>
             {activity.amount} sats
           </ThemedText>
         )}
@@ -99,4 +91,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 4,
   },
-}); 
+});

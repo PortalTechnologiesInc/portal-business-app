@@ -5,7 +5,7 @@ import { PendingRequestCard } from './PendingRequestCard';
 import { PendingRequestSkeletonCard } from './PendingRequestSkeletonCard';
 import { FailedRequestCard } from './FailedRequestCard';
 import type { PendingRequest, PendingRequestType } from '../models/PendingRequest';
-import { AuthChallengeEvent } from 'portal-app-lib';
+import type { AuthChallengeEvent } from 'portal-app-lib';
 import { getNostrServiceInstance } from '@/services/nostr/NostrService';
 import { ThemedText } from './ThemedText';
 import { Colors } from '@/constants/Colors';
@@ -43,7 +43,7 @@ export const PendingRequestsList: React.FC = () => {
   );
 
   // Create combined data
-  let combinedData;
+  let combinedData: PendingRequest[] = [];
 
   if (requestFailed || isLoadingRequest) {
     // If request failed or loading, add a skeleton item at the beginning of the list
