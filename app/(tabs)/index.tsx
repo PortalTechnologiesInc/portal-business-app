@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { StyleSheet, View, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, ScrollView, Image, Dimensions } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -85,16 +85,46 @@ export default function Home() {
   // Memoize the truncated key to prevent recalculation on every render
   const truncatedPublicKey = useMemo(() => {
     if (!userPublicKey) return '';
-    return `${userPublicKey.substring(0, 16)}...${userPublicKey.substring(userPublicKey.length - 16)}`;
+    
+    // Get screen width to determine how many characters to show
+    const screenWidth = Dimensions.get('window').width;
+    
+    // Adjust number of characters based on screen width
+    let charsToShow = 16;
+    if (screenWidth < 375) {
+      charsToShow = 8;
+    } else if (screenWidth < 414) {
+      charsToShow = 12;
+    }
+    
+    return `${userPublicKey.substring(0, charsToShow)}...${userPublicKey.substring(userPublicKey.length - charsToShow)}`;
   }, [userPublicKey]);
 
-  // Memoize the truncated username to prevent recalculation on every render
+  // Calculate if we need to truncate the username based on screen width
+  const screenWidth = Dimensions.get('window').width;
+  const maxUsernameWidth = screenWidth * 0.8; // 80% of screen width
+  
+  // Approximate the character count based on average character width
+  // This is an estimation since actual rendering width depends on font and character types
+  const getEstimatedTextWidth = (text: string) => {
+    // Estimate avg char width (varies by font, this is a rough approximation)
+    const avgCharWidth = 10; // pixels per character
+    return text.length * avgCharWidth;
+  };
+  
+  // Memoize the username display logic
   const truncatedUsername = useMemo(() => {
     if (!username) return '';
-    return username.length > 12
-      ? `${username.substring(0, 8)}...${username.substring(username.length - 4)}`
-      : username;
-  }, [username]);
+    
+    // Check if username is likely to exceed 80% of screen width
+    if (getEstimatedTextWidth(username) > maxUsernameWidth) {
+      const maxChars = Math.floor(maxUsernameWidth / 10);
+      const charsPerSide = Math.floor((maxChars - 3) / 2);
+      return `${username.substring(0, charsPerSide)}...${username.substring(username.length - charsPerSide)}`;
+    }
+    
+    return username;
+  }, [username, maxUsernameWidth]);
 
   // Memoize handlers to prevent recreation on every render
   const handleQrScan = useCallback(() => {
@@ -133,6 +163,8 @@ export default function Home() {
                   style={styles.welcomeText}
                   lightColor={Colors.darkGray}
                   darkColor={Colors.dirtyWhite}
+                  numberOfLines={1}
+                  ellipsizeMode="middle"
                 >
                   {username ? `Welcome back, ${truncatedUsername} 👋` : 'Welcome back 👋'}
                 </ThemedText>
@@ -157,11 +189,12 @@ export default function Home() {
                           username.length > 20 && { fontSize: 16 },
                         ]}
                         numberOfLines={1}
-                        ellipsizeMode="tail"
+                        ellipsizeMode="middle"
                         lightColor={Colors.darkGray}
                         darkColor={Colors.almostWhite}
                       >
-                        {`${truncatedUsername}@getportal.cc`}
+                        <ThemedText>{truncatedUsername}</ThemedText>
+                        <ThemedText>@getportal.cc</ThemedText>
                       </ThemedText>
                     ) : null}
                     <ThemedText
