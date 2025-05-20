@@ -29,7 +29,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { DatabaseService, fromUnixSeconds } from '@/services/database';
 import type { ActivityWithDates, SubscriptionWithDates } from '@/services/database';
 import { useDatabaseStatus } from '@/services/database/DatabaseProvider';
-import { NostrService } from '@/services/nostr/NostrService';
+import type { NostrService } from '@/services/nostr/NostrService';
 import { mnemonicEvents } from '@/services/SecureStorageService';
 
 // Define a type for pending activities
@@ -205,7 +205,8 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
   );
 
   // Add this useEffect to manage NostrService listeners
-  useEffect(() => {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+    useEffect(() => {
     if (!mnemonic) return;
 
     let nostrService: NostrService | null = null;

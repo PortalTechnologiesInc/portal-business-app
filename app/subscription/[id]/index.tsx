@@ -18,8 +18,9 @@ import {
 } from '@/utils';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useActivities } from '@/context/ActivitiesContext';
-import { fromUnixSeconds, type SubscriptionWithDates } from '@/services/database';
 import { parseCalendar } from 'portal-app-lib';
+import { useSQLiteContext } from 'expo-sqlite';
+import { DatabaseService, fromUnixSeconds, type SubscriptionWithDates } from '@/services/database';
 
 // Mock payment history for a subscription
 interface PaymentHistory {
@@ -30,42 +31,16 @@ interface PaymentHistory {
   date: number;
 }
 
-const getMockPaymentHistory = (subscriptionId: string): PaymentHistory[] => {
-  // Create some mock payment history entries
-  const today = new Date().getTime();
-  const oneDay = 24 * 60 * 60 * 1000;
-
-  return [
-    {
-      id: `${subscriptionId}-1`,
-      amount: 500,
-      currency: 'EUR',
-      status: 'completed',
-      date: today - 30 * oneDay,
-    },
-    {
-      id: `${subscriptionId}-2`,
-      amount: 500,
-      currency: 'EUR',
-      status: 'completed',
-      date: today - 60 * oneDay,
-    },
-    {
-      id: `${subscriptionId}-3`,
-      amount: 500,
-      currency: 'EUR',
-      status: 'completed',
-      date: today - 90 * oneDay,
-    },
-  ];
-};
-
 export default function SubscriptionDetailScreen() {
   const { id } = useLocalSearchParams();
   const { subscriptions } = useActivities();
   const [subscription, setSubscription] = useState<SubscriptionWithDates | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const sqliteContext = useSQLiteContext();
+
+  const DB = new DatabaseService(sqliteContext);
 
   useEffect(() => {
     if (id) {
@@ -74,13 +49,21 @@ export default function SubscriptionDetailScreen() {
 
       if (foundSubscription) {
         setSubscription(foundSubscription);
-        // Get mock payment history for this subscription
-        setPaymentHistory(getMockPaymentHistory(id as string));
+
+        DB.getSubscriptionPayments(id as string).then(
+          (payments) => setPaymentHistory(payments.map((payment) => ({
+            id: payment.id,
+            amount: payment.amount ?? 0,
+            currency: payment.currency ?? 'sats',
+            status: 'completed',
+            date: payment.date.getTime(),
+          }))
+        ));
       }
 
       setLoading(false);
     }
-  }, [id, subscriptions]);
+  }, [id, subscriptions, DB]);
 
   const handleBackPress = () => {
     router.back();

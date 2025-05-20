@@ -328,7 +328,7 @@ export class DatabaseService {
   }
 
   // Helper method to get upcoming payments
-  async getUpcomingPayments(limit: number = 5): Promise<UpcomingPayment[]> {
+  async getUpcomingPayments(limit = 5): Promise<UpcomingPayment[]> {
     const now = toUnixSeconds(Date.now());
     const subscriptions = await this.db.getAllAsync<SubscriptionRecord>(
       `SELECT * FROM subscriptions
