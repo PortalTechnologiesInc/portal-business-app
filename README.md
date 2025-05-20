@@ -1,6 +1,6 @@
 # Portal App
 
-![Portal App](./assets/images/logoFull.png)
+![Portal App](https://github.com/PortalTechnologiesInc/.github/raw/main/profile/logoFull.png?raw=true)
 
 Portal is a mobile identity wallet for secure authentication and payments using [Nostr](https://nostr.com) protocol. It puts you in complete control of your digital identity and personal data.
 
@@ -33,7 +33,7 @@ Portal is a mobile identity wallet for secure authentication and payments using 
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/Portal-App.git
+   git clone https://github.com/PortalTechnologiesInc/Portal-App.git
    cd Portal-App
    ```
 
