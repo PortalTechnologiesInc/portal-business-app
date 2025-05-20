@@ -29,6 +29,8 @@ import {
   SinglePaymentRequest,
 } from "portal-app-lib";
 import uuid from "react-native-uuid";
+import { DatabaseService } from "@/services/database";
+import { useSQLiteContext } from "expo-sqlite";
 
 interface PendingRequestsContextType {
 	pendingRequests: PendingRequest[];
@@ -62,6 +64,9 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({
 	const [resolvers, setResolvers] = useState<
 		Map<string, (value: boolean | PaymentResponseContent | RecurringPaymentResponseContent) => void>
 	>(new Map());
+
+	// db init
+	const db = new DatabaseService(useSQLiteContext());
 
 	// Memoize hasPending to avoid recalculation on every render
 	const hasPending = useMemo(() => {
@@ -195,6 +200,17 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({
 			switch (request?.type) {
 				case "login":
 					resolver(true);
+					console.log("SONO QUIIII");
+					db.addActivity({
+						type: "auth",
+						service_key: request.metadata.serviceKey,
+						detail: "User approved login",
+						date: new Date(),
+						service_name: request.metadata.serviceKey,
+						amount: null,
+						currency: null,
+						request_id: id,
+					}).then(() => console.log('AAAAAAAAAAAAAAAAAAAAAAAAAAA')).catch((err) => console.log(err));
 					break;
 				case "payment":
 					resolver({

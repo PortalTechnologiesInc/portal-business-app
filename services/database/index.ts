@@ -2,14 +2,15 @@ import { SQLiteDatabase } from 'expo-sqlite';
 import { ActivityType, Currency } from '@/models/Activity';
 import type { Activity } from '@/models/Activity';
 import type { UpcomingPayment } from '@/models/UpcomingPayment';
+import uuid from 'react-native-uuid';
 
 // Timestamp utilities
-const toUnixSeconds = (date: Date | number): number => {
+export const toUnixSeconds = (date: Date | number): number => {
   const ms = date instanceof Date ? date.getTime() : date;
   return Math.floor(ms / 1000);
 };
 
-const fromUnixSeconds = (seconds: number): Date => {
+export const fromUnixSeconds = (seconds: number): Date => {
   return new Date(seconds * 1000);
 };
 
@@ -20,11 +21,11 @@ export interface ActivityRecord {
   service_name: string;
   service_key: string;
   detail: string;
-  date: number;  // Unix timestamp in seconds
+  date: number; // Unix timestamp in seconds
   amount: number | null;
   currency: string | null;
   request_id: string;
-  created_at: number;  // Unix timestamp in seconds
+  created_at: number; // Unix timestamp in seconds
 }
 
 export interface SubscriptionRecord {
@@ -36,12 +37,12 @@ export interface SubscriptionRecord {
   currency: string;
   recurrence_calendar: string;
   recurrence_max_payments: number | null;
-  recurrence_until: number | null;  // Unix timestamp in seconds
-  recurrence_first_payment_due: number;  // Unix timestamp in seconds
+  recurrence_until: number | null; // Unix timestamp in seconds
+  recurrence_first_payment_due: number; // Unix timestamp in seconds
   status: 'active' | 'paused' | 'cancelled' | 'expired';
-  last_payment_date: number | null;  // Unix timestamp in seconds
-  next_payment_date: number | null;  // Unix timestamp in seconds
-  created_at: number;  // Unix timestamp in seconds
+  last_payment_date: number | null; // Unix timestamp in seconds
+  next_payment_date: number | null; // Unix timestamp in seconds
+  created_at: number; // Unix timestamp in seconds
 }
 
 // Application layer types (with Date objects)
@@ -50,8 +51,15 @@ export interface ActivityWithDates extends Omit<ActivityRecord, 'date' | 'create
   created_at: Date;
 }
 
-export interface SubscriptionWithDates extends Omit<SubscriptionRecord, 
-  'recurrence_until' | 'recurrence_first_payment_due' | 'last_payment_date' | 'next_payment_date' | 'created_at'> {
+export interface SubscriptionWithDates
+  extends Omit<
+    SubscriptionRecord,
+    | 'recurrence_until'
+    | 'recurrence_first_payment_due'
+    | 'last_payment_date'
+    | 'next_payment_date'
+    | 'created_at'
+  > {
   recurrence_until: Date | null;
   recurrence_first_payment_due: Date;
   last_payment_date: Date | null;
@@ -64,7 +72,7 @@ export class DatabaseService {
 
   // Activity methods
   async addActivity(activity: Omit<ActivityWithDates, 'id' | 'created_at'>): Promise<string> {
-    const id = crypto.randomUUID();
+    const id = uuid.v4();
     const now = toUnixSeconds(Date.now());
 
     await this.db.runAsync(
@@ -103,14 +111,16 @@ export class DatabaseService {
     };
   }
 
-  async getActivities(options: {
-    type?: ActivityType;
-    serviceKey?: string;
-    limit?: number;
-    offset?: number;
-    fromDate?: Date | number;
-    toDate?: Date | number;
-  } = {}): Promise<ActivityWithDates[]> {
+  async getActivities(
+    options: {
+      type?: ActivityType;
+      serviceKey?: string;
+      limit?: number;
+      offset?: number;
+      fromDate?: Date | number;
+      toDate?: Date | number;
+    } = {}
+  ): Promise<ActivityWithDates[]> {
     const conditions: string[] = [];
     const params: any[] = [];
 
@@ -148,8 +158,10 @@ export class DatabaseService {
   }
 
   // Subscription methods
-  async addSubscription(subscription: Omit<SubscriptionWithDates, 'id' | 'created_at'>): Promise<string> {
-    const id = crypto.randomUUID();
+  async addSubscription(
+    subscription: Omit<SubscriptionWithDates, 'id' | 'created_at'>
+  ): Promise<string> {
+    const id = uuid.v4();
     const now = toUnixSeconds(Date.now());
 
     await this.db.runAsync(
@@ -192,19 +204,25 @@ export class DatabaseService {
       ...record,
       recurrence_until: record.recurrence_until ? fromUnixSeconds(record.recurrence_until) : null,
       recurrence_first_payment_due: fromUnixSeconds(record.recurrence_first_payment_due),
-      last_payment_date: record.last_payment_date ? fromUnixSeconds(record.last_payment_date) : null,
-      next_payment_date: record.next_payment_date ? fromUnixSeconds(record.next_payment_date) : null,
+      last_payment_date: record.last_payment_date
+        ? fromUnixSeconds(record.last_payment_date)
+        : null,
+      next_payment_date: record.next_payment_date
+        ? fromUnixSeconds(record.next_payment_date)
+        : null,
       created_at: fromUnixSeconds(record.created_at),
     };
   }
 
-  async getSubscriptions(options: {
-    serviceKey?: string;
-    status?: SubscriptionRecord['status'];
-    activeOnly?: boolean;
-    limit?: number;
-    offset?: number;
-  } = {}): Promise<SubscriptionWithDates[]> {
+  async getSubscriptions(
+    options: {
+      serviceKey?: string;
+      status?: SubscriptionRecord['status'];
+      activeOnly?: boolean;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Promise<SubscriptionWithDates[]> {
     const conditions: string[] = [];
     const params: any[] = [];
 
@@ -233,8 +251,12 @@ export class DatabaseService {
       ...record,
       recurrence_until: record.recurrence_until ? fromUnixSeconds(record.recurrence_until) : null,
       recurrence_first_payment_due: fromUnixSeconds(record.recurrence_first_payment_due),
-      last_payment_date: record.last_payment_date ? fromUnixSeconds(record.last_payment_date) : null,
-      next_payment_date: record.next_payment_date ? fromUnixSeconds(record.next_payment_date) : null,
+      last_payment_date: record.last_payment_date
+        ? fromUnixSeconds(record.last_payment_date)
+        : null,
+      next_payment_date: record.next_payment_date
+        ? fromUnixSeconds(record.next_payment_date)
+        : null,
       created_at: fromUnixSeconds(record.created_at),
     }));
   }
@@ -254,10 +276,7 @@ export class DatabaseService {
 
     params.push(id);
 
-    await this.db.runAsync(
-      `UPDATE subscriptions SET ${updates.join(', ')} WHERE id = ?`,
-      params
-    );
+    await this.db.runAsync(`UPDATE subscriptions SET ${updates.join(', ')} WHERE id = ?`, params);
   }
 
   async updateSubscriptionLastPayment(
@@ -266,14 +285,10 @@ export class DatabaseService {
     nextPaymentDate: Date | number | null
   ): Promise<void> {
     await this.db.runAsync(
-      `UPDATE subscriptions 
-       SET last_payment_date = ?, next_payment_date = ? 
+      `UPDATE subscriptions
+       SET last_payment_date = ?, next_payment_date = ?
        WHERE id = ?`,
-      [
-        toUnixSeconds(lastPaymentDate),
-        nextPaymentDate ? toUnixSeconds(nextPaymentDate) : null,
-        id
-      ]
+      [toUnixSeconds(lastPaymentDate), nextPaymentDate ? toUnixSeconds(nextPaymentDate) : null, id]
     );
   }
 
@@ -281,10 +296,10 @@ export class DatabaseService {
   async getUpcomingPayments(limit: number = 5): Promise<UpcomingPayment[]> {
     const now = toUnixSeconds(Date.now());
     const subscriptions = await this.db.getAllAsync<SubscriptionRecord>(
-      `SELECT * FROM subscriptions 
-       WHERE status = 'active' 
-       AND next_payment_date > ? 
-       ORDER BY next_payment_date ASC 
+      `SELECT * FROM subscriptions
+       WHERE status = 'active'
+       AND next_payment_date > ?
+       ORDER BY next_payment_date ASC
        LIMIT ?`,
       [now, limit]
     );
@@ -297,4 +312,4 @@ export class DatabaseService {
       dueDate: fromUnixSeconds(sub.next_payment_date!),
     }));
   }
-} 
+}
