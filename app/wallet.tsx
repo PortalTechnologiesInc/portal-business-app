@@ -14,7 +14,12 @@ import { Colors } from '@/constants/Colors';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Pencil, X, QrCode, Check } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getWalletUrl, saveWalletUrl, isWalletConnected, walletUrlEvents } from '@/services/SecureStorageService';
+import {
+  getWalletUrl,
+  saveWalletUrl,
+  isWalletConnected,
+  walletUrlEvents,
+} from '@/services/SecureStorageService';
 
 export default function WalletManagementScreen() {
   const router = useRouter();
@@ -49,7 +54,7 @@ export default function WalletManagementScreen() {
     loadWalletData();
 
     // Subscribe to wallet URL changes
-    const subscription = walletUrlEvents.addListener('walletUrlChanged', async (newUrl) => {
+    const subscription = walletUrlEvents.addListener('walletUrlChanged', async newUrl => {
       setWalletUrlState(newUrl || '');
       setIsConnected(Boolean(newUrl?.trim()));
     });
@@ -134,7 +139,7 @@ export default function WalletManagementScreen() {
         // Already cleared params, so no need to navigate
         return;
       }
-      
+
       // Otherwise, navigate back to the source screen if specified
       if (sourceParam === 'settings') {
         setTimeout(() => {
@@ -183,7 +188,7 @@ export default function WalletManagementScreen() {
       // Already cleared params, so no need to navigate
       return;
     }
-    
+
     // Otherwise, navigate back to the source screen if specified
     if (sourceParam === 'settings') {
       setTimeout(() => {

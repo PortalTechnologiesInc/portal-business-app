@@ -170,8 +170,8 @@ const styles = StyleSheet.create({
   },
   flatList: {
     overflow: 'visible',
-    marginLeft: -20,  // Counteract the container padding for proper alignment
-    width,     // Ensure full width
+    marginLeft: -20, // Counteract the container padding for proper alignment
+    width, // Ensure full width
   },
   listContent: {
     flexGrow: 1,

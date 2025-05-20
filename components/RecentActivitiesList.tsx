@@ -1,16 +1,23 @@
 import type React from 'react';
-import { useCallback, useState, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { View, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedText } from './ThemedText';
 import { Colors } from '@/constants/Colors';
-import { type Activity, ActivityType } from '@/models/Activity';
+import { ActivityType } from '@/models/Activity';
 import { formatCentsToCurrency, formatDayAndDate, formatRelativeTime } from '@/utils';
 import { Key, BanknoteIcon } from 'lucide-react-native';
+import { useActivities } from '@/context/ActivitiesContext';
+import type { ActivityWithDates } from '@/services/database';
 
 export const RecentActivitiesList: React.FC = () => {
-  // Use empty array instead of mocked data - will be populated with real data later
-  const [activities] = useState<Activity[]>([]);
+  // Use the activities from the context
+  const { activities, isDbReady } = useActivities();
+  
+  // Get only the first 5 most recent activities
+  const recentActivities = useMemo(() => {
+    return activities.slice(0, 5);
+  }, [activities]);
 
   const handleSeeAll = useCallback(() => {
     router.push('/ActivityList');
@@ -21,7 +28,7 @@ export const RecentActivitiesList: React.FC = () => {
   }, []);
 
   const renderActivityItem = useCallback(
-    ({ item }: { item: Activity }) => (
+    ({ item }: { item: ActivityWithDates }) => (
       <View style={styles.activityCard}>
         <View style={styles.iconContainer}>
           {item.type === ActivityType.Auth ? (
@@ -36,7 +43,7 @@ export const RecentActivitiesList: React.FC = () => {
             darkColor={Colors.almostWhite}
             lightColor={Colors.almostWhite}
           >
-            {item.name}
+            {item.service_name}
           </ThemedText>
           <ThemedText
             style={styles.typeText}
@@ -47,7 +54,7 @@ export const RecentActivitiesList: React.FC = () => {
           </ThemedText>
         </View>
         <View style={styles.activityDetails}>
-          {item.type === ActivityType.Pay && (
+          {item.type === ActivityType.Pay && item.amount !== null && (
             <ThemedText
               style={styles.amount}
               darkColor={item.amount < 0 ? Colors.red : Colors.green}
@@ -91,7 +98,17 @@ export const RecentActivitiesList: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      {activities.length === 0 ? (
+      {!isDbReady ? (
+        <View style={styles.emptyContainer}>
+          <ThemedText
+            style={styles.emptyText}
+            darkColor={Colors.dirtyWhite}
+            lightColor={Colors.darkGray}
+          >
+            Loading activities...
+          </ThemedText>
+        </View>
+      ) : recentActivities.length === 0 ? (
         <View style={styles.emptyContainer}>
           <ThemedText
             style={styles.emptyText}
@@ -112,8 +129,8 @@ export const RecentActivitiesList: React.FC = () => {
           </ThemedText>
 
           <FlatList
-            data={activities}
-            keyExtractor={(_, index) => index.toString()}
+            data={recentActivities}
+            keyExtractor={(item) => item.id}
             renderItem={renderActivityItem}
             scrollEnabled={false}
             removeClippedSubviews={false}

@@ -14,8 +14,8 @@ export type Activity =
       date: Date;
     };
 export enum ActivityType {
-  Auth = "auth",
-  Pay = "pay",
+  Auth = 'auth',
+  Pay = 'pay',
 }
 export enum Currency {
   Eur = '€',

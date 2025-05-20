@@ -8,9 +8,14 @@ import { ArrowLeft, User, Pencil, X, QrCode, ChevronRight } from 'lucide-react-n
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { useUserProfile } from '@/context/UserProfileContext';
-import { isWalletConnected, walletUrlEvents, deleteMnemonic } from '@/services/SecureStorageService';
+import {
+  isWalletConnected,
+  walletUrlEvents,
+  deleteMnemonic,
+} from '@/services/SecureStorageService';
 import * as ImagePicker from 'expo-image-picker';
 import { getNostrServiceInstance } from '@/services/nostr/NostrService';
+import { resetDatabase } from '@/services/database/DatabaseProvider';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -33,14 +38,14 @@ export default function SettingsScreen() {
         setIsLoading(false);
       }
     };
-    
+
     checkWalletConnection();
-    
+
     // Subscribe to wallet URL changes
-    const subscription = walletUrlEvents.addListener('walletUrlChanged', async (newUrl) => {
+    const subscription = walletUrlEvents.addListener('walletUrlChanged', async newUrl => {
       setIsConnected(Boolean(newUrl?.trim()));
     });
-    
+
     return () => subscription.remove();
   }, []);
 
@@ -113,10 +118,17 @@ export default function SettingsScreen() {
               await setUsername('');
               await setAvatarUri(null);
 
+              // Delete mnemonic first - this triggers database disconnection
+              deleteMnemonic();
+
+              // Reset NostrService
+              getNostrServiceInstance().reset();
+
+              // Reset the database (will work with new connection)
+              await resetDatabase();
+
               // Reset onboarding state (this navigates to onboarding screen)
               await resetOnboarding();
-              deleteMnemonic();
-              getNostrServiceInstance().reset();
             } catch (error) {
               console.error('Error clearing app data:', error);
               Alert.alert('Error', 'Failed to Reset App. Please try again.');

@@ -46,7 +46,7 @@ export default function QRScannerScreen() {
     // Show the skeleton loader
     const parsedUrl = parseAuthInitUrl(data);
     showSkeletonLoader(parsedUrl);
-    getNostrServiceInstance().sendAuthInit(parsedUrl)
+    getNostrServiceInstance().sendAuthInit(parsedUrl);
 
     // Use router.replace to completely replace the navigation stack
     // This will make it so that when the user gets to the home page,

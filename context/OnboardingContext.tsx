@@ -38,10 +38,10 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const completeOnboarding = async () => {
     // Mark onboarding as complete
     await SecureStore.setItemAsync(ONBOARDING_KEY, 'true');
-    
-    // Reset first launch flag to ensure welcome card appears 
+
+    // Reset first launch flag to ensure welcome card appears
     await SecureStore.deleteItemAsync(FIRST_LAUNCH_KEY);
-    
+
     setIsOnboardingComplete(true);
     router.replace('/');
   };

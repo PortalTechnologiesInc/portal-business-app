@@ -70,30 +70,65 @@ export interface SubscriptionWithDates
 export class DatabaseService {
   constructor(private db: SQLiteDatabase) {}
 
+  // Database reset method
+  async dropAllTables(): Promise<void> {
+    try {
+      console.log('Dropping all tables from database');
+      // Drop existing tables
+      await this.db.execAsync(`
+        DROP TABLE IF EXISTS activities;
+        DROP TABLE IF EXISTS subscriptions;
+        DROP INDEX IF EXISTS idx_activities_date;
+        DROP INDEX IF EXISTS idx_activities_type;
+        DROP INDEX IF EXISTS idx_subscriptions_next_payment;
+        PRAGMA user_version = 0;
+      `);
+      console.log('All database tables dropped successfully');
+    } catch (error) {
+      console.error('Failed to drop tables:', error);
+      throw error;
+    }
+  }
+
   // Activity methods
   async addActivity(activity: Omit<ActivityWithDates, 'id' | 'created_at'>): Promise<string> {
-    const id = uuid.v4();
-    const now = toUnixSeconds(Date.now());
+    try {
+      if (!this.db) {
+        throw new Error('Database connection not available');
+      }
+      
+      const id = uuid.v4();
+      const now = toUnixSeconds(Date.now());
 
-    await this.db.runAsync(
-      `INSERT INTO activities (
-        id, type, service_name, service_key, detail, date, amount, currency, request_id, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        id,
-        activity.type,
-        activity.service_name,
-        activity.service_key,
-        activity.detail,
-        toUnixSeconds(activity.date),
-        activity.amount,
-        activity.currency,
-        activity.request_id,
-        now,
-      ]
-    );
-
-    return id;
+      try {
+        await this.db.runAsync(
+          `INSERT INTO activities (
+            id, type, service_name, service_key, detail, date, amount, currency, request_id, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            id,
+            activity.type,
+            activity.service_name,
+            activity.service_key,
+            activity.detail,
+            toUnixSeconds(activity.date),
+            activity.amount,
+            activity.currency,
+            activity.request_id,
+            now,
+          ]
+        );
+        
+        console.log(`Activity ${id} of type ${activity.type} added successfully`);
+        return id;
+      } catch (dbError) {
+        console.error('Database operation failed when adding activity:', dbError);
+        throw dbError;
+      }
+    } catch (error) {
+      console.error('Failed to add activity:', error);
+      throw error;
+    }
   }
 
   async getActivity(id: string): Promise<ActivityWithDates | null> {

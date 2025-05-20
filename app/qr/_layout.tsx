@@ -8,8 +8,8 @@ export default function QrLayout() {
         headerShown: false,
         contentStyle: { backgroundColor: Colors.darkerGray },
         animation: 'slide_from_right',
-        presentation: 'fullScreenModal'
+        presentation: 'fullScreenModal',
       }}
     />
   );
-} 
+}

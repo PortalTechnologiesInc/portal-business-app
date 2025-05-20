@@ -1,33 +1,24 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '../../components/ThemedText';
 import { Key, BanknoteIcon } from 'lucide-react-native';
-import { type Activity, ActivityType } from '../../models/Activity';
+import type { ActivityType } from '../../models/Activity';
+import { ActivityType as ActivityTypeEnum } from '../../models/Activity';
 import { formatCentsToCurrency, formatRelativeTime } from '@/utils';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useSQLiteContext } from 'expo-sqlite';
-import { DatabaseService, ActivityWithDates } from '@/services/database';
+import type { ActivityWithDates } from '@/services/database';
+import { useActivities } from '@/context/ActivitiesContext';
 
 const ItemList: React.FC = () => {
-  // Initialize with empty array - will be populated with real data later
-  const db = new DatabaseService(useSQLiteContext());
-  const [items, setItems] = useState<ActivityWithDates[]>([]);
-  const [filter, setFilter] = useState<ActivityType | null>(null);
-
-  useEffect(() => {
-    const fetchActivities = async () => {
-      const activities = await db.getActivities();
-      setItems(activities);
-    };
-    fetchActivities();
-  }, []);
+  const { activities, isDbReady } = useActivities();
+  const [filter, setFilter] = useState<ActivityTypeEnum | null>(null);
 
   // Memoize filtered items to prevent recalculation on every render
   const filteredItems = useMemo(
-    () => (filter === null ? items : items.filter(item => item.type === filter)),
-    [filter, items]
+    () => (filter === null ? activities : activities.filter(item => item.type === filter)),
+    [filter, activities]
   );
 
   // Memoize grouped items to prevent recalculation on every render
@@ -56,7 +47,7 @@ const ItemList: React.FC = () => {
     ({ activity }: { activity: ActivityWithDates }) => (
       <View style={styles.activityCard}>
         <View style={styles.iconContainer}>
-          {activity.type === ActivityType.Auth ? (
+          {activity.type === ActivityTypeEnum.Auth ? (
             <Key size={20} color={Colors.almostWhite} />
           ) : (
             <BanknoteIcon size={20} color={Colors.almostWhite} />
@@ -75,15 +66,27 @@ const ItemList: React.FC = () => {
             darkColor={Colors.dirtyWhite}
             lightColor={Colors.dirtyWhite}
           >
-            {activity.type === ActivityType.Auth ? 'Login Request' : 'Payment'}
+            {activity.type === ActivityTypeEnum.Auth ? 'Login Request' : 'Payment'}
           </ThemedText>
         </View>
         <View style={styles.activityDetails}>
-          {activity.type === ActivityType.Pay && (
+          {activity.type === ActivityTypeEnum.Pay && (
             <ThemedText
               style={styles.amount}
-              darkColor={activity.amount ? activity.amount < 0 ? Colors.red : Colors.green : Colors.dirtyWhite}
-              lightColor={activity.amount ? activity.amount < 0 ? Colors.red : Colors.green : Colors.dirtyWhite}
+              darkColor={
+                activity.amount
+                  ? activity.amount < 0
+                    ? Colors.red
+                    : Colors.green
+                  : Colors.dirtyWhite
+              }
+              lightColor={
+                activity.amount
+                  ? activity.amount < 0
+                    ? Colors.red
+                    : Colors.green
+                  : Colors.dirtyWhite
+              }
             >
               {activity.amount ? formatCentsToCurrency(activity.amount) : ''} {activity.currency}
             </ThemedText>
@@ -113,8 +116,8 @@ const ItemList: React.FC = () => {
 
   // Memoize filter handlers
   const handleFilterAll = useCallback(() => setFilter(null), []);
-  const handleFilterPay = useCallback(() => setFilter(ActivityType.Pay), []);
-  const handleFilterAuth = useCallback(() => setFilter(ActivityType.Auth), []);
+  const handleFilterPay = useCallback(() => setFilter(ActivityTypeEnum.Pay), []);
+  const handleFilterAuth = useCallback(() => setFilter(ActivityTypeEnum.Auth), []);
 
   // Memoized list header and footer components
   const ListHeaderComponent = useMemo(() => <View style={{ height: 16 }} />, []);
@@ -126,12 +129,36 @@ const ItemList: React.FC = () => {
       <>
         {renderSectionHeader({ section: { title: item.title } })}
         {item.data.map((activity: ActivityWithDates) => (
-          <React.Fragment key={`${activity.detail}-${activity.date.getTime()}`}>{renderItem({ activity })}</React.Fragment>
+          <React.Fragment key={`${activity.detail}-${activity.date.getTime()}`}>
+            {renderItem({ activity })}
+          </React.Fragment>
         ))}
       </>
     ),
     [renderItem, renderSectionHeader]
   );
+
+  // Show a database initialization message when database isn't ready
+  if (!isDbReady) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <ThemedView style={styles.container}>
+          <ThemedText type="title" darkColor={Colors.almostWhite}>
+            Your activities
+          </ThemedText>
+          <View style={styles.emptyContainer}>
+            <ThemedText
+              style={styles.emptyText}
+              darkColor={Colors.dirtyWhite}
+              lightColor={Colors.darkGray}
+            >
+              Activities will be available after setup is complete
+            </ThemedText>
+          </View>
+        </ThemedView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -152,35 +179,35 @@ const ItemList: React.FC = () => {
             </ThemedText>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.filterChip, filter === ActivityType.Pay && styles.filterChipActive]}
+            style={[styles.filterChip, filter === ActivityTypeEnum.Pay && styles.filterChipActive]}
             onPress={handleFilterPay}
           >
             <ThemedText
               type="subtitle"
               style={[
                 styles.filterChipText,
-                filter === ActivityType.Pay && styles.filterChipTextActive,
+                filter === ActivityTypeEnum.Pay && styles.filterChipTextActive,
               ]}
             >
               Pay
             </ThemedText>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.filterChip, filter === ActivityType.Auth && styles.filterChipActive]}
+            style={[styles.filterChip, filter === ActivityTypeEnum.Auth && styles.filterChipActive]}
             onPress={handleFilterAuth}
           >
             <ThemedText
               type="subtitle"
               style={[
                 styles.filterChipText,
-                filter === ActivityType.Auth && styles.filterChipTextActive,
+                filter === ActivityTypeEnum.Auth && styles.filterChipTextActive,
               ]}
             >
               Login
             </ThemedText>
           </TouchableOpacity>
         </View>
-        
+
         {listData.length === 0 ? (
           <View style={styles.emptyContainer}>
             <ThemedText
@@ -196,7 +223,7 @@ const ItemList: React.FC = () => {
             showsVerticalScrollIndicator={false}
             data={listData}
             renderItem={listItemRenderer}
-            keyExtractor={(item) => item.title}
+            keyExtractor={item => item.title}
             ListHeaderComponent={ListHeaderComponent}
             ListFooterComponent={ListFooterComponent}
             removeClippedSubviews={true}

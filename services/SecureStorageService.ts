@@ -23,7 +23,7 @@ class EventEmitter {
     return {
       remove: () => {
         this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
-      }
+      },
     };
   }
 
