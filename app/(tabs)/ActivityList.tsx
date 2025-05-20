@@ -13,6 +13,8 @@ const ItemList: React.FC = () => {
   const { activities, isDbReady } = useActivities();
   const [filter, setFilter] = useState<ActivityTypeEnum | null>(null);
 
+  console.log(activities)
+
   // Memoize filtered items to prevent recalculation on every render
   const filteredItems = useMemo(
     () => (filter === null ? activities : activities.filter(item => item.type === filter)),

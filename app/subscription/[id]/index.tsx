@@ -267,7 +267,7 @@ export default function SubscriptionDetailScreen() {
                     </ThemedText>
                   </View>
                   <ThemedText style={styles.paymentAmount}>
-                    {payment.currency} {formatCentsToCurrency(payment.amount)}
+                    {payment.amount} {payment.currency}
                   </ThemedText>
                 </View>
               ))

@@ -103,8 +103,8 @@ export class DatabaseService {
       try {
         await this.db.runAsync(
           `INSERT INTO activities (
-            id, type, service_name, service_key, detail, date, amount, currency, request_id, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            id, type, service_name, service_key, detail, date, amount, currency, request_id, created_at, subscription_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             id,
             activity.type,
@@ -116,6 +116,7 @@ export class DatabaseService {
             activity.currency,
             activity.request_id,
             now,
+            activity.subscription_id,
           ]
         );
 

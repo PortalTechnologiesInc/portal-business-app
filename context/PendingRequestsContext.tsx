@@ -149,20 +149,22 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
 
   // Helper function to add a subscription with fallback to queue
   const addSubscriptionWithFallback = useCallback(
-    (subscription: PendingSubscription) => {
+    (subscription: PendingSubscription): Promise<string | undefined> => {
       if (!db) {
         console.log('Database not ready, queuing subscription for later recording');
         setPendingSubscriptions(prev => [...prev, subscription]);
-        return;
+        return Promise.resolve(undefined);
       }
 
       try {
         console.log('Adding subscription to database:', subscription.request_id);
-        db.addSubscription(subscription);
+        return db.addSubscription(subscription);
       } catch (error) {
         console.error('Exception while trying to record subscription, queuing for later:', error);
         setPendingSubscriptions(prev => [...prev, subscription]);
       }
+
+      return Promise.resolve(undefined)
     },
     [db]
   );
@@ -254,10 +256,12 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
         };
 
         return new Promise(resolve => {
+          console.log(event.content.subscriptionId);
           if (event.content.subscriptionId && db) {
             db.getSubscription(event.content.subscriptionId)
               .then(subscription => {
                 if (subscription) {
+                  console.log(subscription)
                   // TODO: check amount
                   resolve({
                     status: new PaymentStatus.Pending(),
@@ -267,6 +271,21 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
                   getNostrServiceInstance().payInvoice(
                     event.content.invoice
                   );
+
+                  getNostrServiceInstance()
+                    .getServiceName(event.serviceKey)
+                    .then((serviceName) =>
+                      addActivityWithFallback({
+                        type: 'pay',
+                        service_key: event.serviceKey,
+                        service_name: serviceName?.nip05 ?? 'Unknown Service',
+                        detail: 'Payment approved',
+                        date: new Date(),
+                        amount: Number(event.content.amount) / 1000,
+                        currency: 'sats',
+                        request_id: event.content.requestId,
+                        subscription_id: subscription.id,
+                      }));
                 } else {
                   showPendingPayment();
                 }
@@ -398,16 +417,6 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
             );
             break;
           case 'subscription':
-            resolver({
-              status: new RecurringPaymentStatus.Confirmed({
-                subscriptionId: 'randomsubscriptionid',
-                authorizedAmount: (request.metadata as SinglePaymentRequest).content.amount,
-                authorizedCurrency: (request.metadata as SinglePaymentRequest).content.currency,
-                authorizedRecurrence: (request.metadata as RecurringPaymentRequest).content
-                  .recurrence,
-              }),
-              requestId: (request.metadata as RecurringPaymentRequest).content.requestId,
-            });
             // Add subscription activity
             try {
               // Convert BigInt to number if needed
@@ -423,7 +432,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
               getNostrServiceInstance()
                 .getServiceName(request.metadata.serviceKey)
                 .then(serviceName => {
-                  addSubscriptionWithFallback({
+                  return addSubscriptionWithFallback({
                     request_id: id,
                     service_name: serviceName?.nip05 ?? 'Unknown Service',
                     service_key: request.metadata.serviceKey,
@@ -441,7 +450,19 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
                     recurrence_calendar: req.content.recurrence.calendar.inner.toCalendarString(),
                     recurrence_max_payments: req.content.recurrence.maxPayments || null,
                   });
-                });
+                })
+                .then((id) => {
+                  resolver({
+                    status: new RecurringPaymentStatus.Confirmed({
+                      subscriptionId: id || 'randomsubscriptionid',
+                      authorizedAmount: (request.metadata as SinglePaymentRequest).content.amount,
+                      authorizedCurrency: (request.metadata as SinglePaymentRequest).content.currency,
+                      authorizedRecurrence: (request.metadata as RecurringPaymentRequest).content
+                        .recurrence,
+                    }),
+                    requestId: (request.metadata as RecurringPaymentRequest).content.requestId,
+                  });
+                })
             } catch (err) {
               console.log('Error adding subscription activity:', err);
             }
