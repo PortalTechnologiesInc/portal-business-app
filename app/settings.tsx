@@ -87,9 +87,14 @@ export default function SettingsScreen() {
     try {
       setProfileIsLoading(true);
 
+      // Capitalize the first letter of the username if it exists
+      const capitalizedUsername = usernameInput.trim() 
+        ? usernameInput.charAt(0).toUpperCase() + usernameInput.slice(1)
+        : '';
+
       // Even if username is empty, we still append @getportal.cc
       // This ensures pubkey format is consistent regardless of username presence
-      await setUsername(usernameInput);
+      await setUsername(capitalizedUsername);
 
       Alert.alert('Success', 'Profile updated successfully');
     } catch (error) {
