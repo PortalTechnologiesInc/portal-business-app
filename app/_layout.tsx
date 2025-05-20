@@ -200,8 +200,8 @@ export default function RootLayout() {
       <OnboardingProvider>
         <UserProfileProvider>
           <DatabaseProvider>
-            <PendingRequestsProvider>
-              <ActivitiesProvider>
+            <ActivitiesProvider>
+              <PendingRequestsProvider>
                 <Stack
                   screenOptions={{
                     headerShown: false,
@@ -218,8 +218,8 @@ export default function RootLayout() {
                   <Stack.Screen name="qr" options={{ presentation: 'fullScreenModal' }} />
                   <Stack.Screen name="subscription" />
                 </Stack>
-              </ActivitiesProvider>
-            </PendingRequestsProvider>
+              </PendingRequestsProvider>
+            </ActivitiesProvider>
           </DatabaseProvider>
         </UserProfileProvider>
       </OnboardingProvider>

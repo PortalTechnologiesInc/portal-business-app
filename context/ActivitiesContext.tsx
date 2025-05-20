@@ -16,6 +16,7 @@ interface ActivitiesContextType {
   subscriptions: SubscriptionWithDates[];
   fetchActivities: () => Promise<void>;
   fetchSubscriptions: () => Promise<void>;
+  refreshData: () => void;
   addActivity: (activity: Omit<ActivityWithDates, 'id' | 'created_at'>) => Promise<string | null>;
   isDbReady: boolean;
 }
@@ -132,20 +133,15 @@ export const ActivitiesProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, [fetchActivities, fetchSubscriptions, db, isDbReady]);
 
-  //TODO FIX
-  // Refresh activities periodically or when needed
-  useEffect(() => {
-    if (!db || !isDbReady) return;
-
-    // Set up a timer to refresh activities every 5 seconds
-    // This is a fallback to ensure data stays relatively up-to-date
-    const intervalId = setInterval(() => {
+  // Create a refresh function that can be called from outside components
+  const refreshData = useCallback(() => {
+    if (db && isDbReady) {
       fetchActivities();
       fetchSubscriptions();
-    }, 5000);
+    }
+  }, [db, isDbReady, fetchActivities, fetchSubscriptions]);
 
-    return () => clearInterval(intervalId);
-  }, [fetchActivities, fetchSubscriptions, db, isDbReady]);
+  // Add refresh function to the context value below
 
   const addActivity = useCallback(
     async (activity: Omit<ActivityWithDates, 'id' | 'created_at'>) => {
@@ -177,10 +173,11 @@ export const ActivitiesProvider: React.FC<{ children: ReactNode }> = ({ children
       subscriptions,
       fetchActivities,
       fetchSubscriptions,
+      refreshData,
       addActivity,
       isDbReady,
     }),
-    [activities, subscriptions, fetchActivities, fetchSubscriptions, addActivity, isDbReady]
+    [activities, subscriptions, fetchActivities, fetchSubscriptions, refreshData, addActivity, isDbReady]
   );
 
   return <ActivitiesContext.Provider value={contextValue}>{children}</ActivitiesContext.Provider>;

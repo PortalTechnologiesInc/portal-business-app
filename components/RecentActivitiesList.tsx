@@ -1,5 +1,4 @@
-import type React from 'react';
-import { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedText } from './ThemedText';
@@ -15,7 +14,12 @@ import { ActivityRow } from './ActivityRow';
 
 export const RecentActivitiesList: React.FC = () => {
   // Use the activities from the context
-  const { activities, isDbReady } = useActivities();
+  const { activities, isDbReady, refreshData } = useActivities();
+  
+  // Refresh data when component mounts
+  useEffect(() => {
+    refreshData();
+  }, [refreshData]);
 
   // Get only the first 5 most recent activities
   const recentActivities = useMemo(() => {

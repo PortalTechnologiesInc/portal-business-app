@@ -28,6 +28,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { DatabaseService, fromUnixSeconds } from '@/services/database';
 import type { ActivityWithDates, SubscriptionWithDates } from '@/services/database';
 import { useDatabaseStatus } from '@/services/database/DatabaseProvider';
+import { useActivities } from '@/context/ActivitiesContext';
 
 // Define a type for pending activities
 type PendingActivity = Omit<ActivityWithDates, 'id' | 'created_at'>;
@@ -78,6 +79,9 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
     console.log('SQLite context not available yet:', error);
   }
 
+  // Get the refreshData function from ActivitiesContext
+  const { refreshData } = useActivities();
+
   // Initialize DB when SQLite context is available
   useEffect(() => {
     if (!sqliteContext || !dbStatus.shouldInitDb || !dbStatus.isDbInitialized) {
@@ -115,10 +119,13 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
           setPendingActivities(prev => [...prev, activity]);
         }
       }
+      
+      // Refresh data after processing pending activities
+      refreshData();
     };
 
     processPendingActivities();
-  }, [db, pendingActivities]);
+  }, [db, pendingActivities, refreshData]);
 
   // Helper function to add an activity with fallback to queue
   const addActivityWithFallback = useCallback(
@@ -134,6 +141,8 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
         db.addActivity(activity)
           .then(() => {
             console.log('Activity recorded successfully:', activity.type);
+            // Refresh activities data after adding a new activity
+            refreshData();
           })
           .catch(err => {
             console.error('Error recording activity, queuing for later:', err);
@@ -144,7 +153,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
         setPendingActivities(prev => [...prev, activity]);
       }
     },
-    [db]
+    [db, refreshData]
   );
 
   // Helper function to add a subscription with fallback to queue
@@ -158,7 +167,11 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
 
       try {
         console.log('Adding subscription to database:', subscription.request_id);
-        return db.addSubscription(subscription);
+        return db.addSubscription(subscription).then(id => {
+          // Refresh subscriptions data after adding a new subscription
+          refreshData();
+          return id;
+        });
       } catch (error) {
         console.error('Exception while trying to record subscription, queuing for later:', error);
         setPendingSubscriptions(prev => [...prev, subscription]);
@@ -166,7 +179,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
 
       return Promise.resolve(undefined)
     },
-    [db]
+    [db, refreshData]
   );
 
   // Memoize hasPending to avoid recalculation on every render

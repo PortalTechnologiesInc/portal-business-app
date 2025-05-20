@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '../../components/ThemedText';
 import { ActivityType as ActivityTypeEnum } from '../../models/Activity';
@@ -10,8 +10,13 @@ import { useActivities } from '@/context/ActivitiesContext';
 import { ActivityRow } from '@/components/ActivityRow';
 
 const ItemList: React.FC = () => {
-  const { activities, isDbReady } = useActivities();
+  const { activities, isDbReady, refreshData } = useActivities();
   const [filter, setFilter] = useState<ActivityTypeEnum | null>(null);
+  
+  // Refresh data when component mounts or becomes focused
+  useEffect(() => {
+    refreshData();
+  }, [refreshData]);
 
   console.log(activities)
 
