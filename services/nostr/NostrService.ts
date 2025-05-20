@@ -56,7 +56,7 @@ export class LocalPaymentRequestListener implements PaymentRequestListener {
     return this.recurringCb(event);
   }
 }
-export class NostrService {
+class NostrService {
   private static instance: NostrService;
   private initialized = false;
   private portalApp: PortalAppInterface | null = null;
@@ -185,11 +185,11 @@ export class NostrService {
     }
   }
 
-  public setAuthChallengeListener(listener: AuthChallengeListener | null): void {
+  public setAuthChallengeListener(listener: AuthChallengeListener): void {
     this.authChallengeListener = listener;
   }
 
-  public setPaymentRequestListeners(listener: PaymentRequestListener | null): void {
+  public setPaymentRequestListeners(listener: PaymentRequestListener): void {
     this.paymentRequestListener = listener;
   }
 
