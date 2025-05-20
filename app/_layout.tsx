@@ -1,76 +1,50 @@
 import { useEffect, useState } from "react";
-import { Text, View, Platform, SafeAreaView, AppState } from "react-native";
+import { Text, View, SafeAreaView, AppState } from "react-native";
 import type { AppStateStatus } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import * as Linking from "expo-linking";
 import * as SplashScreen from "expo-splash-screen";
-import * as SecureStore from "expo-secure-store";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { OnboardingProvider } from "@/context/OnboardingContext";
-import { PendingRequestsProvider } from "@/context/PendingRequestsContext";
 import { UserProfileProvider } from "@/context/UserProfileContext";
-import { WalletProvider } from "@/context/WalletContext";
+import { PendingRequestsProvider } from "@/context/PendingRequestsContext";
 import { StatusBar } from "expo-status-bar";
 import { Colors } from "@/constants/Colors";
 import { Asset } from "expo-asset";
-import { getMnemonic, mnemonicEvents } from "@/services/SecureStorageService";
+import {
+	getMnemonic,
+	mnemonicEvents,
+	getWalletUrl,
+	walletUrlEvents,
+} from "@/services/SecureStorageService";
 import { Mnemonic } from "portal-app-lib";
 import { getNostrServiceInstance } from "@/services/nostr/NostrService";
-import { SQLiteDatabase, SQLiteProvider } from "expo-sqlite";
+import { type SQLiteDatabase, SQLiteProvider } from "expo-sqlite";
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
-// Preload all commonly used images
+// Function to preload images for performance
 const preloadImages = async () => {
-	const images = [
-		require("../assets/images/appLogo.png"),
-		require("../assets/images/logoFull.png"),
-	];
+	try {
+		// Preload any local assets needed on startup
+		const assetPromises = [
+			Asset.loadAsync(require("../assets/images/appLogo.png")),
+			// Add any other assets that need to be preloaded here
+		];
 
-	return Asset.loadAsync(images);
+		await Promise.all(assetPromises);
+		console.log("Assets preloaded successfully");
+	} catch (error) {
+		console.error("Error preloading assets:", error);
+	}
 };
 
 export default function RootLayout() {
 	const [isReady, setIsReady] = useState(false);
 	const [mnemonic, setMnemonic] = useState<string | null>(null);
-
+	const [walletURL, setWalletURL] = useState<string | null>(null);
 	const router = useRouter();
-
-	useEffect(() => {
-		// Handle links when app is already running
-		const subscription = Linking.addEventListener("url", (event) => {
-			const { path, queryParams } = Linking.parse(event.url);
-			console.log("Received link:", path, queryParams);
-
-			// Update the navigation line
-			if (path) {
-				// Cast to any since we're getting dynamic path from deep link
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				router.navigate(path as any);
-
-				// Or check for specific routes you know exist:
-				if (path === "onboarding") {
-					router.navigate("/onboarding");
-				} else if (path === "login") {
-					router.navigate("/"); // Or wherever login should go
-				}
-			}
-		});
-
-		// Check for initial URL that launched the app
-		const checkInitialLink = async () => {
-			const initialUrl = await Linking.getInitialURL();
-			if (initialUrl) {
-				const { path, queryParams } = Linking.parse(initialUrl);
-				console.log("Initial link:", path, queryParams);
-				// Handle the initial link
-			}
-		};
-
-		checkInitialLink();
-		return () => subscription.remove();
-	}, [router]);
 
 	useEffect(() => {
 		async function prepare() {
@@ -91,27 +65,57 @@ export default function RootLayout() {
 		prepare();
 	}, []);
 
-	// Check for mnemonic existence and log its status
+	// Handle deeplinks
 	useEffect(() => {
-		const checkMnemonic = async () => {
+		// Handle links when app is already running
+		const subscription = Linking.addEventListener("url", (event) => {
+			console.log("Received link:", event.url);
+			router.push({
+				pathname: "/deeplink",
+				params: { url: event.url },
+			});
+		});
+
+		// Check for initial URL that launched the app
+		const checkInitialLink = async () => {
+			const initialUrl = await Linking.getInitialURL();
+			if (initialUrl) {
+				console.log("Initial link:", initialUrl);
+				router.push({
+					pathname: "/deeplink",
+					params: { url: initialUrl },
+				});
+			}
+		};
+
+		checkInitialLink();
+		return () => subscription.remove();
+	}, [router]);
+
+	// Check for mnemonic and wallet URL existence and log their status
+	useEffect(() => {
+		const checkSecureStorage = async () => {
 			try {
 				const mnemonicValue = await getMnemonic();
 				setMnemonic(mnemonicValue);
+
+				const walletUrlValue = await getWalletUrl();
+				setWalletURL(walletUrlValue || null);
 			} catch (error) {
 				console.error("SecureStore access failed:", error);
 			}
 		};
 
 		// Check on initial load
-		checkMnemonic();
+		checkSecureStorage();
 
 		// Also check when app returns to foreground
 		const appStateSubscription = AppState.addEventListener(
 			"change",
 			(nextAppState: AppStateStatus) => {
 				if (nextAppState === "active") {
-					console.log("App became active, checking mnemonic...");
-					checkMnemonic();
+					console.log("App became active, checking secure storage...");
+					checkSecureStorage();
 				}
 			},
 		);
@@ -121,13 +125,23 @@ export default function RootLayout() {
 			"mnemonicChanged",
 			(newMnemonicValue) => {
 				console.log("Mnemonic change event received!");
-				setMnemonic(newMnemonicValue);
+				setMnemonic(newMnemonicValue as string | null);
+			},
+		);
+
+		// Subscribe to wallet URL change events
+		const walletUrlSubscription = walletUrlEvents.addListener(
+			"walletUrlChanged",
+			(newWalletUrl) => {
+				console.log("Wallet URL change event received!");
+				setWalletURL(newWalletUrl as string | null);
 			},
 		);
 
 		return () => {
 			appStateSubscription.remove();
 			mnemonicSubscription.remove();
+			walletUrlSubscription.remove();
 		};
 	}, []);
 
@@ -146,6 +160,19 @@ export default function RootLayout() {
 						await nostrService.initialize(mnemonicObj);
 					}
 
+					// Initialize wallet if wallet URL is available
+					if (walletURL) {
+						console.log("Connecting to wallet with URL");
+						try {
+							nostrService.connectNWC(walletURL);
+							console.log("Wallet connected successfully");
+						} catch (error) {
+							console.error("Failed to connect wallet:", error);
+						}
+					} else {
+						console.log("No wallet URL available, skipping wallet connection");
+					}
+
 					console.log(
 						"NostrService initialized successfully with public key:",
 						nostrService.getPublicKey(),
@@ -159,7 +186,7 @@ export default function RootLayout() {
 		};
 
 		initializeNostrService();
-	}, [mnemonic]);
+	}, [mnemonic, walletURL]); // Add walletURL to dependencies to reinitialize if it changes
 
 	if (!isReady) {
 		return (
@@ -177,64 +204,62 @@ export default function RootLayout() {
 	return (
 		<GestureHandlerRootView style={{ flex: 1, backgroundColor: "#000000" }}>
 			<StatusBar style="light" />
-            <SQLiteProvider databaseName="portal-app.db" onInit={migrateDbIfNeeded}>
-			  <OnboardingProvider>
-			  	<UserProfileProvider>
-			  		<WalletProvider>
-			  			<PendingRequestsProvider>
-			  				<Stack
-			  					screenOptions={{
-			  						headerShown: false,
-			  						contentStyle: {
-			  							backgroundColor: "#000000",
-			  						},
-			  					}}
-			  				>
-			  					<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-			  					<Stack.Screen name="index" />
-			  					<Stack.Screen name="onboarding" />
-			  					<Stack.Screen
-			  						name="settings"
-			  						options={{ presentation: "modal" }}
-			  					/>
-			  					<Stack.Screen
-			  						name="wallet"
-			  						options={{ presentation: "modal" }}
-			  					/>
-			  					<Stack.Screen
-			  						name="qr"
-			  						options={{ presentation: "fullScreenModal" }}
-			  					/>
-			  					<Stack.Screen name="subscription" />
-			  				</Stack>
-			  			</PendingRequestsProvider>
-			  		</WalletProvider>
-			  	</UserProfileProvider>
-			  </OnboardingProvider>
-            </SQLiteProvider>
+			<SQLiteProvider databaseName="portal-app.db" onInit={migrateDbIfNeeded}>
+				<OnboardingProvider>
+					<UserProfileProvider>
+						<PendingRequestsProvider>
+							<Stack
+								screenOptions={{
+									headerShown: false,
+									contentStyle: {
+										backgroundColor: "#000000",
+									},
+								}}
+							>
+								<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+								<Stack.Screen name="index" />
+								<Stack.Screen name="onboarding" />
+								<Stack.Screen
+									name="settings"
+									options={{ presentation: "modal" }}
+								/>
+								<Stack.Screen
+									name="wallet"
+									options={{ presentation: "modal" }}
+								/>
+								<Stack.Screen
+									name="qr"
+									options={{ presentation: "fullScreenModal" }}
+								/>
+								<Stack.Screen name="subscription" />
+							</Stack>
+						</PendingRequestsProvider>
+					</UserProfileProvider>
+				</OnboardingProvider>
+			</SQLiteProvider>
 		</GestureHandlerRootView>
 	);
 
-  async function migrateDbIfNeeded(db: SQLiteDatabase) {
-    const DATABASE_VERSION = 2;
-    let { user_version: currentDbVersion } = await db.getFirstAsync<{ user_version: number }>(
-      'PRAGMA user_version'
-    ) ?? { user_version: 0 };
+	async function migrateDbIfNeeded(db: SQLiteDatabase) {
+		const DATABASE_VERSION = 2;
+		let { user_version: currentDbVersion } = (await db.getFirstAsync<{
+			user_version: number;
+		}>("PRAGMA user_version")) ?? { user_version: 0 };
 
-    if (currentDbVersion >= DATABASE_VERSION) {
-      return;
-    }
+		if (currentDbVersion >= DATABASE_VERSION) {
+			return;
+		}
 
-    if (currentDbVersion <= 0) {
-      await db.execAsync(`
+		if (currentDbVersion <= 0) {
+			await db.execAsync(`
         PRAGMA journal_mode = 'wal';
       `);
-      currentDbVersion = 1;
-    }
+			currentDbVersion = 1;
+		}
 
-    if (currentDbVersion <= 1) {
-      // Create activities table
-      await db.execAsync(`
+		if (currentDbVersion <= 1) {
+			// Create activities table
+			await db.execAsync(`
         CREATE TABLE IF NOT EXISTS activities (
           id TEXT PRIMARY KEY NOT NULL,
           type TEXT NOT NULL CHECK (type IN ('auth', 'pay')), -- Maps to ActivityType enum
@@ -271,9 +296,9 @@ export default function RootLayout() {
         CREATE INDEX IF NOT EXISTS idx_activities_type ON activities(type);
         CREATE INDEX IF NOT EXISTS idx_subscriptions_next_payment ON subscriptions(next_payment_date);
       `);
-      currentDbVersion = 2;
-    }
+			currentDbVersion = 2;
+		}
 
-    await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
-  }
+		await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
+	}
 }

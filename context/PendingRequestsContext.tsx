@@ -217,6 +217,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({
 						status: new PaymentStatus.Pending(),
 						requestId: (request.metadata as SinglePaymentRequest).content.requestId,
 					});
+					getNostrServiceInstance().payInvoice((request?.metadata as SinglePaymentRequest).content.invoice);
 					break;
 				case "subscription":
 					resolver({
@@ -230,7 +231,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({
 					});
 					break;
 			}
-      //TODO mandare payment
+
 			resolvers.delete(id);
 			setResolvers(resolvers);
 		}
