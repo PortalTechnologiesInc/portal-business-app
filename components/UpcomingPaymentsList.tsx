@@ -1,15 +1,21 @@
 import type React from 'react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedText } from './ThemedText';
 import { Colors } from '@/constants/Colors';
 import type { UpcomingPayment } from '@/models/UpcomingPayment';
-import { formatCentsToCurrency, formatRelativeTime } from '@/utils';
+import { formatRelativeTime } from '@/utils';
+import { useActivities } from '@/context/ActivitiesContext';
+import { parseCalendar } from 'portal-app-lib';
+import { fromUnixSeconds } from '@/services/database';
+import { BanknoteIcon } from 'lucide-react-native';
 
 export const UpcomingPaymentsList: React.FC = () => {
   // Initialize with empty array - will be populated with real data later
-  const [upcomingPayments] = useState<UpcomingPayment[]>([]);
+  const [upcomingPayments, SetUpcomingPayments] = useState<UpcomingPayment[]>([]);
+
+  const {subscriptions} = useActivities();
 
   const handleSeeAll = useCallback(() => {
     // Will be implemented when we have a dedicated page
@@ -17,21 +23,49 @@ export const UpcomingPaymentsList: React.FC = () => {
     router.push('/(tabs)/Subscriptions');
   }, []);
 
+  useEffect(() => {
+    SetUpcomingPayments(subscriptions.map((sub) => {
+      const parsedCalendar = parseCalendar(sub.recurrence_calendar);
+      const nextPayment =
+      sub.recurrence_first_payment_due > new Date() || !sub.last_payment_date
+        ? sub.recurrence_first_payment_due
+        : fromUnixSeconds(parsedCalendar.nextOccurrence(
+          BigInt((sub.last_payment_date?.getTime() ?? 0) / 1000)
+        ) ?? 0);
+
+        return {
+          id: sub.id,
+          serviceName: sub.service_name,
+          dueDate: nextPayment,
+          amount: sub.amount,
+          currency: sub.currency,
+        }
+    }).filter((sub) => {
+      return sub.dueDate < new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
+    }))
+  }, [subscriptions])
+
   const renderPaymentItem = useCallback(
     ({ item }: { item: UpcomingPayment }) => (
       <View style={styles.paymentCard}>
+        <View style={styles.iconContainer}>
+          <BanknoteIcon size={20} color={Colors.almostWhite} />
+        </View>
         <View style={styles.paymentInfo}>
-          <ThemedText
-            type="subtitle"
-            darkColor={Colors.almostWhite}
-            lightColor={Colors.almostWhite}
-          >
+          <ThemedText type="subtitle" darkColor={Colors.almostWhite} lightColor={Colors.almostWhite}>
             {item.serviceName}
+          </ThemedText>
+          <ThemedText
+            style={styles.typeText}
+            darkColor={Colors.dirtyWhite}
+            lightColor={Colors.dirtyWhite}
+          >
+            Upcoming payment
           </ThemedText>
         </View>
         <View style={styles.paymentDetails}>
-          <ThemedText style={styles.amount} darkColor={Colors.red} lightColor={Colors.red}>
-            {formatCentsToCurrency(item.amount)} {item.currency}
+          <ThemedText style={styles.amount} darkColor={Colors.almostWhite} lightColor={Colors.almostWhite}>
+            {item.amount} {item.currency}
           </ThemedText>
           <ThemedText
             style={styles.dueDate}
@@ -107,11 +141,22 @@ const styles = StyleSheet.create({
   },
   paymentCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     backgroundColor: '#1E1E1E',
     borderRadius: 20,
     padding: 14,
     marginBottom: 10,
+    minHeight: 72,
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#333333',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+    alignSelf: 'center',
   },
   paymentInfo: {
     flex: 1,
@@ -119,6 +164,8 @@ const styles = StyleSheet.create({
   },
   paymentDetails: {
     alignItems: 'flex-end',
+    justifyContent: 'center',
+    minWidth: 80,
   },
   title: {
     fontSize: 24,
@@ -127,8 +174,12 @@ const styles = StyleSheet.create({
   amount: {
     fontSize: 16,
     fontWeight: '600',
+    marginBottom: 4,
   },
   dueDate: {
+    fontSize: 12,
+  },
+  typeText: {
     fontSize: 12,
     marginTop: 4,
   },

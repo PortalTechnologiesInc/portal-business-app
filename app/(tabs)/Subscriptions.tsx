@@ -29,7 +29,7 @@ export default function SubscriptionsScreen() {
       item.recurrence_first_payment_due > new Date() || !item.last_payment_date
         ? item.recurrence_first_payment_due
         : fromUnixSeconds(parsedCalendar.nextOccurrence(
-          BigInt(item.last_payment_date?.getTime() ?? 0)
+          BigInt((item.last_payment_date?.getTime() ?? 0) / 1000)
         ) ?? 0);
 
       return (

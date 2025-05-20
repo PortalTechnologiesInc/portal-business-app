@@ -4,6 +4,6 @@ export interface UpcomingPayment {
   id: string;
   serviceName: string;
   amount: number;
-  currency: Currency;
+  currency: string;
   dueDate: Date;
 }

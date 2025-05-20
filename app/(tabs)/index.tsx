@@ -85,10 +85,10 @@ export default function Home() {
   // Memoize the truncated key to prevent recalculation on every render
   const truncatedPublicKey = useMemo(() => {
     if (!userPublicKey) return '';
-    
+
     // Get screen width to determine how many characters to show
     const screenWidth = Dimensions.get('window').width;
-    
+
     // Adjust number of characters based on screen width
     let charsToShow = 16;
     if (screenWidth < 375) {
@@ -96,14 +96,14 @@ export default function Home() {
     } else if (screenWidth < 414) {
       charsToShow = 12;
     }
-    
+
     return `${userPublicKey.substring(0, charsToShow)}...${userPublicKey.substring(userPublicKey.length - charsToShow)}`;
   }, [userPublicKey]);
 
   // Calculate if we need to truncate the username based on screen width
   const screenWidth = Dimensions.get('window').width;
   const maxUsernameWidth = screenWidth * 0.8; // 80% of screen width
-  
+
   // Approximate the character count based on average character width
   // This is an estimation since actual rendering width depends on font and character types
   const getEstimatedTextWidth = (text: string) => {
@@ -111,18 +111,18 @@ export default function Home() {
     const avgCharWidth = 10; // pixels per character
     return text.length * avgCharWidth;
   };
-  
+
   // Memoize the username display logic
   const truncatedUsername = useMemo(() => {
     if (!username) return '';
-    
+
     // Check if username is likely to exceed 80% of screen width
     if (getEstimatedTextWidth(username) > maxUsernameWidth) {
       const maxChars = Math.floor(maxUsernameWidth / 10);
       const charsPerSide = Math.floor((maxChars - 3) / 2);
       return `${username.substring(0, charsPerSide)}...${username.substring(username.length - charsPerSide)}`;
     }
-    
+
     return username;
   }, [username, maxUsernameWidth]);
 

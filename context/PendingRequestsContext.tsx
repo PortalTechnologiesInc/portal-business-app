@@ -285,6 +285,9 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
                     event.content.invoice
                   );
 
+                  // Update the subscription last payment date
+                  db.updateSubscriptionLastPayment(subscription.id, new Date());
+
                   getNostrServiceInstance()
                     .getServiceName(event.serviceKey)
                     .then((serviceName) =>

@@ -317,14 +317,13 @@ export class DatabaseService {
 
   async updateSubscriptionLastPayment(
     id: string,
-    lastPaymentDate: Date | number,
-    nextPaymentDate: Date | number | null
+    lastPaymentDate: Date | number
   ): Promise<void> {
     await this.db.runAsync(
       `UPDATE subscriptions
-       SET last_payment_date = ?, next_payment_date = ?
+       SET last_payment_date = ?
        WHERE id = ?`,
-      [toUnixSeconds(lastPaymentDate), nextPaymentDate ? toUnixSeconds(nextPaymentDate) : null, id]
+      [toUnixSeconds(lastPaymentDate), id]
     );
   }
 
@@ -345,7 +344,7 @@ export class DatabaseService {
       serviceName: sub.service_name,
       amount: sub.amount,
       currency: sub.currency as Currency,
-      dueDate: fromUnixSeconds(sub.next_payment_date!),
+      dueDate: fromUnixSeconds(sub.next_payment_date ?? 0),
     }));
   }
 
