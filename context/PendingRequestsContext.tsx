@@ -23,12 +23,14 @@ import type {
   RecurringPaymentResponseContent,
   SinglePaymentRequest,
 } from 'portal-app-lib';
-import { PaymentStatus, RecurringPaymentStatus } from 'portal-app-lib';
+import { Mnemonic, PaymentStatus, RecurringPaymentStatus } from 'portal-app-lib';
 import uuid from 'react-native-uuid';
 import { useSQLiteContext } from 'expo-sqlite';
 import { DatabaseService } from '@/services/database';
 import type { ActivityWithDates } from '@/services/database';
 import { useDatabaseStatus } from '@/services/database/DatabaseProvider';
+import { NostrService } from '@/services/nostr/NostrService';
+import { mnemonicEvents } from '@/services/SecureStorageService';
 
 // Define a type for pending activities
 type PendingActivity = Omit<ActivityWithDates, 'id' | 'created_at'>;
@@ -59,6 +61,11 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
   const [resolvers, setResolvers] = useState<
     Map<string, (value: boolean | PaymentResponseContent | RecurringPaymentResponseContent) => void>
   >(new Map());
+
+  const [mnemonic, setMnemonic] = useState<string | null>(null);
+  mnemonicEvents.addListener('mnemonicChanged', newValue => {
+    setMnemonic(newValue);
+  });
 
   // Create database instance for adding activities, but handle case where it's not ready
   const [db, setDb] = useState<DatabaseService | null>(null);
@@ -176,102 +183,121 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
     [pendingRequests]
   );
 
-  getNostrServiceInstance().setAuthChallengeListener(
-    new LocalAuthChallengeListener((event: AuthChallengeEvent) => {
-      // aggiorna lista
-      const id = uuid.v4();
+  // Add this useEffect to manage NostrService listeners
+  useEffect(() => {
+    if (!mnemonic) return;
 
-      console.log('auth challenge', event);
+    let nostrService: NostrService | null = null;
+    try {
+      const mnemonicObj = new Mnemonic(mnemonic);
+      nostrService = getNostrServiceInstance(mnemonicObj);
+    } catch (e) {
+      return;
+    }
 
-      setPendingRequests(prev => [
-        ...prev,
-        {
-          id,
-          metadata: event,
-          timestamp: new Date().toISOString(),
-          status: 'pending',
-          type: 'login',
+    // Set up listeners
+    nostrService.setAuthChallengeListener(
+      new LocalAuthChallengeListener((event: AuthChallengeEvent) => {
+        // aggiorna lista
+        const id = uuid.v4();
+
+        console.log('auth challenge', event);
+
+        setPendingRequests(prev => [
+          ...prev,
+          {
+            id,
+            metadata: event,
+            timestamp: new Date().toISOString(),
+            status: 'pending',
+            type: 'login',
+          },
+        ]);
+
+        if (pendingUrl?.mainKey === event.serviceKey) {
+          cancelSkeletonLoader();
+        }
+
+        return new Promise(resolve => {
+          resolvers.set(
+            id,
+            resolve as (
+              value: boolean | PaymentResponseContent | RecurringPaymentResponseContent
+            ) => void
+          );
+          setResolvers(resolvers);
+        });
+      })
+    );
+    nostrService.setPaymentRequestListeners(
+      new LocalPaymentRequestListener(
+        (event: SinglePaymentRequest) => {
+          // aggiorna lista
+          const id = uuid.v4();
+
+          setPendingRequests(prev => [
+            ...prev,
+            {
+              id,
+              metadata: event,
+              timestamp: new Date().toISOString(),
+              status: 'pending',
+              type: 'payment',
+            },
+          ]);
+
+          if (pendingUrl?.mainKey === event.serviceKey) {
+            cancelSkeletonLoader();
+          }
+
+          return new Promise(resolve => {
+            resolvers.set(
+              id,
+              resolve as (
+                value: boolean | PaymentResponseContent | RecurringPaymentResponseContent
+              ) => void
+            );
+            setResolvers(resolvers);
+          });
         },
-      ]);
+        (event: RecurringPaymentRequest) => {
+          // aggiorna lista
+          const id = uuid.v4();
 
-      if (pendingUrl?.mainKey === event.serviceKey) {
-        cancelSkeletonLoader();
-      }
+          setPendingRequests(prev => [
+            ...prev,
+            {
+              id,
+              metadata: event,
+              timestamp: new Date().toISOString(),
+              status: 'pending',
+              type: 'subscription',
+            },
+          ]);
 
-      return new Promise(resolve => {
-        resolvers.set(
-          id,
-          resolve as (
-            value: boolean | PaymentResponseContent | RecurringPaymentResponseContent
-          ) => void
-        );
-        setResolvers(resolvers);
-      });
-    })
-  );
+          if (pendingUrl?.mainKey === event.serviceKey) {
+            cancelSkeletonLoader();
+          }
 
-  getNostrServiceInstance().setPaymentRequestListeners(
-    new LocalPaymentRequestListener(
-      (event: SinglePaymentRequest) => {
-        // aggiorna lista
-        const id = uuid.v4();
-
-        setPendingRequests(prev => [
-          ...prev,
-          {
-            id,
-            metadata: event,
-            timestamp: new Date().toISOString(),
-            status: 'pending',
-            type: 'payment',
-          },
-        ]);
-
-        if (pendingUrl?.mainKey === event.serviceKey) {
-          cancelSkeletonLoader();
+          return new Promise(resolve => {
+            resolvers.set(
+              id,
+              resolve as (
+                value: boolean | PaymentResponseContent | RecurringPaymentResponseContent
+              ) => void
+            );
+            setResolvers(resolvers);
+          });
         }
+      )
+    );
 
-        return new Promise(resolve => {
-          resolvers.set(
-            id,
-            resolve as (
-              value: boolean | PaymentResponseContent | RecurringPaymentResponseContent
-            ) => void
-          );
-          setResolvers(resolvers);
-        });
-      },
-      (event: RecurringPaymentRequest) => {
-        // aggiorna lista
-        const id = uuid.v4();
-
-        setPendingRequests(prev => [
-          ...prev,
-          {
-            id,
-            metadata: event,
-            timestamp: new Date().toISOString(),
-            status: 'pending',
-            type: 'subscription',
-          },
-        ]);
-
-        if (pendingUrl?.mainKey === event.serviceKey) {
-          cancelSkeletonLoader();
-        }
-
-        return new Promise(resolve => {
-          resolvers.set(
-            id,
-            resolve as (
-              value: boolean | PaymentResponseContent | RecurringPaymentResponseContent
-            ) => void
-          );
-          setResolvers(resolvers);
-        });
-      }
-    )
-  );
+    // Cleanup: remove listeners on unmount or mnemonic change
+    return () => {
+      nostrService.setAuthChallengeListener(null);
+      nostrService.setPaymentRequestListeners(null);
+    };
+  }, [mnemonic]);
 
   const approve = useCallback(
     (id: string) => {
