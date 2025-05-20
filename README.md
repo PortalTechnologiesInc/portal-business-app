@@ -84,7 +84,7 @@ Portal is a mobile identity wallet for secure authentication and payments using 
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License with Common Clause - see the LICENSE file for details.
 
 ## Security
 
