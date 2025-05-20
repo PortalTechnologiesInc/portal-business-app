@@ -8,12 +8,14 @@ import {
   type ReactNode,
 } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
-import { DatabaseService, type ActivityWithDates } from '@/services/database';
+import { DatabaseService, type ActivityWithDates, type SubscriptionWithDates } from '@/services/database';
 import { useDatabaseStatus } from '@/services/database/DatabaseProvider';
 
 interface ActivitiesContextType {
   activities: ActivityWithDates[];
+  subscriptions: SubscriptionWithDates[];
   fetchActivities: () => Promise<void>;
+  fetchSubscriptions: () => Promise<void>;
   addActivity: (activity: Omit<ActivityWithDates, 'id' | 'created_at'>) => Promise<string | null>;
   isDbReady: boolean;
 }
@@ -22,6 +24,7 @@ const ActivitiesContext = createContext<ActivitiesContextType | undefined>(undef
 
 export const ActivitiesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [activities, setActivities] = useState<ActivityWithDates[]>([]);
+  const [subscriptions, setSubscriptions] = useState<SubscriptionWithDates[]>([]);
   const [isDbReady, setIsDbReady] = useState(false);
   const [db, setDb] = useState<DatabaseService | null>(null);
 
@@ -100,13 +103,36 @@ export const ActivitiesProvider: React.FC<{ children: ReactNode }> = ({ children
     }
   }, [db, isDbReady]);
 
+  const fetchSubscriptions = useCallback(async () => {
+    if (!db || !isDbReady) return;
+
+    try {
+      const fetchedSubscriptions = await db.getSubscriptions();
+      console.log('Fetched subscriptions:', fetchedSubscriptions);
+      setSubscriptions(fetchedSubscriptions);
+      console.log('Subscriptions set:');
+    } catch (error) {
+      console.error('Failed to fetch subscriptions:', error);
+      // If database is closed, reset the database state
+      if (
+        error instanceof Error &&
+        (error.message.includes('closed resource') || error.message.includes('has been rejected'))
+      ) {
+        setIsDbReady(false);
+        setDb(null);
+      }
+    }
+  }, [db, isDbReady]);
+
   // Initial fetch
   useEffect(() => {
     if (db && isDbReady) {
       fetchActivities();
+      fetchSubscriptions();
     }
-  }, [fetchActivities, db, isDbReady]);
+  }, [fetchActivities, fetchSubscriptions, db, isDbReady]);
 
+  //TODO FIX
   // Refresh activities periodically or when needed
   useEffect(() => {
     if (!db || !isDbReady) return;
@@ -115,10 +141,11 @@ export const ActivitiesProvider: React.FC<{ children: ReactNode }> = ({ children
     // This is a fallback to ensure data stays relatively up-to-date
     const intervalId = setInterval(() => {
       fetchActivities();
+      fetchSubscriptions();
     }, 5000);
 
     return () => clearInterval(intervalId);
-  }, [fetchActivities, db, isDbReady]);
+  }, [fetchActivities, fetchSubscriptions, db, isDbReady]);
 
   const addActivity = useCallback(
     async (activity: Omit<ActivityWithDates, 'id' | 'created_at'>) => {
@@ -147,11 +174,13 @@ export const ActivitiesProvider: React.FC<{ children: ReactNode }> = ({ children
   const contextValue = useMemo(
     () => ({
       activities,
+      subscriptions,
       fetchActivities,
+      fetchSubscriptions,
       addActivity,
       isDbReady,
     }),
-    [activities, fetchActivities, addActivity, isDbReady]
+    [activities, subscriptions, fetchActivities, fetchSubscriptions, addActivity, isDbReady]
   );
 
   return <ActivitiesContext.Provider value={contextValue}>{children}</ActivitiesContext.Provider>;

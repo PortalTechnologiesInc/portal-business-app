@@ -5,7 +5,6 @@ import type { Identity } from '../../models/Identity';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useRouter } from 'expo-router';
-import { getMockedIdentities } from '../../mocks/Identities';
 import { Colors } from '@/constants/Colors';
 import { Plus, Edit } from 'lucide-react-native';
 
@@ -19,9 +18,9 @@ export default function IdentityList({ onManageIdentity, onDeleteIdentity }: Ide
 
   const router = useRouter();
 
-  useEffect(() => {
+  /* useEffect(() => {
     setIdentities(getMockedIdentities());
-  }, []);
+  }, []); */
   const renderItem = ({ item }: { item: Identity }) => (
     <TouchableOpacity style={styles.listItem} onPress={() => onManageIdentity(item)}>
       <View>

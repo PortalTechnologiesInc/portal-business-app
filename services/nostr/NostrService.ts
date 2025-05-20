@@ -58,12 +58,11 @@ export class LocalPaymentRequestListener implements PaymentRequestListener {
 }
 export class NostrService {
   private static instance: NostrService;
-  private initialized: boolean = false;
+  private initialized = false;
   private portalApp: PortalAppInterface | null = null;
 
   private authChallengeListener: AuthChallengeListener | null = null;
   private paymentRequestListener: PaymentRequestListener | null = null;
-  private dedup = new Map<string, boolean>();
 
   private publicKey: string | null = null;
 

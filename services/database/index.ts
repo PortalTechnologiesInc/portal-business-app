@@ -157,7 +157,7 @@ export class DatabaseService {
     } = {}
   ): Promise<ActivityWithDates[]> {
     const conditions: string[] = [];
-    const params: any[] = [];
+    const params: (string | number | null)[] = [];
 
     if (options.type !== undefined) {
       conditions.push('type = ?');
@@ -259,7 +259,7 @@ export class DatabaseService {
     } = {}
   ): Promise<SubscriptionWithDates[]> {
     const conditions: string[] = [];
-    const params: any[] = [];
+    const params: (string | number | null)[] = [];
 
     if (options.serviceKey) {
       conditions.push('service_key = ?');
@@ -302,7 +302,7 @@ export class DatabaseService {
     nextPaymentDate?: Date | number | null
   ): Promise<void> {
     const updates: string[] = ['status = ?'];
-    const params: any[] = [status];
+    const params: (string | number | null)[] = [status];
 
     if (nextPaymentDate !== undefined) {
       updates.push('next_payment_date = ?');

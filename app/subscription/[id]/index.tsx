@@ -12,15 +12,14 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
-import { getMockedSubscriptions, type Subscription } from '@/mocks/Subscriptions';
 import {
   formatCentsToCurrency,
   formatDayAndDate,
-  formatRelativeTime,
-  getNextRecurrenceDay,
-  getRemainingRecurrenceCount,
 } from '@/utils';
 import { FontAwesome6 } from '@expo/vector-icons';
+import { useActivities } from '@/context/ActivitiesContext';
+import { fromUnixSeconds, type SubscriptionWithDates } from '@/services/database';
+import { parseCalendar } from 'portal-app-lib';
 
 // Mock payment history for a subscription
 interface PaymentHistory {
@@ -63,14 +62,14 @@ const getMockPaymentHistory = (subscriptionId: string): PaymentHistory[] => {
 
 export default function SubscriptionDetailScreen() {
   const { id } = useLocalSearchParams();
-  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const { subscriptions } = useActivities();
+  const [subscription, setSubscription] = useState<SubscriptionWithDates | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (id) {
       // Get the subscription with the matching ID
-      const subscriptions = getMockedSubscriptions();
       const foundSubscription = subscriptions.find(sub => sub.id === id);
 
       if (foundSubscription) {
@@ -81,7 +80,7 @@ export default function SubscriptionDetailScreen() {
 
       setLoading(false);
     }
-  }, [id]);
+  }, [id, subscriptions]);
 
   const handleBackPress = () => {
     router.back();
@@ -92,7 +91,7 @@ export default function SubscriptionDetailScreen() {
 
     Alert.alert(
       'Cancel Subscription',
-      `Are you sure you want to cancel your subscription to ${subscription.serviceName}?`,
+      `Are you sure you want to cancel your subscription to ${subscription.service_name}?`,
       [
         {
           text: 'No',
@@ -161,6 +160,14 @@ export default function SubscriptionDetailScreen() {
     );
   }
 
+  const parsedCalendar = parseCalendar(subscription.recurrence_calendar);
+  const nextPayment =
+    subscription.recurrence_first_payment_due > new Date() || !subscription.last_payment_date
+      ? subscription.recurrence_first_payment_due
+      : fromUnixSeconds(parsedCalendar.nextOccurrence(
+          BigInt(subscription.last_payment_date?.getTime() ?? 0)
+        ) ?? 0);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ThemedView style={styles.container}>
@@ -181,10 +188,10 @@ export default function SubscriptionDetailScreen() {
           <View style={styles.card}>
             <View style={styles.serviceHeader}>
               <ThemedText type="subtitle" style={styles.serviceName}>
-                {subscription.serviceName}
+                {subscription.service_name}
               </ThemedText>
               <ThemedText style={styles.amount}>
-                {subscription.currency} {formatCentsToCurrency(subscription.amount)}
+                {subscription.amount} {subscription.currency}
               </ThemedText>
             </View>
 
@@ -195,7 +202,7 @@ export default function SubscriptionDetailScreen() {
                 darkColor={Colors.dirtyWhite}
                 lightColor={Colors.dirtyWhite}
               >
-                {subscription.recurrence.calendar}
+                {parsedCalendar.toHumanReadable(false)}
               </ThemedText>
             </View>
 
@@ -205,40 +212,32 @@ export default function SubscriptionDetailScreen() {
                 darkColor={Colors.dirtyWhite}
                 lightColor={Colors.dirtyWhite}
               >
-                First payment: {formatDayAndDate(new Date(subscription.recurrence.firstPaymentDue))}
+                First payment: {formatDayAndDate(new Date(subscription.recurrence_first_payment_due))}
               </ThemedText>
               <ThemedText
                 style={styles.detail}
                 darkColor={Colors.dirtyWhite}
                 lightColor={Colors.dirtyWhite}
               >
-                Next payment in{' '}
-                {getNextRecurrenceDay(
-                  new Date(subscription.recurrence.firstPaymentDue ?? 0),
-                  subscription.recurrence.calendar
-                )}
+                Next payment: {formatDayAndDate(nextPayment)}
               </ThemedText>
-              {subscription.amount && (
+              {subscription.recurrence_max_payments && (
                 <ThemedText
                   style={styles.detail}
                   darkColor={Colors.dirtyWhite}
                   lightColor={Colors.dirtyWhite}
                 >
-                  {getRemainingRecurrenceCount(
-                    new Date(subscription.recurrence.firstPaymentDue ?? 0),
-                    subscription.recurrence.calendar,
-                    subscription.recurrence.maxPayments ?? 0
-                  )}{' '}
-                  payments left
+                  {subscription.recurrence_max_payments - paymentHistory.length} payments left
                 </ThemedText>
               )}
-              <ThemedText
+              {subscription.recurrence_until && (
+                <ThemedText
                 style={styles.detail}
                 darkColor={Colors.dirtyWhite}
                 lightColor={Colors.dirtyWhite}
               >
-                Until: {formatDayAndDate(new Date(subscription.recurrence.until ?? 0))}
-              </ThemedText>
+                Until: {formatDayAndDate(new Date(subscription.recurrence_until ?? 0))}
+              </ThemedText>)}
             </View>
           </View>
 
