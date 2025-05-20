@@ -96,7 +96,7 @@ export class DatabaseService {
       if (!this.db) {
         throw new Error('Database connection not available');
       }
-      
+
       const id = uuid.v4();
       const now = toUnixSeconds(Date.now());
 
@@ -118,7 +118,7 @@ export class DatabaseService {
             now,
           ]
         );
-        
+
         console.log(`Activity ${id} of type ${activity.type} added successfully`);
         return id;
       } catch (dbError) {

@@ -1,4 +1,12 @@
-import { useEffect, useState, useCallback, type ReactNode, Fragment, createContext, useContext } from 'react';
+import {
+  useEffect,
+  useState,
+  useCallback,
+  type ReactNode,
+  Fragment,
+  createContext,
+  useContext,
+} from 'react';
 import { SQLiteProvider, type SQLiteDatabase, openDatabaseAsync } from 'expo-sqlite';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { getMnemonic, mnemonicEvents } from '@/services/SecureStorageService';
@@ -183,10 +191,7 @@ export const DatabaseProvider = ({ children }: DatabaseProviderProps) => {
     <DatabaseContext.Provider value={contextValue}>
       <Fragment>
         {shouldInitDb ? (
-          <SQLiteProvider 
-            databaseName={DATABASE_NAME} 
-            onInit={migrateDbIfNeeded}
-          >
+          <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrateDbIfNeeded}>
             {children}
           </SQLiteProvider>
         ) : (

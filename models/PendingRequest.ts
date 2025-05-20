@@ -1,4 +1,8 @@
-import type { AuthChallengeEvent, RecurringPaymentRequest, SinglePaymentRequest } from 'portal-app-lib';
+import type {
+  AuthChallengeEvent,
+  RecurringPaymentRequest,
+  SinglePaymentRequest,
+} from 'portal-app-lib';
 
 export type PendingRequestType = 'login' | 'payment' | 'certificate' | 'identity' | 'subscription';
 

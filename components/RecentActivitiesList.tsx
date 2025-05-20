@@ -13,7 +13,7 @@ import type { ActivityWithDates } from '@/services/database';
 export const RecentActivitiesList: React.FC = () => {
   // Use the activities from the context
   const { activities, isDbReady } = useActivities();
-  
+
   // Get only the first 5 most recent activities
   const recentActivities = useMemo(() => {
     return activities.slice(0, 5);
@@ -130,7 +130,7 @@ export const RecentActivitiesList: React.FC = () => {
 
           <FlatList
             data={recentActivities}
-            keyExtractor={(item) => item.id}
+            keyExtractor={item => item.id}
             renderItem={renderActivityItem}
             scrollEnabled={false}
             removeClippedSubviews={false}

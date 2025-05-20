@@ -88,7 +88,7 @@ export default function SettingsScreen() {
       setProfileIsLoading(true);
 
       // Capitalize the first letter of the username if it exists
-      const capitalizedUsername = usernameInput.trim() 
+      const capitalizedUsername = usernameInput.trim()
         ? usernameInput.charAt(0).toUpperCase() + usernameInput.slice(1)
         : '';
 
