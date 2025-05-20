@@ -10,8 +10,8 @@ export const toUnixSeconds = (date: Date | number): number => {
   return Math.floor(ms / 1000);
 };
 
-export const fromUnixSeconds = (seconds: number): Date => {
-  return new Date(seconds * 1000);
+export const fromUnixSeconds = (seconds: number | bigint): Date => {
+  return new Date(Number(seconds) * 1000);
 };
 
 // Database record types (as stored in SQLite)

@@ -88,6 +88,12 @@ export default function Home() {
     return `${userPublicKey.substring(0, 16)}...${userPublicKey.substring(userPublicKey.length - 16)}`;
   }, [userPublicKey]);
 
+  // Memoize the truncated username to prevent recalculation on every render
+  const truncatedUsername = useMemo(() => {
+    if (!username) return '';
+    return username.length > 12 ? `${username.substring(0, 8)}...${username.substring(username.length - 4)}` : username;
+  }, [username]);
+
   // Memoize handlers to prevent recreation on every render
   const handleQrScan = useCallback(() => {
     // Using 'modal' navigation to ensure cleaner navigation history
@@ -126,7 +132,7 @@ export default function Home() {
                   lightColor={Colors.darkGray}
                   darkColor={Colors.dirtyWhite}
                 >
-                  {username ? `Welcome back, ${username} 👋` : 'Welcome back 👋'}
+                  {username ? `Welcome back, ${truncatedUsername} 👋` : 'Welcome back 👋'}
                 </ThemedText>
                 <View style={styles.userInfoContainer}>
                   {/* Profile Avatar */}
@@ -143,11 +149,17 @@ export default function Home() {
                   <View style={styles.userTextContainer}>
                     {username ? (
                       <ThemedText
-                        style={styles.username}
+                        style={[
+                          styles.username,
+                          username.length > 15 && { fontSize: 18 },
+                          username.length > 20 && { fontSize: 16 }
+                        ]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
                         lightColor={Colors.darkGray}
                         darkColor={Colors.almostWhite}
                       >
-                        {`${username}@getportal.cc`}
+                        {`${truncatedUsername}@getportal.cc`}
                       </ThemedText>
                     ) : null}
                     <ThemedText
@@ -159,7 +171,7 @@ export default function Home() {
                     </ThemedText>
                   </View>
                   <TouchableOpacity style={styles.qrButton} onPress={handleQrScan}>
-                    <QrCode size={35} color={Colors.almostWhite} />
+                    <QrCode size={40} color={Colors.almostWhite} />
                   </TouchableOpacity>
                 </View>
               </TouchableOpacity>
@@ -267,7 +279,7 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 14,
     fontWeight: '400',
-    marginBottom: 8,
+    marginBottom: 16,
   },
   userInfoContainer: {
     flexDirection: 'row',
@@ -275,9 +287,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   avatarContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 55,
+    height: 55,
+    borderRadius: 32,
     backgroundColor: Colors.gray,
     marginRight: 10,
     justifyContent: 'center',
@@ -285,14 +297,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 55,
+    height: 55,
+    borderRadius: 32,
   },
   avatarPlaceholder: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 55,
+    height: 55,
+    borderRadius: 32,
     backgroundColor: Colors.green,
     justifyContent: 'center',
     alignItems: 'center',
@@ -304,15 +316,16 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '600',
     marginBottom: 4,
+    flexShrink: 1,
   },
   publicKey: {
     fontSize: 14,
     fontWeight: '400',
   },
   qrButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 72,
+    height: 72,
+    borderRadius: 50,
     backgroundColor: Colors.green,
     justifyContent: 'center',
     alignItems: 'center',
