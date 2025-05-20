@@ -1,15 +1,13 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '../../components/ThemedText';
-import { Key, BanknoteIcon } from 'lucide-react-native';
-import type { ActivityType } from '../../models/Activity';
 import { ActivityType as ActivityTypeEnum } from '../../models/Activity';
-import { formatCentsToCurrency, formatRelativeTime } from '@/utils';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ActivityWithDates } from '@/services/database';
 import { useActivities } from '@/context/ActivitiesContext';
+import { ActivityRow } from '@/components/ActivityRow';
 
 const ItemList: React.FC = () => {
   const { activities, isDbReady } = useActivities();
@@ -42,68 +40,6 @@ const ItemList: React.FC = () => {
     [groupedItems]
   );
 
-  // Memoize renderItem to prevent recreation on every render
-  const renderItem = useCallback(
-    ({ activity }: { activity: ActivityWithDates }) => (
-      <View style={styles.activityCard}>
-        <View style={styles.iconContainer}>
-          {activity.type === ActivityTypeEnum.Auth ? (
-            <Key size={20} color={Colors.almostWhite} />
-          ) : (
-            <BanknoteIcon size={20} color={Colors.almostWhite} />
-          )}
-        </View>
-        <View style={styles.activityInfo}>
-          <ThemedText
-            type="subtitle"
-            darkColor={Colors.almostWhite}
-            lightColor={Colors.almostWhite}
-          >
-            {activity.service_name}
-          </ThemedText>
-          <ThemedText
-            style={styles.typeText}
-            darkColor={Colors.dirtyWhite}
-            lightColor={Colors.dirtyWhite}
-          >
-            {activity.type === ActivityTypeEnum.Auth ? 'Login Request' : 'Payment'}
-          </ThemedText>
-        </View>
-        <View style={styles.activityDetails}>
-          {activity.type === ActivityTypeEnum.Pay && (
-            <ThemedText
-              style={styles.amount}
-              darkColor={
-                activity.amount
-                  ? activity.amount < 0
-                    ? Colors.red
-                    : Colors.green
-                  : Colors.dirtyWhite
-              }
-              lightColor={
-                activity.amount
-                  ? activity.amount < 0
-                    ? Colors.red
-                    : Colors.green
-                  : Colors.dirtyWhite
-              }
-            >
-              {activity.amount ? formatCentsToCurrency(activity.amount) : ''} {activity.currency}
-            </ThemedText>
-          )}
-          <ThemedText
-            style={styles.timeAgo}
-            darkColor={Colors.dirtyWhite}
-            lightColor={Colors.dirtyWhite}
-          >
-            {formatRelativeTime(activity.date)}
-          </ThemedText>
-        </View>
-      </View>
-    ),
-    []
-  );
-
   // Memoize section header to prevent recreation on every render
   const renderSectionHeader = useCallback(
     ({ section: { title } }: { section: { title: string } }) => (
@@ -129,13 +65,13 @@ const ItemList: React.FC = () => {
       <>
         {renderSectionHeader({ section: { title: item.title } })}
         {item.data.map((activity: ActivityWithDates) => (
-          <React.Fragment key={`${activity.detail}-${activity.date.getTime()}`}>
-            {renderItem({ activity })}
+          <React.Fragment key={`${activity.id}-${activity.date.getTime()}`}>
+            <ActivityRow activity={activity} />
           </React.Fragment>
         ))}
       </>
     ),
-    [renderItem, renderSectionHeader]
+    [renderSectionHeader]
   );
 
   // Show a database initialization message when database isn't ready
@@ -270,45 +206,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginEnd: 8,
     borderRadius: 8,
-  },
-  activityCard: {
-    flexDirection: 'row',
-    backgroundColor: '#1E1E1E',
-    borderRadius: 20,
-    padding: 14,
-    marginBottom: 10,
-    minHeight: 72,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#333333',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  activityInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  activityDetails: {
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    minWidth: 80,
-  },
-  typeText: {
-    fontSize: 12,
-    marginTop: 4,
-  },
-  amount: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  timeAgo: {
-    fontSize: 12,
-    marginTop: 4,
   },
   date: {
     marginBottom: 6,

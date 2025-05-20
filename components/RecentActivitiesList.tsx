@@ -10,6 +10,9 @@ import { Key, BanknoteIcon } from 'lucide-react-native';
 import { useActivities } from '@/context/ActivitiesContext';
 import type { ActivityWithDates } from '@/services/database';
 
+// Import shared activity row component that we'll create
+import { ActivityRow } from './ActivityRow';
+
 export const RecentActivitiesList: React.FC = () => {
   // Use the activities from the context
   const { activities, isDbReady } = useActivities();
@@ -26,55 +29,6 @@ export const RecentActivitiesList: React.FC = () => {
   const today = useMemo(() => {
     return formatDayAndDate(new Date());
   }, []);
-
-  const renderActivityItem = useCallback(
-    ({ item }: { item: ActivityWithDates }) => (
-      <View style={styles.activityCard}>
-        <View style={styles.iconContainer}>
-          {item.type === ActivityType.Auth ? (
-            <Key size={20} color={Colors.almostWhite} />
-          ) : (
-            <BanknoteIcon size={20} color={Colors.almostWhite} />
-          )}
-        </View>
-        <View style={styles.activityInfo}>
-          <ThemedText
-            type="subtitle"
-            darkColor={Colors.almostWhite}
-            lightColor={Colors.almostWhite}
-          >
-            {item.service_name}
-          </ThemedText>
-          <ThemedText
-            style={styles.typeText}
-            darkColor={Colors.dirtyWhite}
-            lightColor={Colors.dirtyWhite}
-          >
-            {item.type === ActivityType.Auth ? 'Login Request' : 'Payment'}
-          </ThemedText>
-        </View>
-        <View style={styles.activityDetails}>
-          {item.type === ActivityType.Pay && item.amount !== null && (
-            <ThemedText
-              style={styles.amount}
-              darkColor={item.amount < 0 ? Colors.red : Colors.green}
-              lightColor={item.amount < 0 ? Colors.red : Colors.green}
-            >
-              {formatCentsToCurrency(item.amount)} {item.currency}
-            </ThemedText>
-          )}
-          <ThemedText
-            style={styles.timeAgo}
-            darkColor={Colors.dirtyWhite}
-            lightColor={Colors.dirtyWhite}
-          >
-            {formatRelativeTime(item.date)}
-          </ThemedText>
-        </View>
-      </View>
-    ),
-    []
-  );
 
   return (
     <View style={styles.container}>
@@ -131,7 +85,7 @@ export const RecentActivitiesList: React.FC = () => {
           <FlatList
             data={recentActivities}
             keyExtractor={item => item.id}
-            renderItem={renderActivityItem}
+            renderItem={({ item }) => <ActivityRow activity={item} />}
             scrollEnabled={false}
             removeClippedSubviews={false}
             initialNumToRender={5}
@@ -162,48 +116,9 @@ const styles = StyleSheet.create({
   seeAll: {
     fontSize: 14,
   },
-  activityCard: {
-    flexDirection: 'row',
-    backgroundColor: '#1E1E1E',
-    borderRadius: 20,
-    padding: 14,
-    marginBottom: 10,
-    minHeight: 72,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#333333',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  activityInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  activityDetails: {
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    minWidth: 80,
-  },
-  typeText: {
-    fontSize: 12,
-    marginTop: 4,
-  },
   title: {
     fontSize: 24,
     fontWeight: '600',
-  },
-  amount: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  timeAgo: {
-    fontSize: 12,
-    marginTop: 4,
   },
   emptyContainer: {
     backgroundColor: '#1E1E1E',

@@ -340,7 +340,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
                     service_name: serviceName?.nip05 ?? 'Unknown Service',
                     detail: 'Payment approved',
                     date: new Date(),
-                    amount: Number(amount), // Ensure it's a number
+                    amount: Number(amount) / 1000,
                     currency,
                     request_id: id,
                   });
@@ -390,8 +390,8 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
                 service_name: request.metadata.serviceKey,
                 detail: 'Subscription approved',
                 date: new Date(),
-                amount: Number(amount), // Ensure it's a number
                 currency,
+                amount: Number(amount) / 1000,
                 request_id: id,
               });
             } catch (err) {
