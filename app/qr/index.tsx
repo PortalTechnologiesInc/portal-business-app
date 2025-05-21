@@ -33,12 +33,7 @@ export default function QRScannerScreen() {
   }, []);
 
   const toggleTorch = () => {
-    // setEnableTorch(!enableTorch);
-
-    // Show the skeleton loader
-    const parsedUrl = parseAuthInitUrl("portal://npub1ek206p7gwgqzgc6s7sfedmlu87cz9894jzzq0283t72lhz3uuxwsgn9stz?relays=wss%3A%2F%2Frelay.nostr.net,wss%3A%2F%2Frelay.damus.io&token=4c254144-2dde-4ead-8a7d-83dcb5a48bfb");
-    showSkeletonLoader(parsedUrl);
-    nostrService.sendAuthInit(parsedUrl);
+    setEnableTorch(!enableTorch);
 
     // Use router.replace to completely replace the navigation stack
     // This will make it so that when the user gets to the home page,
@@ -46,7 +41,6 @@ export default function QRScannerScreen() {
     setTimeout(() => {
       router.replace('/(tabs)');
     }, 300);
- 
   };
 
   const handleBarCodeScanned = (result: BarcodeResult) => {
