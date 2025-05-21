@@ -18,8 +18,6 @@ const ItemList: React.FC = () => {
     refreshData();
   }, [refreshData]);
 
-  console.log(activities)
-
   // Memoize filtered items to prevent recalculation on every render
   const filteredItems = useMemo(
     () => (filter === null ? activities : activities.filter(item => item.type === filter)),

@@ -14,13 +14,14 @@ import {
   deleteMnemonic,
 } from '@/services/SecureStorageService';
 import * as ImagePicker from 'expo-image-picker';
-import { getNostrServiceInstance } from '@/services/nostr/NostrService';
+import { useNostrService } from '@/context/NostrServiceContext';
 import { resetDatabase } from '@/services/database/DatabaseProvider';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { resetOnboarding } = useOnboarding();
   const { username, avatarUri, setUsername, setAvatarUri } = useUserProfile();
+  const nostrService = useNostrService();
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [usernameInput, setUsernameInput] = useState('');
@@ -125,9 +126,6 @@ export default function SettingsScreen() {
 
               // Delete mnemonic first - this triggers database disconnection
               deleteMnemonic();
-
-              // Reset NostrService
-              getNostrServiceInstance().reset();
 
               // Reset the database (will work with new connection)
               await resetDatabase();

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { StyleSheet, View, TouchableOpacity, ScrollView, Image, Dimensions } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
@@ -8,10 +8,10 @@ import { UpcomingPaymentsList } from '@/components/UpcomingPaymentsList';
 import { RecentActivitiesList } from '@/components/RecentActivitiesList';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { useUserProfile } from '@/context/UserProfileContext';
+import { useNostrService } from '@/context/NostrServiceContext';
 import { QrCode, ArrowRight, User } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getNostrServiceInstance } from '@/services/nostr/NostrService';
 import * as SecureStore from 'expo-secure-store';
 
 const FIRST_LAUNCH_KEY = 'portal_first_launch_completed';
@@ -19,7 +19,9 @@ const FIRST_LAUNCH_KEY = 'portal_first_launch_completed';
 export default function Home() {
   const { isLoading } = useOnboarding();
   const { username, avatarUri } = useUserProfile();
+  const nostrService = useNostrService();
   const [isFirstLaunch, setIsFirstLaunch] = useState(true);
+  const isMounted = useRef(true);
 
   // This would come from a real user context in the future
   const [userPublicKey, setUserPublicKey] = useState('unknown pubkey');
@@ -27,39 +29,30 @@ export default function Home() {
   // Function to mark the welcome screen as viewed
   const markWelcomeAsViewed = useCallback(async () => {
     try {
-      await SecureStore.setItemAsync(FIRST_LAUNCH_KEY, 'true');
-      setIsFirstLaunch(false);
+      if (isMounted.current) {
+        await SecureStore.setItemAsync(FIRST_LAUNCH_KEY, 'true');
+        setIsFirstLaunch(false);
+      }
     } catch (e) {
       console.error('Failed to mark welcome as viewed:', e);
     }
   }, []);
 
   useEffect(() => {
-    const fetchPublicKey = async () => {
-      try {
-        const nostrService = getNostrServiceInstance();
-        let publicKey = nostrService.getPublicKey();
-
-        // If no public key is available yet, try again after a short delay
-        if (!publicKey || publicKey === 'unknown pubkey') {
-          // Wait a bit for NostrService to initialize
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          publicKey = nostrService.getPublicKey();
-        }
-
-        setUserPublicKey(publicKey || 'unknown pubkey');
-        console.log('Current public key:', publicKey);
-      } catch (e) {
-        console.error('Failed to get public key:', e);
-        setUserPublicKey('unknown pubkey');
-      }
+    // Cleanup function to set mounted state to false
+    return () => {
+      isMounted.current = false;
     };
+  }, []);
 
-    fetchPublicKey();
+  useEffect(() => {
+    setUserPublicKey(nostrService.publicKey || '');
 
     // Check if this is the user's first launch after onboarding
     const checkFirstLaunch = async () => {
       try {
+        if (!isMounted.current) return;
+        
         const firstLaunchCompleted = await SecureStore.getItemAsync(FIRST_LAUNCH_KEY);
         setIsFirstLaunch(firstLaunchCompleted !== 'true');
         // We no longer set the flag here - we'll set it after user interaction
@@ -69,18 +62,7 @@ export default function Home() {
     };
 
     checkFirstLaunch();
-
-    // Set up an interval to periodically check for the public key if it's not available
-    let intervalId: NodeJS.Timeout | null = null;
-
-    if (!userPublicKey || userPublicKey === 'unknown pubkey') {
-      intervalId = setInterval(fetchPublicKey, 2000);
-    }
-
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [userPublicKey]);
+  }, [nostrService]);
 
   // Memoize the truncated key to prevent recalculation on every render
   const truncatedPublicKey = useMemo(() => {

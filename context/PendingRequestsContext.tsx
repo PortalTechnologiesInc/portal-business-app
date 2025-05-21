@@ -9,15 +9,11 @@ import {
   useCallback,
 } from 'react';
 import type { PendingRequest, PendingRequestType } from '../models/PendingRequest';
-import {
-  getNostrServiceInstance,
-  LocalAuthChallengeListener,
-  LocalPaymentRequestListener,
-} from '../services/nostr/NostrService';
 import type {
   AuthChallengeEvent,
   AuthInitUrl,
   PaymentResponseContent,
+  Profile,
   RecurringPaymentRequest,
   RecurringPaymentResponseContent,
   SinglePaymentRequest,
@@ -29,19 +25,16 @@ import { DatabaseService, fromUnixSeconds } from '@/services/database';
 import type { ActivityWithDates, SubscriptionWithDates } from '@/services/database';
 import { useDatabaseStatus } from '@/services/database/DatabaseProvider';
 import { useActivities } from '@/context/ActivitiesContext';
-import { prefetchServiceName } from '@/components/PendingRequestCard';
-
+import { LocalAuthChallengeListener, LocalPaymentRequestListener, useNostrService } from '@/context/NostrServiceContext';
 // Define a type for pending activities
 type PendingActivity = Omit<ActivityWithDates, 'id' | 'created_at'>;
 type PendingSubscription = Omit<SubscriptionWithDates, 'id' | 'created_at'>;
 
 interface PendingRequestsContextType {
-  pendingRequests: PendingRequest[];
   getByType: (type: PendingRequestType) => PendingRequest[];
   getById: (id: string) => PendingRequest | undefined;
   approve: (id: string) => void;
   deny: (id: string) => void;
-  hasPending: boolean;
   isLoadingRequest: boolean;
   requestFailed: boolean;
   pendingUrl: AuthInitUrl | undefined;
@@ -53,7 +46,6 @@ const PendingRequestsContext = createContext<PendingRequestsContextType | undefi
 
 export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // Use preloaded data to avoid loading delay on mount
-  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [isLoadingRequest, setIsLoadingRequest] = useState(false);
   const [pendingUrl, setPendingUrl] = useState<AuthInitUrl | undefined>(undefined);
   const [requestFailed, setRequestFailed] = useState(false);
@@ -70,6 +62,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
   const [pendingSubscriptions, setPendingSubscriptions] = useState<PendingSubscription[]>([]);
   // Get database initialization status
   const dbStatus = useDatabaseStatus();
+  const nostrService = useNostrService();
 
   // Get SQLite context - this is now safe because we've reordered the providers in _layout.tsx
   let sqliteContext = null;
@@ -183,11 +176,6 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
     [db, refreshData]
   );
 
-  // Memoize hasPending to avoid recalculation on every render
-  const hasPending = useMemo(() => {
-    return pendingRequests.some(req => req.status === 'pending') || isLoadingRequest;
-  }, [pendingRequests, isLoadingRequest]);
-
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -200,342 +188,269 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
   // Memoize these functions to prevent recreation on every render
   const getByType = useCallback(
     (type: PendingRequestType) => {
-      return pendingRequests.filter(request => request.type === type);
+      return Object.values(nostrService.pendingRequests).filter(request => request.type === type);
     },
-    [pendingRequests]
+    [nostrService.pendingRequests]
   );
 
   const getById = useCallback(
     (id: string) => {
-      return pendingRequests.find(request => request.id === id);
+      console.log(nostrService.pendingRequests);
+      return nostrService.pendingRequests[id];
     },
-    [pendingRequests]
+    [nostrService.pendingRequests]
   );
 
-  getNostrServiceInstance().setAuthChallengeListener(
-    new LocalAuthChallengeListener((event: AuthChallengeEvent) => {
-      // aggiorna lista
-      const id = uuid.v4();
-
-      console.log('auth challenge', event);
-
-      // Prefetch service name as soon as we receive the event
-      prefetchServiceName(event.serviceKey);
-
-      setPendingRequests(prev => [
-        ...prev,
-        {
-          id,
-          metadata: event,
-          timestamp: new Date().toISOString(),
-          status: 'pending',
-          type: 'login',
-        },
-      ]);
-
-      if (pendingUrl?.mainKey === event.serviceKey) {
+  // Remove skeleton when we get the expected request
+  useEffect(() => {
+    for (const request of Object.values(nostrService.pendingRequests)) {
+      if (request.metadata.serviceKey === pendingUrl?.mainKey) {
         cancelSkeletonLoader();
       }
+    }
+  }, [nostrService.pendingRequests, pendingUrl]);
 
-      return new Promise(resolve => {
-        resolvers.set(
-          id,
-          resolve as (
-            value: boolean | PaymentResponseContent | RecurringPaymentResponseContent
-          ) => void
-        );
-        setResolvers(resolvers);
-      });
-    })
-  );
+  // Process automatic payments
+  useEffect(() => {
+    for (const request of Object.values(nostrService.pendingRequests)) {
+      if (request.type === 'payment' && (request.metadata as SinglePaymentRequest).content.subscriptionId) {
+        const paymentRequest = request.metadata as SinglePaymentRequest;
+        console.log('Processing automated payment for subscription', paymentRequest.content.subscriptionId);
 
-  getNostrServiceInstance().setPaymentRequestListeners(
-    new LocalPaymentRequestListener(
-      (event: SinglePaymentRequest) => {
-        // aggiorna lista
-        const id = uuid.v4();
+        async function processPayment() {
+          const subscription = await db!.getSubscription(paymentRequest.content.subscriptionId!);
+          if (!subscription) {
+            request.result({
+              status: new PaymentStatus.Rejected({ reason: 'Subscription not found' }),
+              requestId: paymentRequest.content.requestId,
+            });
 
-        const showPendingPayment = () => {
-          // Prefetch service name as soon as we receive the event
-          prefetchServiceName(event.serviceKey);
-          
-          setPendingRequests(prev => [
-            ...prev,
-            {
-              id,
-              metadata: event,
-              timestamp: new Date().toISOString(),
-              status: 'pending',
-              type: 'payment',
-            },
-          ]);
-
-          if (pendingUrl?.mainKey === event.serviceKey) {
-            cancelSkeletonLoader();
+            return;
           }
-        };
+          console.log('Subscription found!');
 
-        return new Promise(resolve => {
-          console.log(event.content.subscriptionId);
-          if (event.content.subscriptionId && db) {
-            db.getSubscription(event.content.subscriptionId)
-              .then(subscription => {
-                if (subscription) {
-                  console.log(subscription)
-                  // TODO: check amount
-                  resolve({
-                    status: new PaymentStatus.Pending(),
-                    requestId: event.content.requestId,
-                  });
+          // TODO: check amount
 
-                  getNostrServiceInstance().payInvoice(
-                    event.content.invoice
-                  );
+          request.result({
+            status: new PaymentStatus.Pending(),
+            requestId: paymentRequest.content.requestId,
+          });
 
-                  // Update the subscription last payment date
-                  db.updateSubscriptionLastPayment(subscription.id, new Date());
+          let preimage: string | null = null;
+          try {
+            preimage = await nostrService.payInvoice(paymentRequest.content.invoice);
+            if (!preimage) {
+              // TODO: save failed payment??
+              // TODO: notify user??
+              return;
+            }
+          } catch (error) {
+            console.error('Error paying invoice:', error);
+            // TODO: save failed payment??
+            // TODO: notify user??
+            return;
+          }
+          console.log('Preimage: ', preimage);
 
-                  getNostrServiceInstance()
-                    .getServiceName(event.serviceKey)
-                    .then((serviceName) =>
-                      addActivityWithFallback({
-                        type: 'pay',
-                        service_key: event.serviceKey,
-                        service_name: serviceName?.nip05 ?? 'Unknown Service',
-                        detail: 'Payment approved',
-                        date: new Date(),
-                        amount: Number(event.content.amount) / 1000,
-                        currency: 'sats',
-                        request_id: event.content.requestId,
-                        subscription_id: subscription.id,
-                      }));
-                } else {
-                  showPendingPayment();
-                }
-              });
-          } else {
-            showPendingPayment();
+          // Update the subscription last payment date
+          await db!.updateSubscriptionLastPayment(subscription.id, new Date());
+
+          let serviceName: Profile | undefined = undefined;
+          try {
+            serviceName = await nostrService.getServiceName(paymentRequest.serviceKey);
+          } catch (e) {
+            console.error('Error getting service name:', e);
           }
 
-          resolvers.set(
-            id,
-            resolve as (
-              value: boolean | PaymentResponseContent | RecurringPaymentResponseContent
-            ) => void
-          );
-          setResolvers(resolvers);
-        });
-      },
-      (event: RecurringPaymentRequest) => {
-        // aggiorna lista
-        const id = uuid.v4();
-
-        // Prefetch service name as soon as we receive the event
-        prefetchServiceName(event.serviceKey);
-
-        setPendingRequests(prev => [
-          ...prev,
-          {
-            id,
-            metadata: event,
-            timestamp: new Date().toISOString(),
-            status: 'pending',
-            type: 'subscription',
-          },
-        ]);
-
-        if (pendingUrl?.mainKey === event.serviceKey) {
-          cancelSkeletonLoader();
+          addActivityWithFallback({
+            type: 'pay',
+            service_key: paymentRequest.serviceKey,
+            service_name: serviceName?.nip05 ?? 'Unknown Service',
+            detail: 'Payment approved',
+            date: new Date(),
+            amount: Number(paymentRequest.content.amount) / 1000,
+            currency: 'sats',
+            request_id: paymentRequest.content.requestId,
+            subscription_id: subscription.id,
+          });
         }
 
-        return new Promise(resolve => {
-          resolvers.set(
-            id,
-            resolve as (
-              value: boolean | PaymentResponseContent | RecurringPaymentResponseContent
-            ) => void
-          );
-          setResolvers(resolvers);
-        });
+        processPayment();
+        nostrService.dismissPendingRequest(request.id);
       }
-    )
-  );
+    }
+  }, [nostrService.pendingRequests]);
 
   const approve = useCallback(
     (id: string) => {
+      console.log('Approve', id);
+
       const request = getById(id);
+      if (!request) {
+        console.log('Request not found', id);
+        return;
+      }
 
-      setPendingRequests(prev =>
-        prev.map(request => (request.id === id ? { ...request, status: 'approved' } : request))
-      );
+      nostrService.dismissPendingRequest(id);
 
-      const resolver = resolvers.get(id);
+      switch (request.type) {
+        case 'login':
+          request.result(true);
 
-      console.log('approve', id, resolver);
+          // Add an activity record directly via the database service
+          nostrService
+            .getServiceName(request.metadata.serviceKey)
+            .then(serviceName => {
+              addActivityWithFallback({
+                type: 'auth',
+                service_key: request.metadata.serviceKey,
+                detail: 'User approved login',
+                date: new Date(),
+                service_name: serviceName?.nip05 ?? 'Unknown Service',
+                amount: null,
+                currency: null,
+                request_id: id,
+                subscription_id: null,
+              });
+            });
+          break;
+        case 'payment':
+          request.result({
+            status: new PaymentStatus.Pending(),
+            requestId: (request.metadata as SinglePaymentRequest).content.requestId,
+          });
+          // Add payment activity
+          try {
+            // Convert BigInt to number if needed
+            const amount =
+              typeof (request.metadata as SinglePaymentRequest).content.amount === 'bigint'
+                ? Number((request.metadata as SinglePaymentRequest).content.amount)
+                : (request.metadata as SinglePaymentRequest).content.amount;
 
-      if (resolver && request) {
-        switch (request.type) {
-          case 'login':
-            resolver(true);
-            // Add an activity record directly via the database service
-            getNostrServiceInstance()
+            // Extract currency symbol from the Currency object
+            let currency: string | null = null;
+            const currencyObj = (request.metadata as SinglePaymentRequest).content.currency;
+            if (currencyObj) {
+              // If it's a simple string, use it directly
+              if (typeof currencyObj === 'string') {
+                currency = currencyObj;
+              } else {
+                currency = 'sats';
+              }
+            }
+
+            nostrService
               .getServiceName(request.metadata.serviceKey)
               .then(serviceName => {
                 addActivityWithFallback({
-                  type: 'auth',
+                  type: 'pay',
                   service_key: request.metadata.serviceKey,
-                  detail: 'User approved login',
-                  date: new Date(),
                   service_name: serviceName?.nip05 ?? 'Unknown Service',
-                  amount: null,
-                  currency: null,
+                  detail: 'Payment approved',
+                  date: new Date(),
+                  amount: Number(amount) / 1000,
+                  currency,
                   request_id: id,
                   subscription_id: null,
                 });
               });
-            break;
-          case 'payment':
-            resolver({
-              status: new PaymentStatus.Pending(),
-              requestId: (request.metadata as SinglePaymentRequest).content.requestId,
-            });
-            // Add payment activity
-            try {
-              // Convert BigInt to number if needed
-              const amount =
-                typeof (request.metadata as SinglePaymentRequest).content.amount === 'bigint'
-                  ? Number((request.metadata as SinglePaymentRequest).content.amount)
-                  : (request.metadata as SinglePaymentRequest).content.amount;
+          } catch (err) {
+            console.log('Error adding payment activity:', err);
+          }
+          nostrService.payInvoice(
+            (request?.metadata as SinglePaymentRequest).content.invoice
+          );
+          break;
+        case 'subscription':
+          // Add subscription activity
+          try {
+            // Convert BigInt to number if needed
+            const req = request.metadata as RecurringPaymentRequest;
+            const amount =
+              typeof req.content.amount === 'bigint'
+                ? Number(req.content.amount)
+                : req.content.amount;
 
-              // Extract currency symbol from the Currency object
-              let currency: string | null = null;
-              const currencyObj = (request.metadata as SinglePaymentRequest).content.currency;
-              if (currencyObj) {
-                // If it's a simple string, use it directly
-                if (typeof currencyObj === 'string') {
-                  currency = currencyObj;
-                } else {
-                  // Otherwise try to get the symbol - default to € if can't determine
-                  currency = '€';
-                }
-              }
+            // Extract currency symbol from the Currency object
+            const currencyObj = req.content.currency;
 
-              getNostrServiceInstance()
-                .getServiceName(request.metadata.serviceKey)
-                .then(serviceName => {
-                  addActivityWithFallback({
-                    type: 'pay',
-                    service_key: request.metadata.serviceKey,
-                    service_name: serviceName?.nip05 ?? 'Unknown Service',
-                    detail: 'Payment approved',
-                    date: new Date(),
-                    amount: Number(amount) / 1000,
-                    currency,
-                    request_id: id,
-                    subscription_id: null,
-                  });
+            nostrService
+              .getServiceName(request.metadata.serviceKey)
+              .then(serviceName => {
+                return addSubscriptionWithFallback({
+                  request_id: id,
+                  service_name: serviceName?.nip05 ?? 'Unknown Service',
+                  service_key: request.metadata.serviceKey,
+                  amount: Number(amount) / 1000,
+                  currency: 'sats',
+                  status: 'active',
+                  recurrence_until: req.content.recurrence.until
+                    ? fromUnixSeconds(req.content.recurrence.until)
+                    : null,
+                  recurrence_first_payment_due: fromUnixSeconds(
+                    req.content.recurrence.firstPaymentDue
+                  ),
+                  last_payment_date: null,
+                  next_payment_date: fromUnixSeconds(req.content.recurrence.firstPaymentDue),
+                  recurrence_calendar: req.content.recurrence.calendar.inner.toCalendarString(),
+                  recurrence_max_payments: req.content.recurrence.maxPayments || null,
                 });
-            } catch (err) {
-              console.log('Error adding payment activity:', err);
-            }
-            getNostrServiceInstance().payInvoice(
-              (request?.metadata as SinglePaymentRequest).content.invoice
-            );
-            break;
-          case 'subscription':
-            // Add subscription activity
-            try {
-              // Convert BigInt to number if needed
-              const req = request.metadata as RecurringPaymentRequest;
-              const amount =
-                typeof req.content.amount === 'bigint'
-                  ? Number(req.content.amount)
-                  : req.content.amount;
-
-              // Extract currency symbol from the Currency object
-              const currencyObj = req.content.currency;
-
-              getNostrServiceInstance()
-                .getServiceName(request.metadata.serviceKey)
-                .then(serviceName => {
-                  return addSubscriptionWithFallback({
-                    request_id: id,
-                    service_name: serviceName?.nip05 ?? 'Unknown Service',
-                    service_key: request.metadata.serviceKey,
-                    amount: Number(amount) / 1000,
-                    currency: 'sats',
-                    status: 'active',
-                    recurrence_until: req.content.recurrence.until
-                      ? fromUnixSeconds(req.content.recurrence.until)
-                      : null,
-                    recurrence_first_payment_due: fromUnixSeconds(
-                      req.content.recurrence.firstPaymentDue
-                    ),
-                    last_payment_date: null,
-                    next_payment_date: fromUnixSeconds(req.content.recurrence.firstPaymentDue),
-                    recurrence_calendar: req.content.recurrence.calendar.inner.toCalendarString(),
-                    recurrence_max_payments: req.content.recurrence.maxPayments || null,
-                  });
-                })
-                .then((id) => {
-                  resolver({
-                    status: new RecurringPaymentStatus.Confirmed({
-                      subscriptionId: id || 'randomsubscriptionid',
-                      authorizedAmount: (request.metadata as SinglePaymentRequest).content.amount,
-                      authorizedCurrency: (request.metadata as SinglePaymentRequest).content.currency,
-                      authorizedRecurrence: (request.metadata as RecurringPaymentRequest).content
-                        .recurrence,
-                    }),
-                    requestId: (request.metadata as RecurringPaymentRequest).content.requestId,
-                  });
-                })
-            } catch (err) {
-              console.log('Error adding subscription activity:', err);
-            }
-            break;
-        }
-
-        resolvers.delete(id);
-        setResolvers(resolvers);
+              })
+              .then((id) => {
+                request.result({
+                  status: new RecurringPaymentStatus.Confirmed({
+                    subscriptionId: id || 'randomsubscriptionid',
+                    authorizedAmount: (request.metadata as SinglePaymentRequest).content.amount,
+                    authorizedCurrency: (request.metadata as SinglePaymentRequest).content.currency,
+                    authorizedRecurrence: (request.metadata as RecurringPaymentRequest).content
+                      .recurrence,
+                  }),
+                  requestId: (request.metadata as RecurringPaymentRequest).content.requestId,
+                });
+              })
+          } catch (err) {
+            console.log('Error adding subscription activity:', err);
+          }
+          break;
       }
+
     },
     [getById, resolvers, addActivityWithFallback, addSubscriptionWithFallback]
   );
 
   const deny = useCallback(
     (id: string) => {
-      setPendingRequests(prev =>
-        prev.map(request => (request.id === id ? { ...request, status: 'denied' } : request))
-      );
+      console.log('Deny', id);
 
       const request = getById(id);
+      if (!request) {
+        console.log('Request not found', id);
+        return;
+      }
 
-      const resolver = resolvers.get(id);
-      if (resolver) {
-        switch (request?.type) {
-          case 'login':
-            resolver(false);
-            break;
-          case 'payment':
-            resolver({
-              status: new PaymentStatus.Rejected({ reason: 'User rejected' }),
-              requestId: (request.metadata as SinglePaymentRequest).content.requestId,
-            });
-            break;
-          case 'subscription':
-            resolver({
-              status: new RecurringPaymentStatus.Rejected({
-                reason: 'User rejected',
-              }),
-              requestId: (request.metadata as RecurringPaymentRequest).content.requestId,
-            });
-            break;
-        }
-        resolvers.delete(id);
-        setResolvers(resolvers);
+      nostrService.dismissPendingRequest(id);
+
+      switch (request?.type) {
+        case 'login':
+          request.result(false);
+          break;
+        case 'payment':
+          request.result({
+            status: new PaymentStatus.Rejected({ reason: 'User rejected' }),
+            requestId: (request.metadata as SinglePaymentRequest).content.requestId,
+          });
+          break;
+        case 'subscription':
+          request.result({
+            status: new RecurringPaymentStatus.Rejected({
+              reason: 'User rejected',
+            }),
+            requestId: (request.metadata as RecurringPaymentRequest).content.requestId,
+          });
+        break;
       }
     },
-    [getById, resolvers]
+    [getById]
   );
 
   // Show skeleton loader and set timeout for request
@@ -574,12 +489,10 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
   // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   const contextValue = useMemo(
     () => ({
-      pendingRequests,
       getByType,
       getById,
       approve,
       deny,
-      hasPending,
       isLoadingRequest,
       requestFailed,
       pendingUrl,
@@ -587,12 +500,10 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
       setRequestFailed,
     }),
     [
-      pendingRequests,
       getByType,
       getById,
       approve,
       deny,
-      hasPending,
       isLoadingRequest,
       requestFailed,
       pendingUrl,

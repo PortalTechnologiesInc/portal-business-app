@@ -5,10 +5,11 @@ import { PendingRequestCard } from './PendingRequestCard';
 import { PendingRequestSkeletonCard } from './PendingRequestSkeletonCard';
 import { FailedRequestCard } from './FailedRequestCard';
 import type { PendingRequest, PendingRequestType } from '../models/PendingRequest';
-import type { AuthChallengeEvent } from 'portal-app-lib';
-import { getNostrServiceInstance } from '@/services/nostr/NostrService';
+import { AuthChallengeEvent, SinglePaymentRequest } from 'portal-app-lib';
+import { useNostrService } from '@/context/NostrServiceContext';
 import { ThemedText } from './ThemedText';
 import { Colors } from '@/constants/Colors';
+import { useEffect, useState } from 'react';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 80; // Adjusted for proper padding
@@ -18,47 +19,55 @@ const CARD_MARGIN = 12; // Margin between cards
 const createSkeletonRequest = (): PendingRequest => ({
   id: 'skeleton',
   metadata: {} as AuthChallengeEvent,
-  status: 'pending',
   type: 'login',
-  timestamp: new Date().toISOString(),
+  timestamp: new Date(),
+  result: () => {},
 });
 
 export const PendingRequestsList: React.FC = () => {
   const {
-    pendingRequests,
-    hasPending,
     isLoadingRequest,
     requestFailed,
     pendingUrl,
     showSkeletonLoader,
     setRequestFailed,
   } = usePendingRequests();
+  const nostrService = useNostrService();
+  const [combinedData, setCombinedData] = useState<PendingRequest[]>([]);
 
-  // Only show requests with pending status
-  const pendingOnly = pendingRequests.filter(req => req.status === 'pending');
+  useEffect(() => {
+    // Sort requests by timestamp (newest first)
+    const sortedRequests = Object.values(nostrService.pendingRequests).filter(request => {
+      // Hide requests that are payments for a subscription
+      if (request.type === 'payment' && (request.metadata as SinglePaymentRequest).content.subscriptionId) {
+        return false;
+      }
 
-  // Sort requests by timestamp (newest first)
-  const sortedRequests = [...pendingOnly].sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-  );
+      return true;
+    }).sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
 
-  // Create combined data
-  let combinedData: PendingRequest[] = [];
+    // Create combined data
+    let combinedData: PendingRequest[] = [];
 
-  if (requestFailed || isLoadingRequest) {
-    // If request failed or loading, add a skeleton item at the beginning of the list
-    combinedData = [createSkeletonRequest(), ...sortedRequests];
-  } else {
-    // Just show the sorted pending requests
-    combinedData = sortedRequests;
-  }
+    if (requestFailed || isLoadingRequest) {
+      // If request failed or loading, add a skeleton item at the beginning of the list
+      combinedData = [createSkeletonRequest(), ...sortedRequests];
+    } else {
+      // Just show the sorted pending requests
+      combinedData = sortedRequests;
+    }
+
+    setCombinedData(combinedData);
+  }, [nostrService.pendingRequests]);
 
   // Handle retry
   const handleRetry = () => {
     setRequestFailed(false);
     if (pendingUrl) {
       showSkeletonLoader(pendingUrl);
-      getNostrServiceInstance().sendAuthInit(pendingUrl);
+      nostrService.sendAuthInit(pendingUrl);
     }
   };
 
@@ -81,7 +90,7 @@ export const PendingRequestsList: React.FC = () => {
         </ThemedText>
       </View>
 
-      {!hasPending && !isLoadingRequest && !requestFailed ? (
+      {combinedData.length === 0 && !isLoadingRequest && !requestFailed ? (
         <View style={styles.emptyContainer}>
           <ThemedText
             style={styles.emptyText}

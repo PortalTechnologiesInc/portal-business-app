@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Image, TouchableOpacity, TextInput, BackHandler } from 'react-native';
+import { StyleSheet, View, Image, TouchableOpacity, TextInput, BackHandler, ScrollView } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useOnboarding } from '@/context/OnboardingContext';
+import { useMnemonic } from '@/context/MnemonicContext';
 import { Asset } from 'expo-asset';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { generateMnemonic } from 'portal-app-lib';
-import { saveMnemonic } from '@/services/SecureStorageService';
 
 // Preload all required assets
 const onboardingLogo = require('../assets/images/appLogo.png');
 
 export default function Onboarding() {
   const { completeOnboarding } = useOnboarding();
+  const { setMnemonic, generateNewMnemonic } = useMnemonic();
   const [currentPage, setCurrentPage] = useState<'intro' | 'generate' | 'import' | 'splash'>(
     'intro'
   );
@@ -21,20 +22,22 @@ export default function Onboarding() {
 
   // Preload assets when component mounts
   useEffect(() => {
-    const mnemonic = generateMnemonic().toString();
-    setSeedPhrase(mnemonic);
-
-    async function loadAssets() {
+    async function loadAssetsAndMnemonic() {
       try {
+        // Generate a new mnemonic
+        const mnemonic = generateMnemonic().toString();
+        setSeedPhrase(mnemonic);
+        
+        // Load assets
         await Asset.loadAsync([onboardingLogo]);
         setAssetsLoaded(true);
       } catch (error) {
-        console.error('Error preloading assets:', error);
+        console.error('Error in initialization:', error);
         setAssetsLoaded(true);
       }
     }
 
-    loadAssets();
+    loadAssetsAndMnemonic();
   }, []);
 
   // Handle Android back button
@@ -54,8 +57,8 @@ export default function Onboarding() {
   const handleImport = async () => {
     if (seedPhrase.trim()) {
       try {
-        // Save the imported mnemonic to secure storage
-        await saveMnemonic(seedPhrase);
+        // Save the imported mnemonic using our provider
+        await setMnemonic(seedPhrase);
 
         // Show splash screen before completing onboarding
         setCurrentPage('splash');
@@ -77,8 +80,8 @@ export default function Onboarding() {
 
   const handleGenerateComplete = async () => {
     try {
-      // Save the mnemonic to secure storage
-      await saveMnemonic(seedPhrase);
+      // Save the mnemonic using our provider
+      await setMnemonic(seedPhrase);
 
       // Show splash screen before completing onboarding
       setCurrentPage('splash');
@@ -141,7 +144,7 @@ export default function Onboarding() {
         )}
 
         {currentPage === 'generate' && (
-          <View style={styles.pageContainer}>
+          <ScrollView>
             <ThemedText type="title" style={styles.title}>
               Your Seed Phrase
             </ThemedText>
@@ -165,7 +168,7 @@ export default function Onboarding() {
             >
               <ThemedText style={styles.buttonText}>Finish</ThemedText>
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         )}
 
         {currentPage === 'import' && (

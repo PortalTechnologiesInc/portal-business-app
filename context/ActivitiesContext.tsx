@@ -109,9 +109,7 @@ export const ActivitiesProvider: React.FC<{ children: ReactNode }> = ({ children
 
     try {
       const fetchedSubscriptions = await db.getSubscriptions();
-      console.log('Fetched subscriptions:', fetchedSubscriptions);
       setSubscriptions(fetchedSubscriptions);
-      console.log('Subscriptions set:');
     } catch (error) {
       console.error('Failed to fetch subscriptions:', error);
       // If database is closed, reset the database state

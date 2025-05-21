@@ -2,26 +2,16 @@ import { useEffect } from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { parseAuthInitUrl } from 'portal-app-lib';
-import { getNostrServiceInstance } from '@/services/nostr/NostrService';
+import { useNostrService } from '@/context/NostrServiceContext';
 import { usePendingRequests } from '@/context/PendingRequestsContext';
 import { Colors } from '@/constants/Colors';
 
 export default function DeepLinkHandler() {
   const { url } = useLocalSearchParams();
   const { showSkeletonLoader } = usePendingRequests();
+  const nostrService = useNostrService();
 
   useEffect(() => {
-    // Function to check if NostrService is initialized
-    const isNostrServiceReady = () => {
-      try {
-        const nostrService = getNostrServiceInstance();
-        return nostrService?.isInitialized?.();
-      } catch (error) {
-        console.log('NostrService not yet available:', error);
-        return false;
-      }
-    };
-
     const handleDeepLink = async () => {
       if (typeof url === 'string' && url) {
         try {
@@ -39,7 +29,7 @@ export default function DeepLinkHandler() {
                 showSkeletonLoader(parsedUrl);
 
                 // Send the auth request
-                await getNostrServiceInstance().sendAuthInit(parsedUrl);
+                await nostrService.sendAuthInit(parsedUrl);
                 console.log('Auth request sent successfully');
               } else {
                 console.error('URL parsed as null or undefined');
@@ -54,7 +44,7 @@ export default function DeepLinkHandler() {
               const parsedUrl = parseAuthInitUrl(url);
               if (parsedUrl) {
                 showSkeletonLoader(parsedUrl);
-                await getNostrServiceInstance().sendAuthInit(parsedUrl);
+                await nostrService.sendAuthInit(parsedUrl);
               } else {
                 console.error('Failed to parse URL with unknown format');
               }
@@ -74,30 +64,14 @@ export default function DeepLinkHandler() {
       }
     };
 
-    // Check until NostrService is initialized before processing the URL
-    let initCheckCount = 0;
-    const maxChecks = 10; // Maximum number of checks to prevent infinite loop
-
-    const waitForInitialization = () => {
-      if (isNostrServiceReady()) {
-        console.log('NostrService is initialized, processing deeplink...');
-        handleDeepLink();
-      } else if (initCheckCount < maxChecks) {
-        initCheckCount++;
-        console.log(`Waiting for initialization... (attempt ${initCheckCount}/${maxChecks})`);
-        // Increase the delay to give more time for initialization
-        setTimeout(waitForInitialization, 1000);
-      } else {
-        console.error('NostrService initialization timed out, attempting to process anyway');
-        handleDeepLink();
-      }
-    };
-
-    // Start checking if NostrService is initialized
-    const timer = setTimeout(waitForInitialization, 1000);
-
-    return () => clearTimeout(timer);
-  }, [url, showSkeletonLoader]);
+    // Process the deeplink if NostrService is initialized
+    if (nostrService.isInitialized) {
+      handleDeepLink();
+    } else {
+      console.log('NostrService not yet initialized, redirecting to home');
+      router.replace('/(tabs)');
+    }
+  }, [url, showSkeletonLoader, nostrService]);
 
   return (
     <View

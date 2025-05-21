@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import type { PendingRequest } from '../models/PendingRequest';
 import { usePendingRequests } from '../context/PendingRequestsContext';
-import { getNostrServiceInstance } from '@/services/nostr/NostrService';
+import { useNostrService } from '@/context/NostrServiceContext';
 import type { SinglePaymentRequest, RecurringPaymentRequest } from 'portal-app-lib';
 
 const { width } = Dimensions.get('window');
@@ -39,37 +39,15 @@ const truncatePubkey = (pubkey: string | undefined) => {
 // Global cache for service names
 const serviceNameCache: Record<string, string> = {};
 
-// Prefetch service name and add to cache
-export const prefetchServiceName = async (serviceKey: string): Promise<string> => {
-  if (serviceNameCache[serviceKey]) {
-    return serviceNameCache[serviceKey];
-  }
-  
-  try {
-    const profile = await getNostrServiceInstance().getServiceName(serviceKey);
-    if (profile?.nip05) {
-      const name = profile.nip05;
-      // Save to global cache
-      serviceNameCache[serviceKey] = name;
-      return name;
-    }
-  } catch (error) {
-    console.error('Error fetching service name:', error);
-  }
-  
-  return 'Unknown Service';
-};
-
 export const PendingRequestCard: FC<PendingRequestCardProps> = ({ request }) => {
   const { approve, deny } = usePendingRequests();
   const { id, metadata, type } = request;
-  const [serviceName, setServiceName] = useState<string>(
-    serviceNameCache[metadata.serviceKey] || 'Unknown Service'
-  );
+  const nostrService = useNostrService();
+  const [serviceName, setServiceName] = useState<string>('Unknown Service');
   const isMounted = useRef(true);
 
   // Add debug logging when a card is rendered
-  console.log(`Rendering card ${id} of type ${type} with status ${request.status}`);
+  console.log(`Rendering card ${id} of type ${type}`);
 
   const calendarObj =
     type === 'subscription'
@@ -79,26 +57,29 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({ request }) => 
   const recurrence = calendarObj?.inner.toHumanReadable(false);
 
   useEffect(() => {
-    // Always try to fetch the service name to keep cache updated,
-    // even if we already have it cached
-    const fetchServiceName = async () => {
-      try {
-        const name = await prefetchServiceName(metadata.serviceKey);
-        if (isMounted.current) {
-          setServiceName(name);
-        }
-      } catch (error) {
-        console.error('Error fetching service name in card:', error);
-      }
-    };
-    
-    fetchServiceName();
+    // Check if we have a cached name for this service
+    if (serviceNameCache[metadata.serviceKey]) {
+      setServiceName(serviceNameCache[metadata.serviceKey]);
+    } else {
+      nostrService
+        .getServiceName(metadata.serviceKey)
+        .then(profile => {
+          // Only update if the component is still mounted
+          if (isMounted.current && profile?.nip05) {
+            const name = profile.nip05;
+            // Save to global cache
+            serviceNameCache[metadata.serviceKey] = name;
+            // Update state
+            setServiceName(name);
+          }
+        });
+    }
 
     // Cleanup function to prevent state updates after unmount
     return () => {
       isMounted.current = false;
     };
-  }, [metadata.serviceKey]);
+  }, [metadata.serviceKey, nostrService]);
 
   const recipientPubkey = metadata.recipient;
 
@@ -109,8 +90,6 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({ request }) => 
   const amount =
     (metadata as SinglePaymentRequest)?.content?.amount ||
     (metadata as RecurringPaymentRequest)?.content?.amount;
-
-  console.log(amount);
 
   return (
     <View style={styles.card}>

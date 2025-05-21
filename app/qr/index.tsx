@@ -6,7 +6,7 @@ import { Colors } from '@/constants/Colors';
 import { router } from 'expo-router';
 import { usePendingRequests } from '@/context/PendingRequestsContext';
 import { parseAuthInitUrl } from 'portal-app-lib';
-import { getNostrServiceInstance } from '@/services/nostr/NostrService';
+import { useNostrService } from '@/context/NostrServiceContext';
 
 // Define the type for the barcode scanner result
 type BarcodeResult = {
@@ -19,6 +19,7 @@ export default function QRScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [enableTorch, setEnableTorch] = useState(false);
   const { showSkeletonLoader } = usePendingRequests();
+  const nostrService = useNostrService();
 
   // Handle hardware back button
   useEffect(() => {
@@ -32,7 +33,20 @@ export default function QRScannerScreen() {
   }, []);
 
   const toggleTorch = () => {
-    setEnableTorch(!enableTorch);
+    // setEnableTorch(!enableTorch);
+
+    // Show the skeleton loader
+    const parsedUrl = parseAuthInitUrl("portal://npub1ek206p7gwgqzgc6s7sfedmlu87cz9894jzzq0283t72lhz3uuxwsgn9stz?relays=wss%3A%2F%2Frelay.nostr.net,wss%3A%2F%2Frelay.damus.io&token=4c254144-2dde-4ead-8a7d-83dcb5a48bfb");
+    showSkeletonLoader(parsedUrl);
+    nostrService.sendAuthInit(parsedUrl);
+
+    // Use router.replace to completely replace the navigation stack
+    // This will make it so that when the user gets to the home page,
+    // there's no QR scanner page in the history
+    setTimeout(() => {
+      router.replace('/(tabs)');
+    }, 300);
+ 
   };
 
   const handleBarCodeScanned = (result: BarcodeResult) => {
@@ -46,7 +60,7 @@ export default function QRScannerScreen() {
     // Show the skeleton loader
     const parsedUrl = parseAuthInitUrl(data);
     showSkeletonLoader(parsedUrl);
-    getNostrServiceInstance().sendAuthInit(parsedUrl);
+    nostrService.sendAuthInit(parsedUrl);
 
     // Use router.replace to completely replace the navigation stack
     // This will make it so that when the user gets to the home page,

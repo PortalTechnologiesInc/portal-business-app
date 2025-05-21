@@ -5,22 +5,16 @@ import { Stack, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { OnboardingProvider } from '@/context/OnboardingContext';
+import { OnboardingProvider, useOnboarding } from '@/context/OnboardingContext';
 import { UserProfileProvider } from '@/context/UserProfileContext';
 import { PendingRequestsProvider } from '@/context/PendingRequestsContext';
 import { ActivitiesProvider } from '@/context/ActivitiesContext';
 import { DatabaseProvider } from '@/services/database/DatabaseProvider';
+import { MnemonicProvider, useMnemonic } from '@/context/MnemonicContext';
+import { NostrServiceProvider } from '@/context/NostrServiceContext';
 import { StatusBar } from 'expo-status-bar';
 import { Colors } from '@/constants/Colors';
 import { Asset } from 'expo-asset';
-import {
-  getMnemonic,
-  mnemonicEvents,
-  getWalletUrl,
-  walletUrlEvents,
-} from '@/services/SecureStorageService';
-import { Mnemonic } from 'portal-app-lib';
-import { getNostrServiceInstance } from '@/services/nostr/NostrService';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -41,10 +35,75 @@ const preloadImages = async () => {
   }
 };
 
+// Main app structure with NostrService initialization
+const AppContent = () => {
+  const { isOnboardingComplete } = useOnboarding();
+  const { mnemonic, walletUrl } = useMnemonic();
+  
+  // If onboarding is not complete, we don't need NostrService yet
+  if (!isOnboardingComplete) {
+    return (
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: {
+            backgroundColor: '#000000',
+          },
+        }}
+      >
+        <Stack.Screen name="onboarding" />
+      </Stack>
+    );
+  }
+  
+  // Only initialize NostrService if we have a mnemonic
+  if (!mnemonic) {
+    console.log('No mnemonic available, cannot initialize NostrService');
+    return (
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: {
+            backgroundColor: '#000000',
+          },
+        }}
+      >
+        <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
+      </Stack>
+    );
+  }
+  
+  // For authenticated app, wrap everything in NostrServiceProvider
+  return (
+    <NostrServiceProvider mnemonic={mnemonic} walletUrl={walletUrl}>
+      <DatabaseProvider>
+        <ActivitiesProvider>
+          <PendingRequestsProvider>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: {
+                  backgroundColor: '#000000',
+                },
+              }}
+            >
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="index" />
+              <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="wallet" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="qr" options={{ presentation: 'fullScreenModal' }} />
+              <Stack.Screen name="subscription" />
+              <Stack.Screen name="deeplink" />
+            </Stack>
+          </PendingRequestsProvider>
+        </ActivitiesProvider>
+      </DatabaseProvider>
+    </NostrServiceProvider>
+  );
+};
+
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
-  const [mnemonic, setMnemonic] = useState<string | null>(null);
-  const [walletURL, setWalletURL] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -93,96 +152,6 @@ export default function RootLayout() {
     return () => subscription.remove();
   }, [router]);
 
-  // Check for mnemonic and wallet URL existence and log their status
-  useEffect(() => {
-    const checkSecureStorage = async () => {
-      try {
-        const mnemonicValue = await getMnemonic();
-        setMnemonic(mnemonicValue);
-
-        const walletUrlValue = await getWalletUrl();
-        setWalletURL(walletUrlValue || null);
-      } catch (error) {
-        console.error('SecureStore access failed:', error);
-      }
-    };
-
-    // Check on initial load
-    checkSecureStorage();
-
-    // Also check when app returns to foreground
-    const appStateSubscription = AppState.addEventListener(
-      'change',
-      (nextAppState: AppStateStatus) => {
-        if (nextAppState === 'active') {
-          console.log('App became active, checking secure storage...');
-          checkSecureStorage();
-        }
-      }
-    );
-
-    // Subscribe to mnemonic change events
-    const mnemonicSubscription = mnemonicEvents.addListener('mnemonicChanged', newMnemonicValue => {
-      console.log('Mnemonic change event received!');
-      setMnemonic(newMnemonicValue as string | null);
-    });
-
-    // Subscribe to wallet URL change events
-    const walletUrlSubscription = walletUrlEvents.addListener('walletUrlChanged', newWalletUrl => {
-      console.log('Wallet URL change event received!');
-      setWalletURL(newWalletUrl as string | null);
-    });
-
-    return () => {
-      appStateSubscription.remove();
-      mnemonicSubscription.remove();
-      walletUrlSubscription.remove();
-    };
-  }, []);
-
-  // Log whenever mnemonic changes
-  useEffect(() => {
-    console.log('Mnemonic value:', mnemonic);
-    const initializeNostrService = async () => {
-      if (mnemonic) {
-        console.log('Initializing PortalApp with mnemonic');
-        try {
-          const mnemonicObj = new Mnemonic(mnemonic);
-          const nostrService = getNostrServiceInstance(mnemonicObj);
-
-          // Make sure initialization completes before continuing
-          if (!nostrService.isInitialized()) {
-            await nostrService.initialize(mnemonicObj);
-          }
-
-          // Initialize wallet if wallet URL is available
-          if (walletURL) {
-            console.log('Connecting to wallet with URL');
-            try {
-              nostrService.connectNWC(walletURL);
-              console.log('Wallet connected successfully');
-            } catch (error) {
-              console.error('Failed to connect wallet:', error);
-            }
-          } else {
-            console.log('No wallet URL available, skipping wallet connection');
-          }
-
-          console.log(
-            'NostrService initialized successfully with public key:',
-            nostrService.getPublicKey()
-          );
-        } catch (error) {
-          console.error('Failed to initialize NostrService:', error);
-        }
-      } else {
-        console.log('Mnemonic does not exist');
-      }
-    };
-
-    initializeNostrService();
-  }, [mnemonic, walletURL]); // Add walletURL to dependencies to reinitialize if it changes
-
   if (!isReady) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: '#000000' }}>
@@ -199,28 +168,9 @@ export default function RootLayout() {
       <StatusBar style="light" />
       <OnboardingProvider>
         <UserProfileProvider>
-          <DatabaseProvider>
-            <ActivitiesProvider>
-              <PendingRequestsProvider>
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: {
-                      backgroundColor: '#000000',
-                    },
-                  }}
-                >
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="index" />
-                  <Stack.Screen name="onboarding" />
-                  <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
-                  <Stack.Screen name="wallet" options={{ presentation: 'modal' }} />
-                  <Stack.Screen name="qr" options={{ presentation: 'fullScreenModal' }} />
-                  <Stack.Screen name="subscription" />
-                </Stack>
-              </PendingRequestsProvider>
-            </ActivitiesProvider>
-          </DatabaseProvider>
+          <MnemonicProvider>
+            <AppContent />
+          </MnemonicProvider>
         </UserProfileProvider>
       </OnboardingProvider>
     </GestureHandlerRootView>

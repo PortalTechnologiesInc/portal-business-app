@@ -11,7 +11,6 @@ import { fromUnixSeconds, type SubscriptionWithDates } from "@/services/database
 import { parseCalendar } from "portal-app-lib";
 
 export default function SubscriptionsScreen() {
-	console.log('SubscriptionsScreen');
 	const { subscriptions, isDbReady } = useActivities();
 
 	const handleSubscriptionPress = useCallback((subscriptionId: string) => {
