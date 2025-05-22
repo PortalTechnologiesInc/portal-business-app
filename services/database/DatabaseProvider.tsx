@@ -10,7 +10,6 @@ import {
 import { SQLiteProvider, type SQLiteDatabase, openDatabaseAsync } from 'expo-sqlite';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { getMnemonic, mnemonicEvents } from '@/services/SecureStorageService';
-import { DatabaseService } from './index';
 
 // Database name constant to ensure consistency
 export const DATABASE_NAME = 'portal-app.db';

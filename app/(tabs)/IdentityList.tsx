@@ -18,9 +18,7 @@ export default function IdentityList({ onManageIdentity }: IdentityListProps) {
 
   const router = useRouter();
 
-  /* useEffect(() => {
-    setIdentities(getMockedIdentities());
-  }, []); */
+
   const renderItem = ({ item }: { item: Identity }) => (
     <TouchableOpacity style={styles.listItem} onPress={() => onManageIdentity(item)}>
       <View>

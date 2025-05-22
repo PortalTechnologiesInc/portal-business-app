@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ActivityWithDates } from '@/services/database';
 import { useActivities } from '@/context/ActivitiesContext';
 import { ActivityRow } from '@/components/ActivityRow';
+import { router } from 'expo-router';
 
 const ItemList: React.FC = () => {
   const { activities, isDbReady, refreshData } = useActivities();
@@ -63,6 +64,14 @@ const ItemList: React.FC = () => {
   // Memoized list header and footer components
   const ListHeaderComponent = useMemo(() => <View style={{ height: 16 }} />, []);
   const ListFooterComponent = useMemo(() => <View style={{ height: 24 }} />, []);
+
+  // link handler
+  const handleLinkPress = useCallback((activity: ActivityWithDates) => {
+    router.push({
+      pathname: '/activity/[id]',
+      params: { id: activity.id },
+    });
+  }, []);
 
   // Memoize list item renderer
   const listItemRenderer = useCallback(
