@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { Identity } from '../../models/Identity';
@@ -13,8 +13,8 @@ export type IdentityListProps = {
   onDeleteIdentity: (identity: Identity) => void;
 };
 
-export default function IdentityList({ onManageIdentity, onDeleteIdentity }: IdentityListProps) {
-  const [identities, setIdentities] = useState<Identity[]>([]);
+export default function IdentityList({ onManageIdentity }: IdentityListProps) {
+  const [identities] = useState<Identity[]>([]);
 
   const router = useRouter();
 

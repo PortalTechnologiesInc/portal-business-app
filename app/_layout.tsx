@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Text, View, SafeAreaView, AppState } from 'react-native';
+import { Text, View, SafeAreaView } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';

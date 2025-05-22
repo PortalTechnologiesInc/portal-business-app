@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { StyleSheet, View, FlatList, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { formatCentsToCurrency, formatDayAndDate, getNextRecurrenceDay } from '@/utils';
+import { formatDayAndDate } from '@/utils';
 import { useActivities } from '@/context/ActivitiesContext';
 import { fromUnixSeconds, type SubscriptionWithDates } from '@/services/database';
 import { parseCalendar } from 'portal-app-lib';

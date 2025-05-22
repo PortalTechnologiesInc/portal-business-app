@@ -21,7 +21,7 @@ const onboardingLogo = require('../assets/images/appLogo.png');
 
 export default function Onboarding() {
   const { completeOnboarding } = useOnboarding();
-  const { setMnemonic, generateNewMnemonic } = useMnemonic();
+  const { setMnemonic } = useMnemonic();
   const [currentPage, setCurrentPage] = useState<'intro' | 'generate' | 'import' | 'splash'>(
     'intro'
   );

@@ -73,7 +73,7 @@ export default function WalletManagementScreen() {
       // Clear the URL parameter immediately to prevent re-processing
       // This prevents the infinite loop of rendering when the modal is displayed
       if (params.scannedUrl) {
-        const { scannedUrl, timestamp, ...restParams } = params;
+        const { ...restParams } = params;
         router.setParams(restParams);
       }
     }
