@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { StyleSheet, View, TouchableOpacity, ScrollView, Image, Dimensions } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, ScrollView, Image, Dimensions, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -20,7 +20,7 @@ export default function Home() {
   const { isLoading } = useOnboarding();
   const { username, avatarUri } = useUserProfile();
   const nostrService = useNostrService();
-  const [isFirstLaunch, setIsFirstLaunch] = useState(true);
+  const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
   const isMounted = useRef(true);
 
   // This would come from a real user context in the future
@@ -130,9 +130,13 @@ export default function Home() {
     router.push('/settings');
   }, []);
 
-  // Don't render anything until we've checked the onboarding status
-  if (isLoading) {
-    return null;
+  // Don't render anything until we've checked the onboarding status and first launch status
+  if (isLoading || isFirstLaunch === null) {
+    return (
+      <View style={styles.loaderContainer}>
+        <ActivityIndicator size="large" color={Colors.green} />
+      </View>
+    );
   }
 
   return (
@@ -196,7 +200,7 @@ export default function Home() {
             </View>
           </ThemedView>
 
-          {isFirstLaunch ? (
+          {isFirstLaunch === true ? (
             <View style={styles.welcomeContainer}>
               <View style={styles.welcomeCard}>
                 <ThemedText
@@ -423,5 +427,11 @@ const styles = StyleSheet.create({
   dismissText: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.darkerGray,
   },
 });
