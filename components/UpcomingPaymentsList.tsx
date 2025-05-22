@@ -53,7 +53,11 @@ export const UpcomingPaymentsList: React.FC = () => {
 
   const renderPaymentItem = useCallback(
     ({ item }: { item: UpcomingPayment }) => (
-      <View style={styles.paymentCard}>
+      <TouchableOpacity 
+        style={styles.paymentCard} 
+        activeOpacity={0.7}
+        onPress={() => router.push(`/subscription/${item.id}`)}
+      >
         <View style={styles.iconContainer}>
           <BanknoteIcon size={20} color={Colors.almostWhite} />
         </View>
@@ -89,7 +93,7 @@ export const UpcomingPaymentsList: React.FC = () => {
             {formatRelativeTime(item.dueDate)}
           </ThemedText>
         </View>
-      </View>
+      </TouchableOpacity>
     ),
     []
   );

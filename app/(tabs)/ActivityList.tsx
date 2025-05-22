@@ -79,13 +79,15 @@ const ItemList: React.FC = () => {
       <>
         {renderSectionHeader({ section: { title: item.title } })}
         {item.data.map((activity: ActivityWithDates) => (
-          <React.Fragment key={`${activity.id}-${activity.date.getTime()}`}>
-            <ActivityRow activity={activity} />
-          </React.Fragment>
+          <TouchableOpacity onPress={() => handleLinkPress(activity)} key={`${activity.id}-${activity.date.getTime()}`}>
+            <React.Fragment>
+              <ActivityRow activity={activity} />
+            </React.Fragment>
+          </TouchableOpacity>
         ))}
       </>
     ),
-    [renderSectionHeader]
+    [renderSectionHeader, handleLinkPress]
   );
 
   // Show a database initialization message when database isn't ready

@@ -1,19 +1,24 @@
 import type React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Key, BanknoteIcon } from 'lucide-react-native';
 import { ThemedText } from './ThemedText';
 import { Colors } from '@/constants/Colors';
 import { ActivityType } from '@/models/Activity';
 import { formatRelativeTime } from '@/utils';
 import type { ActivityWithDates } from '@/services/database';
+import { router } from 'expo-router';
 
 interface ActivityRowProps {
   activity: ActivityWithDates;
 }
 
 export const ActivityRow: React.FC<ActivityRowProps> = ({ activity }) => {
+  const handlePress = () => {
+    router.push(`/activity/${activity.id}`);
+  };
+
   return (
-    <View style={styles.activityCard}>
+    <TouchableOpacity style={styles.activityCard} onPress={handlePress} activeOpacity={0.7}>
       <View style={styles.iconContainer}>
         {activity.type === ActivityType.Auth ? (
           <Key size={20} color={Colors.almostWhite} />
@@ -51,7 +56,7 @@ export const ActivityRow: React.FC<ActivityRowProps> = ({ activity }) => {
           {formatRelativeTime(activity.date)}
         </ThemedText>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 
