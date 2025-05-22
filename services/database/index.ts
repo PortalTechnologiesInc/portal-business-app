@@ -315,10 +315,7 @@ export class DatabaseService {
     await this.db.runAsync(`UPDATE subscriptions SET ${updates.join(', ')} WHERE id = ?`, params);
   }
 
-  async updateSubscriptionLastPayment(
-    id: string,
-    lastPaymentDate: Date | number
-  ): Promise<void> {
+  async updateSubscriptionLastPayment(id: string, lastPaymentDate: Date | number): Promise<void> {
     await this.db.runAsync(
       `UPDATE subscriptions
        SET last_payment_date = ?

@@ -12,7 +12,7 @@ import { ActivityRow } from '@/components/ActivityRow';
 const ItemList: React.FC = () => {
   const { activities, isDbReady, refreshData } = useActivities();
   const [filter, setFilter] = useState<ActivityTypeEnum | null>(null);
-  
+
   // Refresh data when component mounts or becomes focused
   useEffect(() => {
     refreshData();

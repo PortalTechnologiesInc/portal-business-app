@@ -12,10 +12,7 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
-import {
-  formatCentsToCurrency,
-  formatDayAndDate,
-} from '@/utils';
+import { formatCentsToCurrency, formatDayAndDate } from '@/utils';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useActivities } from '@/context/ActivitiesContext';
 import { parseCalendar } from 'portal-app-lib';
@@ -50,15 +47,17 @@ export default function SubscriptionDetailScreen() {
       if (foundSubscription) {
         setSubscription(foundSubscription);
 
-        DB.getSubscriptionPayments(id as string).then(
-          (payments) => setPaymentHistory(payments.map((payment) => ({
-            id: payment.id,
-            amount: payment.amount ?? 0,
-            currency: payment.currency ?? 'sats',
-            status: 'completed',
-            date: payment.date.getTime(),
-          }))
-        ));
+        DB.getSubscriptionPayments(id as string).then(payments =>
+          setPaymentHistory(
+            payments.map(payment => ({
+              id: payment.id,
+              amount: payment.amount ?? 0,
+              currency: payment.currency ?? 'sats',
+              status: 'completed',
+              date: payment.date.getTime(),
+            }))
+          )
+        );
       }
 
       setLoading(false);
@@ -147,9 +146,11 @@ export default function SubscriptionDetailScreen() {
   const nextPayment =
     subscription.recurrence_first_payment_due > new Date() || !subscription.last_payment_date
       ? subscription.recurrence_first_payment_due
-      : fromUnixSeconds(parsedCalendar.nextOccurrence(
-          BigInt((subscription.last_payment_date?.getTime() ?? 0) / 1000)
-        ) ?? 0);
+      : fromUnixSeconds(
+          parsedCalendar.nextOccurrence(
+            BigInt((subscription.last_payment_date?.getTime() ?? 0) / 1000)
+          ) ?? 0
+        );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -195,7 +196,8 @@ export default function SubscriptionDetailScreen() {
                 darkColor={Colors.dirtyWhite}
                 lightColor={Colors.dirtyWhite}
               >
-                First payment: {formatDayAndDate(new Date(subscription.recurrence_first_payment_due))}
+                First payment:{' '}
+                {formatDayAndDate(new Date(subscription.recurrence_first_payment_due))}
               </ThemedText>
               <ThemedText
                 style={styles.detail}
@@ -215,12 +217,13 @@ export default function SubscriptionDetailScreen() {
               )}
               {subscription.recurrence_until && (
                 <ThemedText
-                style={styles.detail}
-                darkColor={Colors.dirtyWhite}
-                lightColor={Colors.dirtyWhite}
-              >
-                Until: {formatDayAndDate(new Date(subscription.recurrence_until ?? 0))}
-              </ThemedText>)}
+                  style={styles.detail}
+                  darkColor={Colors.dirtyWhite}
+                  lightColor={Colors.dirtyWhite}
+                >
+                  Until: {formatDayAndDate(new Date(subscription.recurrence_until ?? 0))}
+                </ThemedText>
+              )}
             </View>
           </View>
 
@@ -369,7 +372,7 @@ const styles = StyleSheet.create({
   paymentStatus: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#3d8c40'
+    color: '#3d8c40',
   },
   paymentAmount: {
     fontSize: 16,

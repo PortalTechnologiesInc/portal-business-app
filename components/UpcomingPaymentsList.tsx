@@ -15,7 +15,7 @@ export const UpcomingPaymentsList: React.FC = () => {
   // Initialize with empty array - will be populated with real data later
   const [upcomingPayments, SetUpcomingPayments] = useState<UpcomingPayment[]>([]);
 
-  const {subscriptions} = useActivities();
+  const { subscriptions } = useActivities();
 
   const handleSeeAll = useCallback(() => {
     // Will be implemented when we have a dedicated page
@@ -24,26 +24,32 @@ export const UpcomingPaymentsList: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    SetUpcomingPayments(subscriptions.map((sub) => {
-      const parsedCalendar = parseCalendar(sub.recurrence_calendar);
-      const nextPayment =
-      sub.recurrence_first_payment_due > new Date() || !sub.last_payment_date
-        ? sub.recurrence_first_payment_due
-        : fromUnixSeconds(parsedCalendar.nextOccurrence(
-          BigInt((sub.last_payment_date?.getTime() ?? 0) / 1000)
-        ) ?? 0);
+    SetUpcomingPayments(
+      subscriptions
+        .map(sub => {
+          const parsedCalendar = parseCalendar(sub.recurrence_calendar);
+          const nextPayment =
+            sub.recurrence_first_payment_due > new Date() || !sub.last_payment_date
+              ? sub.recurrence_first_payment_due
+              : fromUnixSeconds(
+                  parsedCalendar.nextOccurrence(
+                    BigInt((sub.last_payment_date?.getTime() ?? 0) / 1000)
+                  ) ?? 0
+                );
 
-        return {
-          id: sub.id,
-          serviceName: sub.service_name,
-          dueDate: nextPayment,
-          amount: sub.amount,
-          currency: sub.currency,
-        }
-    }).filter((sub) => {
-      return sub.dueDate < new Date(Date.now() + 14 * 24 * 60 * 60 * 1000)
-    }))
-  }, [subscriptions])
+          return {
+            id: sub.id,
+            serviceName: sub.service_name,
+            dueDate: nextPayment,
+            amount: sub.amount,
+            currency: sub.currency,
+          };
+        })
+        .filter(sub => {
+          return sub.dueDate < new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+        })
+    );
+  }, [subscriptions]);
 
   const renderPaymentItem = useCallback(
     ({ item }: { item: UpcomingPayment }) => (
@@ -52,7 +58,11 @@ export const UpcomingPaymentsList: React.FC = () => {
           <BanknoteIcon size={20} color={Colors.almostWhite} />
         </View>
         <View style={styles.paymentInfo}>
-          <ThemedText type="subtitle" darkColor={Colors.almostWhite} lightColor={Colors.almostWhite}>
+          <ThemedText
+            type="subtitle"
+            darkColor={Colors.almostWhite}
+            lightColor={Colors.almostWhite}
+          >
             {item.serviceName}
           </ThemedText>
           <ThemedText
@@ -64,7 +74,11 @@ export const UpcomingPaymentsList: React.FC = () => {
           </ThemedText>
         </View>
         <View style={styles.paymentDetails}>
-          <ThemedText style={styles.amount} darkColor={Colors.almostWhite} lightColor={Colors.almostWhite}>
+          <ThemedText
+            style={styles.amount}
+            darkColor={Colors.almostWhite}
+            lightColor={Colors.almostWhite}
+          >
             {item.amount} {item.currency}
           </ThemedText>
           <ThemedText

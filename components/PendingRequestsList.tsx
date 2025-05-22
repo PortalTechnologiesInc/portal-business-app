@@ -25,28 +25,26 @@ const createSkeletonRequest = (): PendingRequest => ({
 });
 
 export const PendingRequestsList: React.FC = () => {
-  const {
-    isLoadingRequest,
-    requestFailed,
-    pendingUrl,
-    showSkeletonLoader,
-    setRequestFailed,
-  } = usePendingRequests();
+  const { isLoadingRequest, requestFailed, pendingUrl, showSkeletonLoader, setRequestFailed } =
+    usePendingRequests();
   const nostrService = useNostrService();
   const [combinedData, setCombinedData] = useState<PendingRequest[]>([]);
 
   useEffect(() => {
     // Sort requests by timestamp (newest first)
-    const sortedRequests = Object.values(nostrService.pendingRequests).filter(request => {
-      // Hide requests that are payments for a subscription
-      if (request.type === 'payment' && (request.metadata as SinglePaymentRequest).content.subscriptionId) {
-        return false;
-      }
+    const sortedRequests = Object.values(nostrService.pendingRequests)
+      .filter(request => {
+        // Hide requests that are payments for a subscription
+        if (
+          request.type === 'payment' &&
+          (request.metadata as SinglePaymentRequest).content.subscriptionId
+        ) {
+          return false;
+        }
 
-      return true;
-    }).sort(
-      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    );
+        return true;
+      })
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     // Create combined data
     let combinedData: PendingRequest[] = [];

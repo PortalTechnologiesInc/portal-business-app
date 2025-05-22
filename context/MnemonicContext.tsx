@@ -8,7 +8,7 @@ import {
   getWalletUrl as getSecureWalletUrl,
   saveWalletUrl as saveSecureWalletUrl,
   walletUrlEvents,
-  isWalletConnected
+  isWalletConnected,
 } from '@/services/SecureStorageService';
 import { generateMnemonic } from 'portal-app-lib';
 
@@ -39,9 +39,9 @@ export const MnemonicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       try {
         const [savedMnemonic, savedWalletUrl] = await Promise.all([
           getSecureMnemonic(),
-          getSecureWalletUrl()
+          getSecureWalletUrl(),
         ]);
-        
+
         setMnemonicState(savedMnemonic);
         setWalletUrlState(savedWalletUrl || null);
       } catch (e) {
@@ -58,10 +58,10 @@ export const MnemonicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setMnemonic = useCallback(async (newMnemonic: string) => {
     try {
       await saveSecureMnemonic(newMnemonic);
-      
+
       // Update state directly
       setMnemonicState(newMnemonic);
-      
+
       // Still emit the event for other listeners in the app
       mnemonicEvents.emit('mnemonicChanged', newMnemonic);
     } catch (e) {
@@ -74,10 +74,10 @@ export const MnemonicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const clearMnemonic = useCallback(async () => {
     try {
       await deleteSecureMnemonic();
-      
+
       // Update state directly
       setMnemonicState(null);
-      
+
       // Still emit the event for other listeners in the app
       mnemonicEvents.emit('mnemonicChanged', null);
     } catch (e) {
@@ -91,10 +91,10 @@ export const MnemonicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       // Generate a new mnemonic phrase
       const newMnemonic = generateMnemonic().toString();
-      
+
       // Save it and update state
       await setMnemonic(newMnemonic);
-      
+
       return newMnemonic;
     } catch (e) {
       console.error('Failed to generate new mnemonic:', e);
@@ -106,11 +106,11 @@ export const MnemonicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setWalletUrl = useCallback(async (url: string) => {
     try {
       await saveSecureWalletUrl(url);
-      
+
       // Update state directly
       setWalletUrlState(url);
       setIsWalletConnectedState(Boolean(url.trim()));
-      
+
       // The event is already emitted by the saveSecureWalletUrl function
     } catch (e) {
       console.error('Failed to save wallet URL:', e);
@@ -122,11 +122,11 @@ export const MnemonicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const clearWalletUrl = useCallback(async () => {
     try {
       await saveSecureWalletUrl(''); // This will delete it in the SecureStorageService
-      
+
       // Update state directly
       setWalletUrlState(null);
       setIsWalletConnectedState(false);
-      
+
       // The event is already emitted by the saveSecureWalletUrl function
     } catch (e) {
       console.error('Failed to clear wallet URL:', e);
@@ -166,4 +166,4 @@ export const useMnemonic = () => {
   return context;
 };
 
-export default MnemonicProvider; 
+export default MnemonicProvider;

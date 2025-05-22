@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Image, TouchableOpacity, TextInput, BackHandler, ScrollView } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  Image,
+  TouchableOpacity,
+  TextInput,
+  BackHandler,
+  ScrollView,
+} from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useOnboarding } from '@/context/OnboardingContext';
@@ -27,7 +35,7 @@ export default function Onboarding() {
         // Generate a new mnemonic
         const mnemonic = generateMnemonic().toString();
         setSeedPhrase(mnemonic);
-        
+
         // Load assets
         await Asset.loadAsync([onboardingLogo]);
         setAssetsLoaded(true);

@@ -15,7 +15,7 @@ import { ActivityRow } from './ActivityRow';
 export const RecentActivitiesList: React.FC = () => {
   // Use the activities from the context
   const { activities, isDbReady, refreshData } = useActivities();
-  
+
   // Refresh data when component mounts
   useEffect(() => {
     refreshData();

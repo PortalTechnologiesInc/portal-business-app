@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Text, View, SafeAreaView, AppState } from 'react-native';
-import type { AppStateStatus } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import * as Linking from 'expo-linking';
 import * as SplashScreen from 'expo-splash-screen';
@@ -39,7 +38,7 @@ const preloadImages = async () => {
 const AppContent = () => {
   const { isOnboardingComplete } = useOnboarding();
   const { mnemonic, walletUrl } = useMnemonic();
-  
+
   // If onboarding is not complete, we don't need NostrService yet
   if (!isOnboardingComplete) {
     return (
@@ -55,7 +54,7 @@ const AppContent = () => {
       </Stack>
     );
   }
-  
+
   // Only initialize NostrService if we have a mnemonic
   if (!mnemonic) {
     console.log('No mnemonic available, cannot initialize NostrService');
@@ -72,7 +71,7 @@ const AppContent = () => {
       </Stack>
     );
   }
-  
+
   // For authenticated app, wrap everything in NostrServiceProvider
   return (
     <NostrServiceProvider mnemonic={mnemonic} walletUrl={walletUrl}>

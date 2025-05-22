@@ -35,7 +35,11 @@ export const ActivityRow: React.FC<ActivityRowProps> = ({ activity }) => {
       </View>
       <View style={styles.activityDetails}>
         {activity.type === ActivityType.Pay && activity.amount !== null && (
-          <ThemedText style={styles.amount} darkColor={Colors.almostWhite} lightColor={Colors.almostWhite}>
+          <ThemedText
+            style={styles.amount}
+            darkColor={Colors.almostWhite}
+            lightColor={Colors.almostWhite}
+          >
             {activity.amount} sats
           </ThemedText>
         )}

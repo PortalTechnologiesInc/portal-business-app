@@ -32,12 +32,14 @@ Portal is a mobile identity wallet for secure authentication and payments using 
 ### Installation
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/PortalTechnologiesInc/Portal-App.git
    cd Portal-App
    ```
 
 2. Install dependencies:
+
    ```bash
    npm install
    ```
@@ -50,15 +52,18 @@ Portal is a mobile identity wallet for secure authentication and payments using 
 ## Usage
 
 1. **First-time Setup**:
+
    - Generate a new private key or import an existing seed phrase
    - Set up your profile information
 
 2. **Authentication**:
+
    - Scan a Portal QR code from a website
    - Review the authentication request details
    - Approve or deny the request
 
 3. **Payments**:
+
    - Review payment requests from services
    - Process one-time payments
    - Approve subscription requests
@@ -89,6 +94,7 @@ This project is licensed under the MIT License with Common Clause - see the LICE
 ## Security
 
 Portal prioritizes your security and privacy:
+
 - All private keys are stored securely on your device
 - Authentication is cryptographically verified
 - No personal data is shared without your explicit consent

@@ -63,7 +63,7 @@ interface NostrServiceContextType {
   publicKey: string | null;
   portalApp: PortalAppInterface | null;
   nwcWallet: Nwc | null;
-  pendingRequests: {[key: string]: PendingRequest};
+  pendingRequests: { [key: string]: PendingRequest };
   payInvoice: (invoice: string) => Promise<string>;
   lookupInvoice: (invoice: string) => Promise<LookupInvoiceResponse>;
   disconnectWallet: () => void;
@@ -85,13 +85,13 @@ interface NostrServiceProviderProps {
 export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   mnemonic,
   walletUrl,
-  children
+  children,
 }) => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [portalApp, setPortalApp] = useState<PortalAppInterface | null>(null);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [nwcWallet, setNwcWallet] = useState<Nwc | null>(null);
-  const [pendingRequests, setPendingRequests] = useState<{[key: string]: PendingRequest}>({});
+  const [pendingRequests, setPendingRequests] = useState<{ [key: string]: PendingRequest }>({});
 
   // Initialize the NostrService
   useEffect(() => {
@@ -103,7 +103,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     const initializeNostrService = async () => {
       try {
         console.log('Initializing NostrService with mnemonic');
-        
+
         // Create Mnemonic object
         const mnemonicObj = new Mnemonic(mnemonic);
         const keypair = mnemonicObj.getKeypair();
@@ -111,90 +111,100 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
 
         // Set public key
         setPublicKey(publicKeyStr);
-        
+
         // Create and initialize portal app
         const app = await PortalApp.create(keypair, DEFAULT_RELAYS);
         app.listen(); // Listen asynchronously
 
-        app.listenForAuthChallenge(
-          new LocalAuthChallengeListener((event: AuthChallengeEvent) => {
-            const id = uuid.v4();
+        app
+          .listenForAuthChallenge(
+            new LocalAuthChallengeListener((event: AuthChallengeEvent) => {
+              const id = uuid.v4();
 
-            console.log(`Auth challenge with id ${id} received`, event);
+              console.log(`Auth challenge with id ${id} received`, event);
 
-            return new Promise(resolve => {
-              setPendingRequests(prev => {
-                const newPendingRequests = { ...prev };
-                newPendingRequests[id] = {
-                  id,
-                  metadata: event,
-                  timestamp: new Date(),
-                  type: 'login',
-                  result: resolve as (value: boolean | PaymentResponseContent | RecurringPaymentResponseContent) => void,
-                };
-                console.log('Updated pending requests map:', pendingRequests);
+              return new Promise(resolve => {
+                setPendingRequests(prev => {
+                  const newPendingRequests = { ...prev };
+                  newPendingRequests[id] = {
+                    id,
+                    metadata: event,
+                    timestamp: new Date(),
+                    type: 'login',
+                    result: resolve as (
+                      value: boolean | PaymentResponseContent | RecurringPaymentResponseContent
+                    ) => void,
+                  };
+                  console.log('Updated pending requests map:', pendingRequests);
 
-                return newPendingRequests;
-              })
-            });
-          })
-        ).catch((e) => {
+                  return newPendingRequests;
+                });
+              });
+            })
+          )
+          .catch(e => {
             console.error('Error listening for auth challenge', e);
             // TODO: re-initialize the app
-        });
+          });
 
-        app.listenForPaymentRequest(
-          new LocalPaymentRequestListener(
-            (event: SinglePaymentRequest) => {
-              const id = uuid.v4();
+        app
+          .listenForPaymentRequest(
+            new LocalPaymentRequestListener(
+              (event: SinglePaymentRequest) => {
+                const id = uuid.v4();
 
-              console.log(`Single payment request with id ${id} received`, event);
+                console.log(`Single payment request with id ${id} received`, event);
 
-              return new Promise(resolve => {
-                setPendingRequests(prev => {
-                  const newPendingRequests = { ...prev };
-                  newPendingRequests[id] = {
-                    id,
-                    metadata: event,
-                    timestamp: new Date(),
-                    type: 'payment',
-                    result: resolve as (value: boolean | PaymentResponseContent | RecurringPaymentResponseContent) => void,
-                  };
+                return new Promise(resolve => {
+                  setPendingRequests(prev => {
+                    const newPendingRequests = { ...prev };
+                    newPendingRequests[id] = {
+                      id,
+                      metadata: event,
+                      timestamp: new Date(),
+                      type: 'payment',
+                      result: resolve as (
+                        value: boolean | PaymentResponseContent | RecurringPaymentResponseContent
+                      ) => void,
+                    };
 
-                  return newPendingRequests;
+                    return newPendingRequests;
+                  });
                 });
-              });
-            },
-            (event: RecurringPaymentRequest) => {
-              const id = uuid.v4();
+              },
+              (event: RecurringPaymentRequest) => {
+                const id = uuid.v4();
 
-              console.log(`Recurring payment request with id ${id} received`, event);
+                console.log(`Recurring payment request with id ${id} received`, event);
 
-              return new Promise(resolve => {
-                setPendingRequests(prev => {
-                  const newPendingRequests = { ...prev };
-                  newPendingRequests[id] = {
-                    id,
-                    metadata: event,
-                    timestamp: new Date(),
-                    type: 'subscription',
-                    result: resolve as (value: boolean | PaymentResponseContent | RecurringPaymentResponseContent) => void,
-                  };
+                return new Promise(resolve => {
+                  setPendingRequests(prev => {
+                    const newPendingRequests = { ...prev };
+                    newPendingRequests[id] = {
+                      id,
+                      metadata: event,
+                      timestamp: new Date(),
+                      type: 'subscription',
+                      result: resolve as (
+                        value: boolean | PaymentResponseContent | RecurringPaymentResponseContent
+                      ) => void,
+                    };
 
-                  return newPendingRequests;
+                    return newPendingRequests;
+                  });
                 });
-              });
-            }
+              }
+            )
           )
-        ).catch((e) => {
-          console.error('Error listening for payment request', e);
-          // TODO: re-initialize the app
-        });
-        
+          .catch(e => {
+            console.error('Error listening for payment request', e);
+            // TODO: re-initialize the app
+          });
+
         // Save portal app instance
         setPortalApp(app);
         console.log('NostrService initialized successfully with public key:', publicKeyStr);
-        
+
         // Mark as initialized
         setIsInitialized(true);
       } catch (error) {
@@ -232,20 +242,26 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   }, [walletUrl, isInitialized]);
 
   // Pay invoice via wallet
-  const payInvoice = useCallback(async (invoice: string): Promise<string> => {
-    if (!nwcWallet) {
-      throw new Error('NWC wallet not connected');
-    }
-    return nwcWallet.payInvoice(invoice);
-  }, [nwcWallet]);
+  const payInvoice = useCallback(
+    async (invoice: string): Promise<string> => {
+      if (!nwcWallet) {
+        throw new Error('NWC wallet not connected');
+      }
+      return nwcWallet.payInvoice(invoice);
+    },
+    [nwcWallet]
+  );
 
   // Lookup invoice via wallet
-  const lookupInvoice = useCallback(async (invoice: string): Promise<LookupInvoiceResponse> => {
-    if (!nwcWallet) {
-      throw new Error('NWC wallet not connected');
-    }
-    return nwcWallet.lookupInvoice(invoice);
-  }, [nwcWallet]);
+  const lookupInvoice = useCallback(
+    async (invoice: string): Promise<LookupInvoiceResponse> => {
+      if (!nwcWallet) {
+        throw new Error('NWC wallet not connected');
+      }
+      return nwcWallet.lookupInvoice(invoice);
+    },
+    [nwcWallet]
+  );
 
   // Disconnect wallet
   const disconnectWallet = useCallback(() => {
@@ -253,22 +269,28 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   }, []);
 
   // Send auth init
-  const sendAuthInit = useCallback(async (url: AuthInitUrl): Promise<void> => {
-    if (!portalApp) {
-      throw new Error('PortalApp not initialized');
-    }
-    console.log('Sending auth init', url);
-    return portalApp.sendAuthInit(url);
-  }, [portalApp]);
+  const sendAuthInit = useCallback(
+    async (url: AuthInitUrl): Promise<void> => {
+      if (!portalApp) {
+        throw new Error('PortalApp not initialized');
+      }
+      console.log('Sending auth init', url);
+      return portalApp.sendAuthInit(url);
+    },
+    [portalApp]
+  );
 
   // Get service name
-  const getServiceName = useCallback(async (pubKey: string): Promise<Profile | undefined> => {
-    if (!portalApp) {
-      throw new Error('PortalApp not initialized');
-    }
-    const service = await portalApp.fetchProfile(pubKey);
-    return service;
-  }, [portalApp]);
+  const getServiceName = useCallback(
+    async (pubKey: string): Promise<Profile | undefined> => {
+      if (!portalApp) {
+        throw new Error('PortalApp not initialized');
+      }
+      const service = await portalApp.fetchProfile(pubKey);
+      return service;
+    },
+    [portalApp]
+  );
 
   const dismissPendingRequest = useCallback((id: string) => {
     setPendingRequests(prev => {
@@ -295,9 +317,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   };
 
   return (
-    <NostrServiceContext.Provider value={contextValue}>
-      {children}
-    </NostrServiceContext.Provider>
+    <NostrServiceContext.Provider value={contextValue}>{children}</NostrServiceContext.Provider>
   );
 };
 
@@ -310,4 +330,4 @@ export const useNostrService = () => {
   return context;
 };
 
-export default NostrServiceProvider; 
+export default NostrServiceProvider;

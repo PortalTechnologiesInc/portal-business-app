@@ -61,18 +61,16 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({ request }) => 
     if (serviceNameCache[metadata.serviceKey]) {
       setServiceName(serviceNameCache[metadata.serviceKey]);
     } else {
-      nostrService
-        .getServiceName(metadata.serviceKey)
-        .then(profile => {
-          // Only update if the component is still mounted
-          if (isMounted.current && profile?.nip05) {
-            const name = profile.nip05;
-            // Save to global cache
-            serviceNameCache[metadata.serviceKey] = name;
-            // Update state
-            setServiceName(name);
-          }
-        });
+      nostrService.getServiceName(metadata.serviceKey).then(profile => {
+        // Only update if the component is still mounted
+        if (isMounted.current && profile?.nip05) {
+          const name = profile.nip05;
+          // Save to global cache
+          serviceNameCache[metadata.serviceKey] = name;
+          // Update state
+          setServiceName(name);
+        }
+      });
     }
 
     // Cleanup function to prevent state updates after unmount

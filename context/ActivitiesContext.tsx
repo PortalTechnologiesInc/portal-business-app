@@ -8,7 +8,11 @@ import {
   type ReactNode,
 } from 'react';
 import { useSQLiteContext } from 'expo-sqlite';
-import { DatabaseService, type ActivityWithDates, type SubscriptionWithDates } from '@/services/database';
+import {
+  DatabaseService,
+  type ActivityWithDates,
+  type SubscriptionWithDates,
+} from '@/services/database';
 import { useDatabaseStatus } from '@/services/database/DatabaseProvider';
 
 interface ActivitiesContextType {
@@ -175,7 +179,15 @@ export const ActivitiesProvider: React.FC<{ children: ReactNode }> = ({ children
       addActivity,
       isDbReady,
     }),
-    [activities, subscriptions, fetchActivities, fetchSubscriptions, refreshData, addActivity, isDbReady]
+    [
+      activities,
+      subscriptions,
+      fetchActivities,
+      fetchSubscriptions,
+      refreshData,
+      addActivity,
+      isDbReady,
+    ]
   );
 
   return <ActivitiesContext.Provider value={contextValue}>{children}</ActivitiesContext.Provider>;

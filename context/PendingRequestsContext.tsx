@@ -25,7 +25,11 @@ import { DatabaseService, fromUnixSeconds } from '@/services/database';
 import type { ActivityWithDates, SubscriptionWithDates } from '@/services/database';
 import { useDatabaseStatus } from '@/services/database/DatabaseProvider';
 import { useActivities } from '@/context/ActivitiesContext';
-import { LocalAuthChallengeListener, LocalPaymentRequestListener, useNostrService } from '@/context/NostrServiceContext';
+import {
+  LocalAuthChallengeListener,
+  LocalPaymentRequestListener,
+  useNostrService,
+} from '@/context/NostrServiceContext';
 // Define a type for pending activities
 type PendingActivity = Omit<ActivityWithDates, 'id' | 'created_at'>;
 type PendingSubscription = Omit<SubscriptionWithDates, 'id' | 'created_at'>;
@@ -113,7 +117,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
           setPendingActivities(prev => [...prev, activity]);
         }
       }
-      
+
       // Refresh data after processing pending activities
       refreshData();
     };
@@ -171,7 +175,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
         setPendingSubscriptions(prev => [...prev, subscription]);
       }
 
-      return Promise.resolve(undefined)
+      return Promise.resolve(undefined);
     },
     [db, refreshData]
   );
@@ -213,9 +217,15 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
   // Process automatic payments
   useEffect(() => {
     for (const request of Object.values(nostrService.pendingRequests)) {
-      if (request.type === 'payment' && (request.metadata as SinglePaymentRequest).content.subscriptionId) {
+      if (
+        request.type === 'payment' &&
+        (request.metadata as SinglePaymentRequest).content.subscriptionId
+      ) {
         const paymentRequest = request.metadata as SinglePaymentRequest;
-        console.log('Processing automated payment for subscription', paymentRequest.content.subscriptionId);
+        console.log(
+          'Processing automated payment for subscription',
+          paymentRequest.content.subscriptionId
+        );
 
         async function processPayment() {
           const subscription = await db!.getSubscription(paymentRequest.content.subscriptionId!);
@@ -298,21 +308,19 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
           request.result(true);
 
           // Add an activity record directly via the database service
-          nostrService
-            .getServiceName(request.metadata.serviceKey)
-            .then(serviceName => {
-              addActivityWithFallback({
-                type: 'auth',
-                service_key: request.metadata.serviceKey,
-                detail: 'User approved login',
-                date: new Date(),
-                service_name: serviceName?.nip05 ?? 'Unknown Service',
-                amount: null,
-                currency: null,
-                request_id: id,
-                subscription_id: null,
-              });
+          nostrService.getServiceName(request.metadata.serviceKey).then(serviceName => {
+            addActivityWithFallback({
+              type: 'auth',
+              service_key: request.metadata.serviceKey,
+              detail: 'User approved login',
+              date: new Date(),
+              service_name: serviceName?.nip05 ?? 'Unknown Service',
+              amount: null,
+              currency: null,
+              request_id: id,
+              subscription_id: null,
             });
+          });
           break;
         case 'payment':
           request.result({
@@ -339,27 +347,23 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
               }
             }
 
-            nostrService
-              .getServiceName(request.metadata.serviceKey)
-              .then(serviceName => {
-                addActivityWithFallback({
-                  type: 'pay',
-                  service_key: request.metadata.serviceKey,
-                  service_name: serviceName?.nip05 ?? 'Unknown Service',
-                  detail: 'Payment approved',
-                  date: new Date(),
-                  amount: Number(amount) / 1000,
-                  currency,
-                  request_id: id,
-                  subscription_id: null,
-                });
+            nostrService.getServiceName(request.metadata.serviceKey).then(serviceName => {
+              addActivityWithFallback({
+                type: 'pay',
+                service_key: request.metadata.serviceKey,
+                service_name: serviceName?.nip05 ?? 'Unknown Service',
+                detail: 'Payment approved',
+                date: new Date(),
+                amount: Number(amount) / 1000,
+                currency,
+                request_id: id,
+                subscription_id: null,
               });
+            });
           } catch (err) {
             console.log('Error adding payment activity:', err);
           }
-          nostrService.payInvoice(
-            (request?.metadata as SinglePaymentRequest).content.invoice
-          );
+          nostrService.payInvoice((request?.metadata as SinglePaymentRequest).content.invoice);
           break;
         case 'subscription':
           // Add subscription activity
@@ -396,7 +400,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
                   recurrence_max_payments: req.content.recurrence.maxPayments || null,
                 });
               })
-              .then((id) => {
+              .then(id => {
                 request.result({
                   status: new RecurringPaymentStatus.Confirmed({
                     subscriptionId: id || 'randomsubscriptionid',
@@ -407,13 +411,12 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
                   }),
                   requestId: (request.metadata as RecurringPaymentRequest).content.requestId,
                 });
-              })
+              });
           } catch (err) {
             console.log('Error adding subscription activity:', err);
           }
           break;
       }
-
     },
     [getById, resolvers, addActivityWithFallback, addSubscriptionWithFallback]
   );
@@ -447,7 +450,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
             }),
             requestId: (request.metadata as RecurringPaymentRequest).content.requestId,
           });
-        break;
+          break;
       }
     },
     [getById]

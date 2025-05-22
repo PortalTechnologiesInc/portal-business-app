@@ -52,7 +52,7 @@ export default function Home() {
     const checkFirstLaunch = async () => {
       try {
         if (!isMounted.current) return;
-        
+
         const firstLaunchCompleted = await SecureStore.getItemAsync(FIRST_LAUNCH_KEY);
         setIsFirstLaunch(firstLaunchCompleted !== 'true');
         // We no longer set the flag here - we'll set it after user interaction
@@ -96,7 +96,7 @@ export default function Home() {
 
   // Memoize the username display logic
   // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
-    const truncatedUsername = useMemo(() => {
+  const truncatedUsername = useMemo(() => {
     if (!username) return '';
 
     // Check if username is likely to exceed 80% of screen width
