@@ -52,6 +52,7 @@ const AppContent = () => {
 				}}
 			>
 				<Stack.Screen name="onboarding" />
+				<Stack.Screen name="[...deeplink]" />
 			</Stack>
 		);
 	}
@@ -69,6 +70,7 @@ const AppContent = () => {
 				}}
 			>
 				<Stack.Screen name="settings" options={{ presentation: "modal" }} />
+				<Stack.Screen name="[...deeplink]" />
 			</Stack>
 		);
 	}
