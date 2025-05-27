@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { OnboardingProvider, useOnboarding } from "@/context/OnboardingContext";
 import { UserProfileProvider } from "@/context/UserProfileContext";
 import { PendingRequestsProvider } from "@/context/PendingRequestsContext";
+import { DeeplinkProvider } from "@/context/DeeplinkContext";
 import { ActivitiesProvider } from "@/context/ActivitiesContext";
 import { DatabaseProvider } from "@/services/database/DatabaseProvider";
 import { MnemonicProvider, useMnemonic } from "@/context/MnemonicContext";
@@ -78,28 +79,33 @@ const AppContent = () => {
 			<DatabaseProvider>
 				<ActivitiesProvider>
 					<PendingRequestsProvider>
-						<Stack
-							screenOptions={{
-								headerShown: false,
-								contentStyle: {
-									backgroundColor: "#000000",
-								},
-							}}
-						>
-							<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-							<Stack.Screen name="index" />
-							<Stack.Screen
-								name="settings"
-								options={{ presentation: "modal" }}
-							/>
-							<Stack.Screen name="wallet" options={{ presentation: "modal" }} />
-							<Stack.Screen
-								name="qr"
-								options={{ presentation: "fullScreenModal" }}
-							/>
-							<Stack.Screen name="subscription" />
-							<Stack.Screen name="deeplink" />
-						</Stack>
+						<DeeplinkProvider>
+							<Stack
+								screenOptions={{
+									headerShown: false,
+									contentStyle: {
+										backgroundColor: "#000000",
+									},
+								}}
+							>
+								<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+								<Stack.Screen name="index" />
+								<Stack.Screen
+									name="settings"
+									options={{ presentation: "modal" }}
+								/>
+								<Stack.Screen
+									name="wallet"
+									options={{ presentation: "modal" }}
+								/>
+								<Stack.Screen
+									name="qr"
+									options={{ presentation: "fullScreenModal" }}
+								/>
+								<Stack.Screen name="subscription" />
+								<Stack.Screen name="[...deeplink]" />
+							</Stack>
+						</DeeplinkProvider>
 					</PendingRequestsProvider>
 				</ActivitiesProvider>
 			</DatabaseProvider>
@@ -145,14 +151,14 @@ export default function RootLayout() {
 
 	return (
 		<GestureHandlerRootView style={{ flex: 1, backgroundColor: "#000000" }}>
-			<StatusBar style="light" />
-			<OnboardingProvider>
-				<UserProfileProvider>
-					<MnemonicProvider>
+			<StatusBar style="light" backgroundColor={Colors.darkerGray} />
+			<MnemonicProvider>
+				<OnboardingProvider>
+					<UserProfileProvider>
 						<AppContent />
-					</MnemonicProvider>
-				</UserProfileProvider>
-			</OnboardingProvider>
+					</UserProfileProvider>
+				</OnboardingProvider>
+			</MnemonicProvider>
 		</GestureHandlerRootView>
 	);
 }
