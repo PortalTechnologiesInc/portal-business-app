@@ -36,6 +36,7 @@ import {
 	LocalPaymentRequestListener,
 	useNostrService,
 } from "@/context/NostrServiceContext";
+import { serviceNameCache } from "@/utils/serviceNameCache";
 // Define a type for pending activities
 type PendingActivity = Omit<ActivityWithDates, "id" | "created_at">;
 type PendingSubscription = Omit<SubscriptionWithDates, "id" | "created_at">;
@@ -50,6 +51,7 @@ interface PendingRequestsContextType {
 	pendingUrl: AuthInitUrl | undefined;
 	showSkeletonLoader: (parsedUrl: AuthInitUrl) => void;
 	setRequestFailed: (failed: boolean) => void;
+	preloadServiceNames: () => Promise<void>;
 }
 
 const PendingRequestsContext = createContext<
@@ -244,15 +246,6 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({
 		},
 		[nostrService.pendingRequests],
 	);
-
-	// Remove skeleton when we get the expected request
-	useEffect(() => {
-		for (const request of Object.values(nostrService.pendingRequests)) {
-			if (request.metadata.serviceKey === pendingUrl?.mainKey) {
-				cancelSkeletonLoader();
-			}
-		}
-	}, [nostrService.pendingRequests, pendingUrl]);
 
 	// Process automatic payments
 	useEffect(() => {
@@ -563,6 +556,49 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({
 		setRequestFailed(false);
 	}, [timeoutId]);
 
+	// Add this function to the PendingRequestsProvider component
+	const preloadServiceNames = useCallback(async () => {
+		// Get all unique service keys from pending requests
+		const serviceKeys = new Set(
+			Object.values(nostrService.pendingRequests).map(
+				(req) => req.metadata.serviceKey
+			)
+		);
+
+		// Fetch service names for each service key if not already in cache
+		const fetchPromises = Array.from(serviceKeys).map(async (serviceKey) => {
+			// Skip if already in cache
+			if (serviceNameCache[serviceKey]) {
+				return;
+			}
+
+			try {
+				const profile = await nostrService.getServiceName(serviceKey);
+				if (profile?.nip05) {
+					// Add to cache
+					serviceNameCache[serviceKey] = profile.nip05;
+				}
+			} catch (error) {
+				console.error(`Failed to fetch service name for ${serviceKey}:`, error);
+			}
+		});
+
+		await Promise.all(fetchPromises);
+	}, [nostrService]);
+
+	// Add preloadServiceNames to the useEffect that depends on pendingRequests
+	useEffect(() => {
+		// Preload service names whenever the pending requests change
+		preloadServiceNames();
+
+		// Existing code for removing skeleton when we get the expected request
+		for (const request of Object.values(nostrService.pendingRequests)) {
+			if (request.metadata.serviceKey === pendingUrl?.mainKey) {
+				cancelSkeletonLoader();
+			}
+		}
+	}, [nostrService.pendingRequests, pendingUrl, preloadServiceNames]);
+
 	// Memoize the context value to prevent recreation on every render
 	// biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
 	const contextValue = useMemo(
@@ -576,6 +612,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({
 			pendingUrl,
 			showSkeletonLoader,
 			setRequestFailed,
+			preloadServiceNames,
 		}),
 		[
 			getByType,
@@ -587,6 +624,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({
 			pendingUrl,
 			showSkeletonLoader,
 			setRequestFailed,
+			preloadServiceNames,
 		],
 	);
 

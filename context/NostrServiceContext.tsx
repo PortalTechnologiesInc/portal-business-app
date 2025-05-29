@@ -274,10 +274,23 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       if (!portalApp) {
         throw new Error('PortalApp not initialized');
       }
+      
+      // Check if we already have a pending request for this service
+      const serviceKey = url.mainKey;
+      const existingRequests = Object.values(pendingRequests).filter(
+        req => req.metadata.serviceKey === serviceKey
+      );
+      
+      if (existingRequests.length > 0) {
+        console.log('Already have pending request for service key:', serviceKey);
+        console.log('Skipping duplicate auth init for:', url);
+        return;
+      }
+      
       console.log('Sending auth init', url);
       return portalApp.sendAuthInit(url);
     },
-    [portalApp]
+    [portalApp, pendingRequests]
   );
 
   // Get service name

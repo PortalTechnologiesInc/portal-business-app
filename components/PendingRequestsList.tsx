@@ -1,5 +1,5 @@
 import type React from "react";
-import { View, StyleSheet, FlatList, Dimensions } from "react-native";
+import { View, StyleSheet, FlatList, Dimensions, ActivityIndicator } from "react-native";
 import { usePendingRequests } from "../context/PendingRequestsContext";
 import { PendingRequestCard } from "./PendingRequestCard";
 import { PendingRequestSkeletonCard } from "./PendingRequestSkeletonCard";
@@ -13,6 +13,7 @@ import { useNostrService } from "@/context/NostrServiceContext";
 import { ThemedText } from "./ThemedText";
 import { Colors } from "@/constants/Colors";
 import { useEffect, useState } from "react";
+import { serviceNameCache } from "@/utils/serviceNameCache";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - 80; // Adjusted for proper padding
@@ -34,11 +35,39 @@ export const PendingRequestsList: React.FC = () => {
 		pendingUrl,
 		showSkeletonLoader,
 		setRequestFailed,
+		preloadServiceNames,
 	} = usePendingRequests();
 	const nostrService = useNostrService();
 	const [combinedData, setCombinedData] = useState<PendingRequest[]>([]);
+	const [isLoadingServiceNames, setIsLoadingServiceNames] = useState(false);
 
 	useEffect(() => {
+		// Add a loading state while fetching service names
+		const loadData = async () => {
+			if (Object.values(nostrService.pendingRequests).length > 0) {
+				setIsLoadingServiceNames(true);
+				
+				// Preload service names for all pending requests
+				await preloadServiceNames();
+				
+				// Add a small delay to ensure everything is properly loaded
+				await new Promise(resolve => setTimeout(resolve, 100));
+				
+				// Process and deduplicate requests
+				processRequests();
+				
+				setIsLoadingServiceNames(false);
+			} else {
+				// No requests, just clear the list
+				setCombinedData([]);
+			}
+		};
+		
+		loadData();
+	}, [nostrService.pendingRequests, isLoadingRequest, requestFailed, preloadServiceNames]);
+	
+	// Function to process and deduplicate requests
+	const processRequests = () => {
 		// Sort requests by timestamp (newest first)
 		const sortedRequests = Object.values(nostrService.pendingRequests)
 			.filter((request) => {
@@ -52,6 +81,27 @@ export const PendingRequestsList: React.FC = () => {
 
 				return true;
 			})
+			// Deduplicate requests from the same service (keep only the newest one)
+			.reduce((unique, request) => {
+				const serviceKey = request.metadata.serviceKey;
+				const existingIndex = unique.findIndex(req => req.metadata.serviceKey === serviceKey);
+				
+				if (existingIndex === -1) {
+					// No existing request with this service key, add it
+					unique.push(request);
+				} else {
+					// Check if this request is newer than the existing one
+					const existingTimestamp = new Date(unique[existingIndex].timestamp).getTime();
+					const newTimestamp = new Date(request.timestamp).getTime();
+					
+					if (newTimestamp > existingTimestamp) {
+						// Replace the older request with this newer one
+						unique[existingIndex] = request;
+					}
+				}
+				
+				return unique;
+			}, [] as PendingRequest[])
 			.sort(
 				(a, b) =>
 					new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
@@ -69,7 +119,7 @@ export const PendingRequestsList: React.FC = () => {
 		}
 
 		setCombinedData(combinedData);
-	}, [nostrService.pendingRequests, isLoadingRequest, requestFailed]);
+	};
 
 	// Handle retry
 	const handleRetry = () => {
@@ -84,6 +134,28 @@ export const PendingRequestsList: React.FC = () => {
 	const handleCancel = () => {
 		setRequestFailed(false);
 	};
+
+	// Show loading indicator while fetching service names
+	if (isLoadingServiceNames) {
+		return (
+			<View style={styles.container}>
+				<View style={styles.header}>
+					<ThemedText
+						type="title"
+						style={styles.title}
+						darkColor={Colors.almostWhite}
+						lightColor={Colors.almostWhite}
+					>
+						Pending Requests
+					</ThemedText>
+				</View>
+				<View style={styles.loadingContainer}>
+					<ActivityIndicator size="large" color={Colors.almostWhite} />
+					<ThemedText style={styles.loadingText}>Loading requests...</ThemedText>
+				</View>
+			</View>
+		);
+	}
 
 	return (
 		<View style={styles.container}>
@@ -112,7 +184,11 @@ export const PendingRequestsList: React.FC = () => {
 			) : (
 				<FlatList
 					data={combinedData}
-					keyExtractor={(item) => item.id}
+					keyExtractor={(item) => 
+						item.id === "skeleton" 
+							? "skeleton" 
+							: `${item.metadata.serviceKey}-${item.id}`
+					}
 					renderItem={({ item }) => (
 						<View style={styles.itemContainer}>
 							{item.id === "skeleton" && requestFailed ? (
@@ -186,6 +262,19 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 		minHeight: 100,
+	},
+	loadingContainer: {
+		backgroundColor: "#1E1E1E",
+		borderRadius: 20,
+		padding: 20,
+		alignItems: "center",
+		justifyContent: "center",
+		minHeight: 100,
+	},
+	loadingText: {
+		fontSize: 16,
+		marginTop: 10,
+		textAlign: "center",
 	},
 	emptyText: {
 		fontSize: 16,

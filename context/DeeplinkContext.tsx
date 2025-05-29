@@ -32,6 +32,8 @@ export const DeeplinkProvider = ({ children }: { children: ReactNode }) => {
 	const nostrService = useNostrService();
 	// Track processed URLs to avoid duplicates
 	const processedUrls = useRef<Set<string>>(new Set());
+	// Track last processing time to implement cooldown
+	const lastProcessTime = useRef<Record<string, number>>({});
 	// Track if initial URL has been processed
 	const initialUrlProcessed = useRef<boolean>(false);
 
@@ -44,13 +46,23 @@ export const DeeplinkProvider = ({ children }: { children: ReactNode }) => {
 				return;
 			}
 
+			// Implement a cooldown period (3 seconds) to prevent multiple rapid processing
+			const now = Date.now();
+			const lastTime = lastProcessTime.current[url] || 0;
+			if (now - lastTime < 3000) {
+				console.log("URL processed too recently, cooldown active:", url);
+				return;
+			}
+
 			console.log("Handling deeplink URL:", url);
-			// Mark this URL as processed
+			// Mark this URL as processed and update last process time
 			processedUrls.current.add(url);
+			lastProcessTime.current[url] = now;
 
 			try {
 				// Parse the URL
 				const parsedUrl = parseAuthInitUrl(url);
+				console.log("Parsed deeplink URL:", parsedUrl);
 
 				// Show the skeleton loader
 				showSkeletonLoader(parsedUrl);
@@ -95,6 +107,7 @@ export const DeeplinkProvider = ({ children }: { children: ReactNode }) => {
 		// Handle URLs that the app was opened with
 		const getInitialURL = async () => {
 			if (initialUrlProcessed.current) {
+				console.log("Initial URL already processed, skipping");
 				return;
 			}
 
