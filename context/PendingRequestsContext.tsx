@@ -13,7 +13,6 @@ import type {
 	PendingRequestType,
 } from "../models/PendingRequest";
 import type {
-	AuthChallengeEvent,
 	AuthInitUrl,
 	PaymentResponseContent,
 	Profile,
@@ -22,7 +21,6 @@ import type {
 	SinglePaymentRequest,
 } from "portal-app-lib";
 import { PaymentStatus, RecurringPaymentStatus } from "portal-app-lib";
-import uuid from "react-native-uuid";
 import { useSQLiteContext } from "expo-sqlite";
 import { DatabaseService, fromUnixSeconds } from "@/services/database";
 import type {
@@ -32,8 +30,6 @@ import type {
 import { useDatabaseStatus } from "@/services/database/DatabaseProvider";
 import { useActivities } from "@/context/ActivitiesContext";
 import {
-	LocalAuthChallengeListener,
-	LocalPaymentRequestListener,
 	useNostrService,
 } from "@/context/NostrServiceContext";
 import { serviceNameCache } from "@/utils/serviceNameCache";
@@ -558,6 +554,12 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({
 
 	// Add this function to the PendingRequestsProvider component
 	const preloadServiceNames = useCallback(async () => {
+		// Check if NostrService is properly initialized
+		if (!nostrService.isInitialized || !nostrService.portalApp) {
+			console.log('NostrService not ready for fetching service names');
+			return;
+		}
+
 		// Get all unique service keys from pending requests
 		const serviceKeys = new Set(
 			Object.values(nostrService.pendingRequests).map(
@@ -579,11 +581,22 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({
 					serviceNameCache[serviceKey] = profile.nip05;
 				}
 			} catch (error) {
+				// Handle specific connection errors more gracefully
+				if (error instanceof Error) {
+					if (error.message.includes('ListenerDisconnected') || 
+						error.message.includes('AppError.ListenerDisconnected')) {
+						console.warn(`Nostr listener disconnected while fetching service name for ${serviceKey}. Will retry later.`);
+						// Don't log as error since this is a transient connection issue
+						return;
+					}
+				}
+				
 				console.error(`Failed to fetch service name for ${serviceKey}:`, error);
+				// For other errors, still try to continue with other service keys
 			}
 		});
 
-		await Promise.all(fetchPromises);
+		await Promise.allSettled(fetchPromises); // Use allSettled to continue even if some fail
 	}, [nostrService]);
 
 	// Add preloadServiceNames to the useEffect that depends on pendingRequests
