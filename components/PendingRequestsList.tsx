@@ -256,11 +256,11 @@ const styles = StyleSheet.create({
 		fontWeight: "600",
 	},
 	emptyContainer: {
-		backgroundColor: "#1E1E1E",
+		backgroundColor: '#1E1E1E',
 		borderRadius: 20,
 		padding: 20,
-		alignItems: "center",
-		justifyContent: "center",
+		alignItems: 'center',
+		justifyContent: 'center',
 		minHeight: 100,
 	},
 	loadingContainer: {
@@ -269,12 +269,14 @@ const styles = StyleSheet.create({
 		padding: 20,
 		alignItems: "center",
 		justifyContent: "center",
-		minHeight: 100,
+		minHeight: 72, // Match the height of a single card
+		marginBottom: 10, // Match the margin between cards
 	},
 	loadingText: {
 		fontSize: 16,
 		marginTop: 10,
 		textAlign: "center",
+		color: Colors.dirtyWhite, // Use the same color as empty text
 	},
 	emptyText: {
 		fontSize: 16,

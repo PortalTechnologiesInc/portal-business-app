@@ -300,30 +300,6 @@ export default function SettingsScreen() {
 									<ChevronRight size={24} color={Colors.almostWhite} />
 								</View>
 							</TouchableOpacity>
-
-							{/* Paste URL section */}
-							<ThemedView style={styles.pasteUrlContainer}>
-								<ThemedText style={styles.pasteUrlLabel}>
-									Paste wallet connection URL
-								</ThemedText>
-								<TextInput
-									style={styles.urlInput}
-									value={walletUrl}
-									onChangeText={setWalletUrl}
-									placeholder="Paste wallet URL here"
-									placeholderTextColor={Colors.gray}
-									autoCapitalize="none"
-									autoCorrect={false}
-								/>
-								<TouchableOpacity
-									style={styles.urlSubmitButton}
-									onPress={handleWalletUrlSubmit}
-								>
-									<ThemedText style={styles.urlSubmitButtonText}>
-										Connect Wallet
-									</ThemedText>
-								</TouchableOpacity>
-							</ThemedView>
 						</ThemedView>
 					</ThemedView>
 
