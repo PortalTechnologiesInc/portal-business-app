@@ -1,5 +1,14 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import { StyleSheet, View, TouchableOpacity, ScrollView, Image, Dimensions, ActivityIndicator } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  TouchableOpacity,
+  ScrollView,
+  Image,
+  Dimensions,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
 import { router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -13,14 +22,16 @@ import { QrCode, ArrowRight, User } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
+import { showToast } from '@/utils/Toast';
 
 const FIRST_LAUNCH_KEY = 'portal_first_launch_completed';
 
 export default function Home() {
   const { isLoading } = useOnboarding();
-  const { username, avatarUri } = useUserProfile();
+  const { username, avatarUri, fetchProfile, syncStatus } = useUserProfile();
   const nostrService = useNostrService();
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const isMounted = useRef(true);
 
   // This would come from a real user context in the future
@@ -64,6 +75,41 @@ export default function Home() {
     checkFirstLaunch();
   }, [nostrService]);
 
+  // Fetch profile when NostrService is ready
+  useEffect(() => {
+    const initializeProfileFetch = async () => {
+      // Only fetch if we have a public key, service is initialized, and we haven't fetched yet
+      if (nostrService.isInitialized && nostrService.publicKey && syncStatus === 'idle') {
+        console.log('Starting profile fetch on app load for:', nostrService.publicKey);
+        await fetchProfile(nostrService.publicKey);
+      }
+    };
+
+    initializeProfileFetch();
+  }, [nostrService.isInitialized, nostrService.publicKey, syncStatus, fetchProfile]);
+
+  const handleRefreshProfile = async () => {
+    try {
+      // Get the current public key from NostrService to refresh profile
+      if (nostrService.publicKey) {
+        console.log('Refreshing profile for:', nostrService.publicKey);
+        await fetchProfile(nostrService.publicKey);
+        showToast('Profile refreshed successfully', 'success');
+      } else {
+        showToast('Unable to refresh profile', 'error');
+      }
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
+      showToast('Failed to refresh profile', 'error');
+    }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await handleRefreshProfile();
+    setRefreshing(false);
+  };
+
   // Memoize the truncated key to prevent recalculation on every render
   const truncatedPublicKey = useMemo(() => {
     if (!userPublicKey) return '';
@@ -94,19 +140,20 @@ export default function Home() {
     return text.length * avgCharWidth;
   };
 
-  // Memoize the username display logic
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  // Memoize the username display logic - use username directly with @getportal.cc suffix
   const truncatedUsername = useMemo(() => {
     if (!username) return '';
 
+    const fullUsername = `${username}@getportal.cc`;
+
     // Check if username is likely to exceed 80% of screen width
-    if (getEstimatedTextWidth(username) > maxUsernameWidth) {
+    if (getEstimatedTextWidth(fullUsername) > maxUsernameWidth) {
       const maxChars = Math.floor(maxUsernameWidth / 10);
       const charsPerSide = Math.floor((maxChars - 3) / 2);
-      return `${username.substring(0, charsPerSide)}...${username.substring(username.length - charsPerSide)}`;
+      return `${fullUsername.substring(0, charsPerSide)}...${fullUsername.substring(fullUsername.length - charsPerSide)}`;
     }
 
-    return username;
+    return fullUsername;
   }, [username, maxUsernameWidth]);
 
   // Memoize handlers to prevent recreation on every render
@@ -142,7 +189,19 @@ export default function Home() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ThemedView style={styles.container}>
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[Colors.green]}
+              tintColor={Colors.green}
+              title="Pull to refresh profile"
+              titleColor={Colors.almostWhite}
+            />
+          }
+        >
           <ThemedView style={styles.header}>
             <View style={styles.headerContent}>
               <TouchableOpacity style={styles.headerLeft} onPress={handleSettingsNavigate}>
@@ -153,7 +212,7 @@ export default function Home() {
                   numberOfLines={1}
                   ellipsizeMode="middle"
                 >
-                  {username ? `Welcome back, ${truncatedUsername} 👋` : 'Welcome back 👋'}
+                  {username ? `Welcome back, ${username} 👋` : 'Welcome back 👋'}
                 </ThemedText>
                 <View style={styles.userInfoContainer}>
                   {/* Profile Avatar */}
@@ -180,7 +239,7 @@ export default function Home() {
                         lightColor={Colors.darkGray}
                         darkColor={Colors.almostWhite}
                       >
-                        <ThemedText>{truncatedUsername}</ThemedText>
+                        <ThemedText>{username}</ThemedText>
                         <ThemedText>@getportal.cc</ThemedText>
                       </ThemedText>
                     ) : null}

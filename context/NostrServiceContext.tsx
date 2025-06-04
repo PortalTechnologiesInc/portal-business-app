@@ -19,7 +19,12 @@ import { PendingRequest } from '@/models/PendingRequest';
 import uuid from 'react-native-uuid';
 
 // Constants and helper classes from original NostrService
-const DEFAULT_RELAYS = ['wss://relay.damus.io', 'wss://relay.nostr.net'];
+const DEFAULT_RELAYS = [
+  'wss://relay.damus.io',
+  'wss://nostr.wine',
+  'wss://relay.orangepill.dev',
+  'wss://nostr.milou.lol',
+];
 
 export class LocalAuthChallengeListener implements AuthChallengeListener {
   private callback: (event: AuthChallengeEvent) => Promise<boolean>;
@@ -70,6 +75,7 @@ interface NostrServiceContextType {
   sendAuthInit: (url: AuthInitUrl) => Promise<void>;
   getServiceName: (publicKey: string) => Promise<Profile | undefined>;
   dismissPendingRequest: (id: string) => void;
+  setUserProfile: (profile: Profile) => Promise<void>;
 }
 
 // Create context with default values
@@ -274,19 +280,19 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       if (!portalApp) {
         throw new Error('PortalApp not initialized');
       }
-      
+
       // Check if we already have a pending request for this service
       const serviceKey = url.mainKey;
       const existingRequests = Object.values(pendingRequests).filter(
         req => req.metadata.serviceKey === serviceKey
       );
-      
+
       if (existingRequests.length > 0) {
         console.log('Already have pending request for service key:', serviceKey);
         console.log('Skipping duplicate auth init for:', url);
         return;
       }
-      
+
       console.log('Sending auth init', url);
       return portalApp.sendAuthInit(url);
     },
@@ -313,6 +319,16 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     });
   }, []);
 
+  const setUserProfile = useCallback(
+    async (profile: Profile) => {
+      if (!portalApp) {
+        throw new Error('PortalApp not initialized');
+      }
+      await portalApp.setProfile(profile);
+    },
+    [portalApp]
+  );
+
   // Context value
   const contextValue: NostrServiceContextType = {
     isInitialized,
@@ -327,6 +343,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     sendAuthInit,
     getServiceName,
     dismissPendingRequest,
+    setUserProfile,
   };
 
   return (
