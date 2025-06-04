@@ -7,14 +7,14 @@ import {
   TextInput,
   BackHandler,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { useMnemonic } from '@/context/MnemonicContext';
-import { Asset } from 'expo-asset';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { generateMnemonic } from 'portal-app-lib';
+import { generateMnemonic, Mnemonic } from 'portal-app-lib';
 
 // Preload all required assets
 const onboardingLogo = require('../assets/images/appLogo.png');
@@ -25,28 +25,8 @@ export default function Onboarding() {
   const [currentPage, setCurrentPage] = useState<'intro' | 'generate' | 'import' | 'splash'>(
     'intro'
   );
+
   const [seedPhrase, setSeedPhrase] = useState('');
-  const [assetsLoaded, setAssetsLoaded] = useState(false);
-
-  // Preload assets when component mounts
-  useEffect(() => {
-    async function loadAssetsAndMnemonic() {
-      try {
-        // Generate a new mnemonic
-        const mnemonic = generateMnemonic().toString();
-        setSeedPhrase(mnemonic);
-
-        // Load assets
-        await Asset.loadAsync([onboardingLogo]);
-        setAssetsLoaded(true);
-      } catch (error) {
-        console.error('Error in initialization:', error);
-        setAssetsLoaded(true);
-      }
-    }
-
-    loadAssetsAndMnemonic();
-  }, []);
 
   // Handle Android back button
   useEffect(() => {
@@ -62,27 +42,36 @@ export default function Onboarding() {
     return () => backHandler.remove();
   }, [currentPage]);
 
-  const handleImport = async () => {
-    if (seedPhrase.trim()) {
-      try {
-        // Save the imported mnemonic using our provider
-        await setMnemonic(seedPhrase);
+  const handleGenerate = async () => {
+    const mnemonic = generateMnemonic().toString();
+    setSeedPhrase(mnemonic);
 
-        // Show splash screen before completing onboarding
-        setCurrentPage('splash');
+    setCurrentPage('generate');
+  };
 
-        // Complete onboarding after a short delay
-        setTimeout(() => {
-          completeOnboarding();
-        }, 2000);
-      } catch (error) {
-        console.error('Failed to save imported mnemonic:', error);
-        // Still continue with onboarding even if saving fails
-        setCurrentPage('splash');
-        setTimeout(() => {
-          completeOnboarding();
-        }, 2000);
-      }
+  const validateImportedMnemonic = (phrase: string): { isValid: boolean; error?: string } => {
+    const trimmedPhrase = phrase.trim().toLowerCase();
+
+    if (!trimmedPhrase) {
+      return { isValid: false, error: 'Please enter a seed phrase' };
+    }
+
+    const words = trimmedPhrase.split(/\s+/);
+
+    if (words.length !== 12) {
+      return { isValid: false, error: 'Seed phrase must be exactly 12 words' };
+    }
+
+    try {
+      // Use portal-app-lib's Mnemonic class for validation
+      // If the mnemonic is invalid, the constructor will throw an error
+      new Mnemonic(trimmedPhrase);
+      return { isValid: true };
+    } catch (error) {
+      return {
+        isValid: false,
+        error: 'Invalid seed phrase. Please check your words and try again.',
+      };
     }
   };
 
@@ -108,14 +97,40 @@ export default function Onboarding() {
     }
   };
 
-  // Show loading view while assets are being loaded
-  if (!assetsLoaded) {
-    return (
-      <ThemedView style={[styles.container, styles.loadingContainer]}>
-        <ThemedText>Loading...</ThemedText>
-      </ThemedView>
-    );
-  }
+  const handleImport = async () => {
+    await setSeedPhrase('');
+
+    setCurrentPage('import');
+  };
+
+  const handleImportComplete = async () => {
+    const validation = validateImportedMnemonic(seedPhrase);
+
+    if (!validation.isValid) {
+      Alert.alert(
+        'Invalid Seed Phrase',
+        validation.error || 'Please check your seed phrase and try again.'
+      );
+      return;
+    }
+
+    try {
+      const normalizedPhrase = seedPhrase.trim().toLowerCase();
+      await setMnemonic(normalizedPhrase);
+
+      setCurrentPage('splash');
+      setTimeout(() => {
+        completeOnboarding();
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to save imported mnemonic:', error);
+      Alert.alert('Error', 'Failed to save your seed phrase. Please try again.');
+    }
+  };
+
+  useEffect(() => {
+    console.log('seedPhrase', seedPhrase);
+  }, [seedPhrase]);
 
   // Show splash screen when transitioning to home
   if (currentPage === 'splash') {
@@ -140,11 +155,11 @@ export default function Onboarding() {
             </ThemedText>
 
             <View style={styles.buttonGroup}>
-              <TouchableOpacity style={styles.button} onPress={() => setCurrentPage('generate')}>
+              <TouchableOpacity style={styles.button} onPress={handleGenerate}>
                 <ThemedText style={styles.buttonText}>Generate your private key</ThemedText>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.button} onPress={() => setCurrentPage('import')}>
+              <TouchableOpacity style={styles.button} onPress={handleImport}>
                 <ThemedText style={styles.buttonText}>Import existing seed</ThemedText>
               </TouchableOpacity>
             </View>
@@ -161,7 +176,7 @@ export default function Onboarding() {
             </ThemedText>
 
             <View style={styles.seedContainer}>
-              {seedPhrase.split(' ').map((word, index) => (
+              {seedPhrase.split(' ').map((word: string, index: number) => (
                 <View key={`word-${index}-${word}`} style={styles.wordContainer}>
                   <ThemedText style={styles.wordText}>
                     {index + 1}. {word}
@@ -200,7 +215,10 @@ export default function Onboarding() {
               />
             </View>
 
-            <TouchableOpacity style={[styles.button, styles.finishButton]} onPress={handleImport}>
+            <TouchableOpacity
+              style={[styles.button, styles.finishButton]}
+              onPress={handleImportComplete}
+            >
               <ThemedText style={styles.buttonText}>Import</ThemedText>
             </TouchableOpacity>
           </View>

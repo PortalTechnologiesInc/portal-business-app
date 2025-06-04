@@ -590,9 +590,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({
 						return;
 					}
 				}
-				
 				console.error(`Failed to fetch service name for ${serviceKey}:`, error);
-				// For other errors, still try to continue with other service keys
 			}
 		});
 

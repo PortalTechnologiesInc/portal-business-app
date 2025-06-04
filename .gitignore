@@ -48,4 +48,4 @@ app-example
 .env
 
 # portal lib
-portalBuild/*.tgz
+portalBuild/portal*
