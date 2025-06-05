@@ -8,13 +8,14 @@ import {
   View,
   ScrollView,
   RefreshControl,
+  Switch,
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, User, Pencil, ChevronRight } from 'lucide-react-native';
+import { ArrowLeft, User, Pencil, ChevronRight, Fingerprint, Shield } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { useUserProfile } from '@/context/UserProfileContext';
@@ -28,6 +29,9 @@ import * as ImagePicker from 'expo-image-picker';
 import { resetDatabase } from '@/services/database/DatabaseProvider';
 import { useNostrService } from '@/context/NostrServiceContext';
 import { showToast } from '@/utils/Toast';
+import { authenticateForSensitiveAction } from '@/services/BiometricAuthService';
+import { isAppLockEnabled, setAppLockEnabled, canEnableAppLock } from '@/services/AppLockService';
+import { useAppLock } from '@/context/AppLockContext';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -35,13 +39,16 @@ export default function SettingsScreen() {
   const { username, avatarUri, setUsername, setAvatarUri, isProfileEditable, fetchProfile } =
     useUserProfile();
   const nostrService = useNostrService();
+  const { refreshLockStatus } = useAppLock();
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [usernameInput, setUsernameInput] = useState('');
   const [profileIsLoading, setProfileIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [appLockEnabled, setAppLockEnabledState] = useState(false);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
 
-  // Initialize wallet connection status
+  // Initialize wallet connection status and app lock settings
   useEffect(() => {
     const checkWalletConnection = async () => {
       try {
@@ -49,12 +56,28 @@ export default function SettingsScreen() {
         setIsConnected(connected);
       } catch (error) {
         console.error('Error checking wallet connection:', error);
-      } finally {
-        setIsLoading(false);
       }
     };
 
-    checkWalletConnection();
+    const checkAppLockSettings = async () => {
+      try {
+        const [lockEnabled, biometricEnabled] = await Promise.all([
+          isAppLockEnabled(),
+          canEnableAppLock(),
+        ]);
+        setAppLockEnabledState(lockEnabled);
+        setBiometricAvailable(biometricEnabled);
+      } catch (error) {
+        console.error('Error checking app lock settings:', error);
+      }
+    };
+
+    const initializeSettings = async () => {
+      await Promise.all([checkWalletConnection(), checkAppLockSettings()]);
+      setIsLoading(false);
+    };
+
+    initializeSettings();
 
     // Subscribe to wallet URL changes
     const subscription = walletUrlEvents.addListener('walletUrlChanged', async newUrl => {
@@ -118,7 +141,7 @@ export default function SettingsScreen() {
         showToast('Unable to refresh profile', 'error');
       }
     } catch (error) {
-      console.error('Error refreshing profile:', error);
+      // Silently handle profile fetch errors
       showToast('Failed to refresh profile', 'error');
     }
   };
@@ -181,24 +204,27 @@ export default function SettingsScreen() {
         {
           text: 'Clear Data',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              // Clear user profile data but maintain pubkey format
-              await setUsername('');
-              await setAvatarUri(null);
+          onPress: () => {
+            // Require biometric authentication before proceeding with the destructive action
+            authenticateForSensitiveAction(async () => {
+              try {
+                // Clear user profile data but maintain pubkey format
+                await setUsername('');
+                await setAvatarUri(null);
 
-              // Delete mnemonic first - this triggers database disconnection
-              deleteMnemonic();
+                // Delete mnemonic first - this triggers database disconnection
+                deleteMnemonic();
 
-              // Reset the database (will work with new connection)
-              await resetDatabase();
+                // Reset the database (will work with new connection)
+                await resetDatabase();
 
-              // Reset onboarding state (this navigates to onboarding screen)
-              await resetOnboarding();
-            } catch (error) {
-              console.error('Error clearing app data:', error);
-              Alert.alert('Error', 'Failed to Reset App. Please try again.');
-            }
+                // Reset onboarding state (this navigates to onboarding screen)
+                await resetOnboarding();
+              } catch (error) {
+                console.error('Error clearing app data:', error);
+                Alert.alert('Error', 'Failed to Reset App. Please try again.');
+              }
+            }, 'Authenticate to reset all app data');
           },
         },
       ]
@@ -216,21 +242,71 @@ export default function SettingsScreen() {
   };
 
   const handleExportMnemonic = () => {
-    console.log('Exporting mnemonic...');
-    getMnemonic().then(mnemonic => {
-      console.log('Mnemonic:', mnemonic);
-      if (mnemonic) {
-        Clipboard.setString(mnemonic);
-        showToast('Mnemonic copied to clipboard', 'success');
-      } else {
-        showToast('No mnemonic found', 'error');
+    authenticateForSensitiveAction(async () => {
+      console.log('Exporting mnemonic...');
+      try {
+        const mnemonic = await getMnemonic();
+        console.log('Mnemonic:', mnemonic);
+        if (mnemonic) {
+          Clipboard.setString(mnemonic);
+          showToast('Mnemonic copied to clipboard', 'success');
+        } else {
+          showToast('No mnemonic found', 'error');
+        }
+      } catch (error) {
+        console.error('Error exporting mnemonic:', error);
+        showToast('Failed to export mnemonic', 'error');
       }
-    });
+    }, 'Authenticate to export your seed phrase');
   };
 
   const handleExportAppData = () => {
-    console.log('Exporting app data...');
-    // TODO: Implement app data export logic
+    authenticateForSensitiveAction(async () => {
+      console.log('Exporting app data...');
+      // TODO: Implement app data export logic
+      showToast('App data export not yet implemented', 'success');
+    }, 'Authenticate to export app data');
+  };
+
+  const handleToggleAppLock = async (enabled: boolean) => {
+    if (enabled && !biometricAvailable) {
+      Alert.alert(
+        'Biometric Authentication Required',
+        'To enable app lock, you need to set up biometric authentication (fingerprint, face recognition, or PIN) on your device first.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    if (enabled) {
+      // When enabling, require authentication to confirm
+      authenticateForSensitiveAction(async () => {
+        try {
+          await setAppLockEnabled(true);
+          setAppLockEnabledState(true);
+          // Don't lock immediately when user is actively enabling it
+          await refreshLockStatus(false);
+          showToast('App lock enabled', 'success');
+        } catch (error) {
+          console.error('Error enabling app lock:', error);
+          showToast('Failed to enable app lock', 'error');
+        }
+      }, 'Authenticate to enable app lock');
+    } else {
+      // When disabling, require authentication to confirm
+      authenticateForSensitiveAction(async () => {
+        try {
+          await setAppLockEnabled(false);
+          setAppLockEnabledState(false);
+          // When disabling, unlock the app
+          await refreshLockStatus(false);
+          showToast('App lock disabled', 'success');
+        } catch (error) {
+          console.error('Error disabling app lock:', error);
+          showToast('Failed to disable app lock', 'error');
+        }
+      }, 'Authenticate to disable app lock');
+    }
   };
 
   if (isLoading) {
@@ -376,17 +452,60 @@ export default function SettingsScreen() {
             </ThemedView>
           </ThemedView>
 
+          {/* Security Section */}
+          <ThemedView style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>Security</ThemedText>
+            <ThemedView style={styles.securitySection}>
+              <View style={styles.appLockOption}>
+                <View style={styles.appLockLeft}>
+                  <View style={styles.appLockIconContainer}>
+                    <Shield size={24} color={Colors.almostWhite} />
+                  </View>
+                  <View style={styles.appLockTextContainer}>
+                    <ThemedText style={styles.appLockTitle}>App Lock</ThemedText>
+                    <ThemedText style={styles.appLockDescription}>
+                      {biometricAvailable
+                        ? 'Require biometric authentication to open the app'
+                        : 'Biometric authentication not available'}
+                    </ThemedText>
+                  </View>
+                </View>
+                <Switch
+                  value={appLockEnabled}
+                  onValueChange={handleToggleAppLock}
+                  disabled={!biometricAvailable}
+                  trackColor={{
+                    false: Colors.gray,
+                    true: Colors.green,
+                  }}
+                  thumbColor={appLockEnabled ? Colors.almostWhite : Colors.dirtyWhite}
+                  ios_backgroundColor={Colors.gray}
+                />
+              </View>
+            </ThemedView>
+          </ThemedView>
+
           {/* Export Section */}
           <ThemedView style={styles.section}>
             <ThemedText style={styles.sectionTitle}>Export</ThemedText>
             <ThemedView style={styles.exportSection}>
               <TouchableOpacity style={styles.exportButton} onPress={handleExportMnemonic}>
-                <ThemedText style={styles.exportButtonText}>Export Mnemonic</ThemedText>
+                <View style={styles.exportButtonContent}>
+                  <ThemedText style={styles.exportButtonText}>Export Mnemonic</ThemedText>
+                  <View style={styles.fingerprintIcon}>
+                    <Fingerprint size={20} color={Colors.almostWhite} />
+                  </View>
+                </View>
               </TouchableOpacity>
             </ThemedView>
             <ThemedView style={styles.exportSection}>
               <TouchableOpacity style={styles.exportButton} onPress={handleExportAppData}>
-                <ThemedText style={styles.exportButtonText}>Export App Data</ThemedText>
+                <View style={styles.exportButtonContent}>
+                  <ThemedText style={styles.exportButtonText}>Export App Data</ThemedText>
+                  <View style={styles.fingerprintIcon}>
+                    <Fingerprint size={20} color={Colors.almostWhite} />
+                  </View>
+                </View>
               </TouchableOpacity>
             </ThemedView>
           </ThemedView>
@@ -396,7 +515,12 @@ export default function SettingsScreen() {
             <ThemedText style={styles.sectionTitle}>Extra</ThemedText>
             <ThemedView style={styles.extraSection}>
               <TouchableOpacity style={styles.clearDataButton} onPress={handleClearAppData}>
-                <ThemedText style={styles.clearDataButtonText}>Reset App</ThemedText>
+                <View style={styles.clearDataButtonContent}>
+                  <ThemedText style={styles.clearDataButtonText}>Reset App</ThemedText>
+                  <View style={styles.fingerprintIcon}>
+                    <Fingerprint size={20} color="white" />
+                  </View>
+                </View>
               </TouchableOpacity>
             </ThemedView>
           </ThemedView>
@@ -590,6 +714,15 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+    textAlign: 'center',
+    alignSelf: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    maxWidth: 500,
+    marginRight: 0,
+    paddingRight: 0,
+    paddingLeft: 0,
+    marginLeft: 0,
   },
   avatarContainerDisabled: {
     opacity: 0.5,
@@ -614,5 +747,57 @@ const styles = StyleSheet.create({
     color: Colors.almostWhite,
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  exportButtonContent: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    position: 'relative',
+  },
+  clearDataButtonContent: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    position: 'relative',
+  },
+  fingerprintIcon: {
+    position: 'absolute',
+    right: 0,
+  },
+  securitySection: {
+    paddingVertical: 12,
+    width: '100%',
+  },
+  appLockOption: {
+    backgroundColor: Colors.darkGray,
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  appLockLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  appLockIconContainer: {
+    marginRight: 12,
+  },
+  appLockTextContainer: {
+    flex: 1,
+  },
+  appLockTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.almostWhite,
+    marginBottom: 4,
+  },
+  appLockDescription: {
+    fontSize: 14,
+    color: Colors.dirtyWhite,
+    lineHeight: 18,
   },
 });

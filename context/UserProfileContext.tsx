@@ -122,7 +122,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
       setSyncStatus('completed');
     } catch (error) {
-      console.error('Failed to fetch profile:', error);
+      console.log('Failed to fetch profile:', error);
       setSyncStatus('failed');
     }
   };

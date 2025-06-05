@@ -12,6 +12,8 @@ import { ActivitiesProvider } from '@/context/ActivitiesContext';
 import { DatabaseProvider } from '@/services/database/DatabaseProvider';
 import { MnemonicProvider, useMnemonic } from '@/context/MnemonicContext';
 import { NostrServiceProvider } from '@/context/NostrServiceContext';
+import { AppLockProvider, useAppLock } from '@/context/AppLockContext';
+import { AppLockScreen } from '@/components/AppLockScreen';
 import { StatusBar } from 'expo-status-bar';
 import { Colors } from '@/constants/Colors';
 import { Asset } from 'expo-asset';
@@ -33,6 +35,17 @@ const preloadImages = async () => {
   } catch (error) {
     console.error('Error preloading assets:', error);
   }
+};
+
+// App content wrapper that handles app lock
+const AppContentWrapper = () => {
+  const { isLocked } = useAppLock();
+
+  if (isLocked) {
+    return <AppLockScreen />;
+  }
+
+  return <AppContent />;
 };
 
 // Main app structure with NostrService initialization
@@ -147,7 +160,9 @@ export default function RootLayout() {
       <StatusBar style="light" backgroundColor={Colors.darkerGray} />
       <MnemonicProvider>
         <OnboardingProvider>
-          <AppContent />
+          <AppLockProvider>
+            <AppContentWrapper />
+          </AppLockProvider>
         </OnboardingProvider>
       </MnemonicProvider>
     </GestureHandlerRootView>

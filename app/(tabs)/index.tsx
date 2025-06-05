@@ -22,7 +22,6 @@ import { QrCode, ArrowRight, User } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
-import { showToast } from '@/utils/Toast';
 
 const FIRST_LAUNCH_KEY = 'portal_first_launch_completed';
 
@@ -372,7 +371,7 @@ const styles = StyleSheet.create({
     width: 55,
     height: 55,
     borderRadius: 32,
-    backgroundColor: Colors.green,
+    backgroundColor: Colors.primaryDark,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -393,7 +392,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 50,
-    backgroundColor: Colors.green,
+    backgroundColor: Colors.primaryDark,
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 12,
