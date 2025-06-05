@@ -6,11 +6,10 @@ import {
   TextInput,
   Image,
   View,
-  Keyboard,
   ScrollView,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import Clipboard from '@react-native-clipboard/clipboard';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
@@ -23,6 +22,7 @@ import {
   isWalletConnected,
   walletUrlEvents,
   deleteMnemonic,
+  getMnemonic,
 } from '@/services/SecureStorageService';
 import * as ImagePicker from 'expo-image-picker';
 import { resetDatabase } from '@/services/database/DatabaseProvider';
@@ -32,15 +32,8 @@ import { showToast } from '@/utils/Toast';
 export default function SettingsScreen() {
   const router = useRouter();
   const { resetOnboarding } = useOnboarding();
-  const {
-    username,
-    avatarUri,
-    setUsername,
-    setAvatarUri,
-    syncStatus,
-    isProfileEditable,
-    fetchProfile,
-  } = useUserProfile();
+  const { username, avatarUri, setUsername, setAvatarUri, isProfileEditable, fetchProfile } =
+    useUserProfile();
   const nostrService = useNostrService();
   const [isConnected, setIsConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -222,6 +215,24 @@ export default function SettingsScreen() {
     });
   };
 
+  const handleExportMnemonic = () => {
+    console.log('Exporting mnemonic...');
+    getMnemonic().then(mnemonic => {
+      console.log('Mnemonic:', mnemonic);
+      if (mnemonic) {
+        Clipboard.setString(mnemonic);
+        showToast('Mnemonic copied to clipboard', 'success');
+      } else {
+        showToast('No mnemonic found', 'error');
+      }
+    });
+  };
+
+  const handleExportAppData = () => {
+    console.log('Exporting app data...');
+    // TODO: Implement app data export logic
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -365,6 +376,21 @@ export default function SettingsScreen() {
             </ThemedView>
           </ThemedView>
 
+          {/* Export Section */}
+          <ThemedView style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>Export</ThemedText>
+            <ThemedView style={styles.exportSection}>
+              <TouchableOpacity style={styles.exportButton} onPress={handleExportMnemonic}>
+                <ThemedText style={styles.exportButtonText}>Export Mnemonic</ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+            <ThemedView style={styles.exportSection}>
+              <TouchableOpacity style={styles.exportButton} onPress={handleExportAppData}>
+                <ThemedText style={styles.exportButtonText}>Export App Data</ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
+          </ThemedView>
+
           {/* Extra Section */}
           <ThemedView style={styles.section}>
             <ThemedText style={styles.sectionTitle}>Extra</ThemedText>
@@ -437,6 +463,10 @@ const styles = StyleSheet.create({
   },
   extraSection: {
     paddingVertical: 12,
+    width: '100%',
+  },
+  exportSection: {
+    paddingVertical: 6,
     width: '100%',
   },
   walletCard: {
@@ -569,5 +599,20 @@ const styles = StyleSheet.create({
   },
   usernameInputDisabled: {
     opacity: 0.5,
+  },
+  exportButton: {
+    backgroundColor: Colors.primaryDark,
+    padding: 16,
+    borderRadius: 8,
+    width: '100%',
+    maxWidth: 500,
+    alignItems: 'center',
+    alignSelf: 'center',
+    marginBottom: 8,
+  },
+  exportButtonText: {
+    color: Colors.almostWhite,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

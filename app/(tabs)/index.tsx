@@ -88,26 +88,12 @@ export default function Home() {
     initializeProfileFetch();
   }, [nostrService.isInitialized, nostrService.publicKey, syncStatus, fetchProfile]);
 
-  const handleRefreshProfile = async () => {
-    try {
-      // Get the current public key from NostrService to refresh profile
-      if (nostrService.publicKey) {
-        console.log('Refreshing profile for:', nostrService.publicKey);
-        await fetchProfile(nostrService.publicKey);
-        showToast('Profile refreshed successfully', 'success');
-      } else {
-        showToast('Unable to refresh profile', 'error');
-      }
-    } catch (error) {
-      console.error('Error refreshing profile:', error);
-      showToast('Failed to refresh profile', 'error');
-    }
-  };
-
   const onRefresh = async () => {
     setRefreshing(true);
-    await handleRefreshProfile();
-    setRefreshing(false);
+    // TODO: Add refresh functionality here when needed
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
   };
 
   // Memoize the truncated key to prevent recalculation on every render

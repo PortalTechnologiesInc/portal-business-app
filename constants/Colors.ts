@@ -31,4 +31,50 @@ export const Colors = {
   darkerGray: '#0c0c0c',
   green: '#004f4e',
   red: '#710729',
+
+  // Major palette colors
+  primary: '#0a7ea4',
+  primaryLight: '#4fb3d9',
+  primaryDark: '#005a75',
+  secondary: '#f39c12',
+  secondaryLight: '#f7dc6f',
+  secondaryDark: '#d68910',
+
+  // Semantic colors
+  success: '#27ae60',
+  successLight: '#58d68d',
+  successDark: '#1e8449',
+  warning: '#f39c12',
+  warningLight: '#f7dc6f',
+  warningDark: '#d68910',
+  error: '#e74c3c',
+  errorLight: '#ec7063',
+  errorDark: '#c0392b',
+  info: '#3498db',
+  infoLight: '#85c1e9',
+  infoDark: '#2874a6',
+
+  // Neutral palette
+  white: '#ffffff',
+  black: '#000000',
+  gray100: '#f8f9fa',
+  gray200: '#e9ecef',
+  gray300: '#dee2e6',
+  gray400: '#ced4da',
+  gray500: '#adb5bd',
+  gray600: '#6c757d',
+  gray700: '#495057',
+  gray800: '#343a40',
+  gray900: '#212529',
+
+  // Accent colors
+  purple: '#9b59b6',
+  purpleLight: '#bb8fce',
+  purpleDark: '#7d3c98',
+  orange: '#e67e22',
+  orangeLight: '#f0b27a',
+  orangeDark: '#ca6f1e',
+  teal: '#1abc9c',
+  tealLight: '#76d7c4',
+  tealDark: '#148f77',
 };
