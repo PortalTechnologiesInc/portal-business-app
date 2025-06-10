@@ -22,12 +22,13 @@ import { QrCode, ArrowRight, User } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
+import { generateRandomGamertag } from '@/utils';
 
 const FIRST_LAUNCH_KEY = 'portal_first_launch_completed';
 
 export default function Home() {
   const { isLoading } = useOnboarding();
-  const { username, avatarUri, fetchProfile, syncStatus } = useUserProfile();
+  const { username, avatarUri, fetchProfile, syncStatus, setUsername } = useUserProfile();
   const nostrService = useNostrService();
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -74,18 +75,87 @@ export default function Home() {
     checkFirstLaunch();
   }, [nostrService]);
 
-  // Fetch profile when NostrService is ready
+  // Fetch profile when NostrService is ready and initialize if needed
   useEffect(() => {
-    const initializeProfileFetch = async () => {
-      // Only fetch if we have a public key, service is initialized, and we haven't fetched yet
-      if (nostrService.isInitialized && nostrService.publicKey && syncStatus === 'idle') {
-        console.log('Starting profile fetch on app load for:', nostrService.publicKey);
-        await fetchProfile(nostrService.publicKey);
+    const initializeProfile = async () => {
+      // Only proceed if we have a public key and service is initialized
+      if (!nostrService.isInitialized || !nostrService.publicKey || !nostrService.portalApp) {
+        return;
+      }
+
+      // Only run on first load (syncStatus === 'idle')
+      if (syncStatus !== 'idle') {
+        return;
+      }
+
+      console.log('Starting profile initialization for:', nostrService.publicKey);
+
+      try {
+        // Check if this was a generated or imported seed
+        const seedOrigin = await SecureStore.getItemAsync('portal_seed_origin');
+        console.log('Seed origin:', seedOrigin);
+
+        let currentUsername = '';
+
+        if (seedOrigin === 'imported') {
+          // For imported seeds, fetch existing profile first
+          console.log('Imported seed detected, fetching existing profile...');
+          await fetchProfile(nostrService.publicKey);
+
+          // Wait a moment for the fetch to complete and update local state
+          await new Promise(resolve => setTimeout(resolve, 1500));
+
+          // Check if we have a username after the fetch
+          currentUsername = (await SecureStore.getItemAsync('portal_username')) || '';
+        } else {
+          // For generated seeds, skip fetch (new keypair = no existing profile)
+          console.log('Generated seed detected, skipping profile fetch...');
+
+          // Check if we already have a local username (shouldn't happen, but be safe)
+          currentUsername = (await SecureStore.getItemAsync('portal_username')) || '';
+        }
+
+        // Clean up the seed origin flag after first use
+        await SecureStore.deleteItemAsync('portal_seed_origin');
+
+        // If no username found, create a dummy profile
+        if (!currentUsername.trim()) {
+          console.log('No existing profile found, creating dummy profile...');
+
+          const randomGamertag = generateRandomGamertag();
+          console.log('Generated random gamertag:', randomGamertag);
+
+          // Set local username first
+          await setUsername(randomGamertag);
+
+          // Then set the profile on the nostr network
+          await nostrService.setUserProfile({
+            nip05: `${randomGamertag}@getportal.cc`,
+            name: randomGamertag,
+            picture: '',
+            displayName: randomGamertag,
+          });
+
+          console.log('Dummy profile created successfully:', randomGamertag);
+        } else {
+          console.log('Existing profile found:', currentUsername);
+        }
+      } catch (error) {
+        console.error('Profile initialization failed:', error);
+        // Don't retry automatically - user can manually refresh
       }
     };
 
-    initializeProfileFetch();
-  }, [nostrService.isInitialized, nostrService.publicKey, syncStatus, fetchProfile]);
+    initializeProfile();
+  }, [
+    nostrService.isInitialized,
+    nostrService.publicKey,
+    syncStatus,
+    fetchProfile,
+    setUsername,
+    nostrService.portalApp,
+    nostrService.setUserProfile,
+  ]);
 
   const onRefresh = async () => {
     setRefreshing(true);

@@ -13,11 +13,16 @@ import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { useMnemonic } from '@/context/MnemonicContext';
+
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { generateMnemonic, Mnemonic } from 'portal-app-lib';
+import * as SecureStore from 'expo-secure-store';
 
 // Preload all required assets
 const onboardingLogo = require('../assets/images/appLogo.png');
+
+// Key to track if seed was generated or imported
+const SEED_ORIGIN_KEY = 'portal_seed_origin';
 
 export default function Onboarding() {
   const { completeOnboarding } = useOnboarding();
@@ -80,6 +85,9 @@ export default function Onboarding() {
       // Save the mnemonic using our provider
       await setMnemonic(seedPhrase);
 
+      // Mark this as a generated seed (no need to fetch profile)
+      await SecureStore.setItemAsync(SEED_ORIGIN_KEY, 'generated');
+
       // Show splash screen before completing onboarding
       setCurrentPage('splash');
 
@@ -117,6 +125,9 @@ export default function Onboarding() {
     try {
       const normalizedPhrase = seedPhrase.trim().toLowerCase();
       await setMnemonic(normalizedPhrase);
+
+      // Mark this as an imported seed (should fetch profile first)
+      await SecureStore.setItemAsync(SEED_ORIGIN_KEY, 'imported');
 
       setCurrentPage('splash');
       setTimeout(() => {
