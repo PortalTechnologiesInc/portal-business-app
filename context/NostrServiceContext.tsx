@@ -331,6 +331,10 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     [portalApp]
   );
 
+  const connectionStatus = useMemo(() => {
+    return portalApp?.connectionStatus();
+  }, [nwcWallet]);
+
   // Context value
   const contextValue: NostrServiceContextType = {
     isInitialized,

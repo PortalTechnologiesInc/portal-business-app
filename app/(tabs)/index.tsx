@@ -15,6 +15,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { PendingRequestsList } from '@/components/PendingRequestsList';
 import { UpcomingPaymentsList } from '@/components/UpcomingPaymentsList';
 import { RecentActivitiesList } from '@/components/RecentActivitiesList';
+import { ConnectionStatusIndicator } from '@/components/ConnectionStatusIndicator';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { useUserProfile } from '@/context/UserProfileContext';
 import { useNostrService } from '@/context/NostrServiceContext';
@@ -260,15 +261,18 @@ export default function Home() {
           <ThemedView style={styles.header}>
             <View style={styles.headerContent}>
               <TouchableOpacity style={styles.headerLeft} onPress={handleSettingsNavigate}>
-                <ThemedText
-                  style={styles.welcomeText}
-                  lightColor={Colors.darkGray}
-                  darkColor={Colors.dirtyWhite}
-                  numberOfLines={1}
-                  ellipsizeMode="middle"
-                >
-                  {username ? `Welcome back, ${username} 👋` : 'Welcome back 👋'}
-                </ThemedText>
+                <View style={styles.welcomeRow}>
+                  <ThemedText
+                    style={styles.welcomeText}
+                    lightColor={Colors.darkGray}
+                    darkColor={Colors.dirtyWhite}
+                    numberOfLines={1}
+                    ellipsizeMode="middle"
+                  >
+                    {username ? `Welcome back, ${username} 👋` : 'Welcome back 👋'}
+                  </ThemedText>
+                  <ConnectionStatusIndicator size={10} />
+                </View>
                 <View style={styles.userInfoContainer}>
                   {/* Profile Avatar */}
                   <View style={styles.avatarContainer}>
@@ -412,10 +416,15 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+  welcomeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   welcomeText: {
     fontSize: 14,
     fontWeight: '400',
-    marginBottom: 16,
   },
   userInfoContainer: {
     flexDirection: 'row',
@@ -467,6 +476,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginLeft: 12,
   },
+
   welcomeContainer: {
     paddingHorizontal: 20,
     marginTop: 20,
