@@ -17,8 +17,44 @@ export const ActivityRow: React.FC<ActivityRowProps> = ({ activity }) => {
     router.push(`/activity/${activity.id}`);
   };
 
+  const getActivityStatus = (detail: string): 'success' | 'failed' | 'pending' => {
+    const lowerDetail = detail.toLowerCase();
+    if (lowerDetail.includes('approved') || lowerDetail.includes('success')) {
+      return 'success';
+    } else if (
+      lowerDetail.includes('failed') ||
+      lowerDetail.includes('denied') ||
+      lowerDetail.includes('error') ||
+      lowerDetail.includes('rejected')
+    ) {
+      return 'failed';
+    } else {
+      return 'pending';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'success':
+        return Colors.success;
+      case 'pending':
+        return Colors.warning;
+      case 'failed':
+        return Colors.error;
+      default:
+        return Colors.gray;
+    }
+  };
+
+  const activityStatus = getActivityStatus(activity.detail);
+  const statusColor = getStatusColor(activityStatus);
+
   return (
-    <TouchableOpacity style={styles.activityCard} onPress={handlePress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={[styles.activityCard, { borderLeftWidth: 3, borderLeftColor: statusColor }]}
+      onPress={handlePress}
+      activeOpacity={0.7}
+    >
       <View style={styles.iconContainer}>
         {activity.type === ActivityType.Auth ? (
           <Key size={20} color={Colors.almostWhite} />
@@ -84,6 +120,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+
   activityDetails: {
     alignItems: 'flex-end',
     justifyContent: 'center',

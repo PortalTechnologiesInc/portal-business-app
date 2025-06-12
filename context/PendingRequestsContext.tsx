@@ -425,12 +425,64 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
       switch (request?.type) {
         case 'login':
           request.result(false);
+
+          // Add denied login activity to database
+          nostrService.getServiceName(request.metadata.serviceKey).then(serviceName => {
+            addActivityWithFallback({
+              type: 'auth',
+              service_key: request.metadata.serviceKey,
+              detail: 'User denied login',
+              date: new Date(),
+              service_name: serviceName?.nip05 ?? 'Unknown Service',
+              amount: null,
+              currency: null,
+              request_id: id,
+              subscription_id: null,
+            });
+          });
           break;
         case 'payment':
           request.result({
             status: new PaymentStatus.Rejected({ reason: 'User rejected' }),
             requestId: (request.metadata as SinglePaymentRequest).content.requestId,
           });
+
+          // Add denied payment activity to database
+          try {
+            // Convert BigInt to number if needed
+            const amount =
+              typeof (request.metadata as SinglePaymentRequest).content.amount === 'bigint'
+                ? Number((request.metadata as SinglePaymentRequest).content.amount)
+                : (request.metadata as SinglePaymentRequest).content.amount;
+
+            // Extract currency symbol from the Currency object
+            let currency: string | null = null;
+            const currencyObj = (request.metadata as SinglePaymentRequest).content.currency;
+            if (currencyObj) {
+              // If it's a simple string, use it directly
+              if (typeof currencyObj === 'string') {
+                currency = currencyObj;
+              } else {
+                currency = 'sats';
+              }
+            }
+
+            nostrService.getServiceName(request.metadata.serviceKey).then(serviceName => {
+              addActivityWithFallback({
+                type: 'pay',
+                service_key: request.metadata.serviceKey,
+                service_name: serviceName?.nip05 ?? 'Unknown Service',
+                detail: 'Payment denied by user',
+                date: new Date(),
+                amount: Number(amount) / 1000,
+                currency,
+                request_id: id,
+                subscription_id: null,
+              });
+            });
+          } catch (err) {
+            console.log('Error adding denied payment activity:', err);
+          }
           break;
         case 'subscription':
           request.result({
@@ -439,10 +491,47 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
             }),
             requestId: (request.metadata as RecurringPaymentRequest).content.requestId,
           });
+
+          // Add denied subscription activity to database
+          try {
+            // Convert BigInt to number if needed
+            const amount =
+              typeof (request.metadata as RecurringPaymentRequest).content.amount === 'bigint'
+                ? Number((request.metadata as RecurringPaymentRequest).content.amount)
+                : (request.metadata as RecurringPaymentRequest).content.amount;
+
+            // Extract currency symbol from the Currency object
+            let currency: string | null = null;
+            const currencyObj = (request.metadata as RecurringPaymentRequest).content.currency;
+            if (currencyObj) {
+              // If it's a simple string, use it directly
+              if (typeof currencyObj === 'string') {
+                currency = currencyObj;
+              } else {
+                currency = 'sats';
+              }
+            }
+
+            nostrService.getServiceName(request.metadata.serviceKey).then(serviceName => {
+              addActivityWithFallback({
+                type: 'pay',
+                service_key: request.metadata.serviceKey,
+                service_name: serviceName?.nip05 ?? 'Unknown Service',
+                detail: 'Subscription denied by user',
+                date: new Date(),
+                amount: Number(amount) / 1000,
+                currency,
+                request_id: id,
+                subscription_id: null,
+              });
+            });
+          } catch (err) {
+            console.log('Error adding denied subscription activity:', err);
+          }
           break;
       }
     },
-    [getById, nostrService]
+    [getById, addActivityWithFallback, nostrService]
   );
 
   // Show skeleton loader and set timeout for request
