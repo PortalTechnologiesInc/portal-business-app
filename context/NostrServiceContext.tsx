@@ -23,6 +23,8 @@ import { useSQLiteContext } from 'expo-sqlite';
 // Constants and helper classes from original NostrService
 const DEFAULT_RELAYS = [
   'wss://relay.damus.io',
+  'wss://relay.orangepill.dev',
+  'wss://nostr.milou.lol',
   'wss://nostr.wine',
   'wss://relay.orangepill.dev',
   'wss://nostr.milou.lol',
@@ -124,11 +126,11 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
         setPublicKey(publicKeyStr);
 
         // Create and initialize portal app
-        
-        let relays = (await DB.getRelays()).map(relay => relay.ws_uri)
+
+        let relays = (await DB.getRelays()).map(relay => relay.ws_uri);
         if (relays.length === 0) {
-          DEFAULT_RELAYS.forEach(relay => relays.push(relay))
-          await DB.updateRelays(DEFAULT_RELAYS)
+          DEFAULT_RELAYS.forEach(relay => relays.push(relay));
+          await DB.updateRelays(DEFAULT_RELAYS);
         }
         const app = await PortalApp.create(keypair, relays);
         app.listen(); // Listen asynchronously
@@ -293,22 +295,10 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
         throw new Error('PortalApp not initialized');
       }
 
-      // Check if we already have a pending request for this service
-      const serviceKey = url.mainKey;
-      const existingRequests = Object.values(pendingRequests).filter(
-        req => req.metadata.serviceKey === serviceKey
-      );
-
-      if (existingRequests.length > 0) {
-        console.log('Already have pending request for service key:', serviceKey);
-        console.log('Skipping duplicate auth init for:', url);
-        return;
-      }
-
       console.log('Sending auth init', url);
       return portalApp.sendAuthInit(url);
     },
-    [portalApp, pendingRequests]
+    [portalApp]
   );
 
   // Get service name
