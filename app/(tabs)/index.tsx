@@ -89,6 +89,12 @@ export default function Home() {
         return;
       }
 
+      // Prevent re-initialization if already done
+      const hasInitialized = await SecureStore.getItemAsync('profile_initialized');
+      if (hasInitialized === 'true') {
+        return;
+      }
+
       console.log('Starting profile initialization for:', nostrService.publicKey);
 
       try {
@@ -141,6 +147,9 @@ export default function Home() {
         } else {
           console.log('Existing profile found:', currentUsername);
         }
+
+        // Mark as initialized to prevent re-runs
+        await SecureStore.setItemAsync('profile_initialized', 'true');
       } catch (error) {
         console.error('Profile initialization failed:', error);
         // Don't retry automatically - user can manually refresh
