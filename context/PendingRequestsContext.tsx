@@ -16,6 +16,7 @@ import type {
   RecurringPaymentRequest,
   RecurringPaymentResponseContent,
   SinglePaymentRequest,
+  AuthResponseStatus,
 } from 'portal-app-lib';
 import { PaymentStatus, RecurringPaymentStatus } from 'portal-app-lib';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -294,7 +295,15 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
 
       switch (request.type) {
         case 'login':
-          request.result(true);
+          // Create AuthResponseStatus for approved login using type assertion
+          const approvedAuthResponse = {
+            tag: 'Approved',
+            inner: {
+              grantedPermissions: [],
+              sessionToken: '',
+            },
+          } as unknown as AuthResponseStatus;
+          request.result(approvedAuthResponse);
 
           // Add an activity record directly via the database service
           nostrService.getServiceName(request.metadata.serviceKey).then(serviceName => {
@@ -424,7 +433,14 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
 
       switch (request?.type) {
         case 'login':
-          request.result(false);
+          // Create AuthResponseStatus for denied login using type assertion
+          const deniedAuthResponse = {
+            tag: 'Rejected',
+            inner: {
+              reason: 'User denied login',
+            },
+          } as unknown as AuthResponseStatus;
+          request.result(deniedAuthResponse);
 
           // Add denied login activity to database
           nostrService.getServiceName(request.metadata.serviceKey).then(serviceName => {
