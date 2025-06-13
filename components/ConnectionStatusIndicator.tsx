@@ -12,7 +12,12 @@ import NetInfo from '@react-native-community/netinfo';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
-import { useNostrService } from '@/context/NostrServiceContext';
+import {
+  useNostrService,
+  type RelayInfo,
+  type ConnectionSummary,
+} from '@/context/NostrServiceContext';
+import { isWalletConnected } from '@/services/SecureStorageService';
 import { Wifi, WifiOff, Wallet, X, CheckCircle, AlertCircle, XCircle } from 'lucide-react-native';
 
 type ConnectionStatus = 'connected' | 'partial' | 'disconnected';
@@ -28,9 +33,15 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
   const [scaleValue] = useState(new Animated.Value(1));
   const [opacityValue] = useState(new Animated.Value(1));
   const [isOnline, setIsOnline] = useState(true);
-  const [relayStatus, setRelayStatus] = useState(false); // Will be updated with actual relay status
+  const [isWalletConfigured, setIsWalletConfigured] = useState(false);
+  const [showRelayDetails, setShowRelayDetails] = useState(false);
 
-  const { isInitialized: nostrInitialized, isWalletConnected, nwcWallet } = useNostrService();
+  const {
+    isInitialized: nostrInitialized,
+    isWalletConnected: isWalletConnectedState,
+    nwcWallet,
+    getConnectionSummary,
+  } = useNostrService();
 
   // Network connectivity detection
   useEffect(() => {
@@ -41,26 +52,52 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
     return () => unsubscribe();
   }, []);
 
+  // Check wallet configuration
+  useEffect(() => {
+    const checkWalletConfiguration = async () => {
+      try {
+        const configured = await isWalletConnected();
+        setIsWalletConfigured(configured);
+      } catch (error) {
+        console.error('Error checking wallet configuration:', error);
+        setIsWalletConfigured(false);
+      }
+    };
+
+    checkWalletConfiguration();
+  }, []);
+
+  // Get relay details from context
+  const relayDetails: ConnectionSummary = useMemo(() => {
+    return getConnectionSummary();
+  }, [getConnectionSummary]);
+
   // Calculate overall status
-  const connectionStatus: ConnectionStatus = useMemo(() => {
-    // If device is offline, status is disconnected
+  const overallConnectionStatus: ConnectionStatus = useMemo(() => {
+    // If device is offline, status is disconnected (red)
     if (!isOnline) return 'disconnected';
 
-    // When online, check relay status and wallet (only if wallet is connected)
-    const statusChecks = [relayStatus]; // Start with relay status
+    // When online, check relay status and wallet (only if wallet is configured)
+    const statusChecks = [];
 
-    // Only include wallet status if a wallet is actually connected
-    if (nwcWallet) {
-      statusChecks.push(isWalletConnected);
+    // Check relay status
+    statusChecks.push(relayDetails.allRelaysConnected);
+
+    // Only include wallet status if a wallet is actually configured
+    if (isWalletConfigured) {
+      statusChecks.push(isWalletConnectedState);
     }
 
     const connectedCount = statusChecks.filter(Boolean).length;
     const totalChecks = statusChecks.length;
 
+    // Green only when ALL systems are connected
     if (connectedCount === totalChecks && totalChecks > 0) return 'connected';
-    if (connectedCount > 0) return 'partial';
-    return 'disconnected';
-  }, [isOnline, relayStatus, isWalletConnected, nwcWallet]);
+
+    // Orange for any partial connection (some relays have issues OR wallet issues)
+    // This means if even 1 relay is not "Connected", we show orange
+    return 'partial';
+  }, [isOnline, relayDetails.allRelaysConnected, isWalletConnectedState, isWalletConfigured]);
 
   // Get status color
   const getStatusColor = (status: ConnectionStatus) => {
@@ -78,7 +115,7 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
 
   // Pulse animation for non-green status
   React.useEffect(() => {
-    if (connectionStatus !== 'connected') {
+    if (overallConnectionStatus !== 'connected') {
       const pulse = Animated.loop(
         Animated.sequence([
           Animated.timing(opacityValue, {
@@ -98,7 +135,7 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
     } else {
       opacityValue.setValue(1);
     }
-  }, [connectionStatus, opacityValue]);
+  }, [overallConnectionStatus, opacityValue]);
 
   // Handle press with animation
   const handlePress = () => {
@@ -137,7 +174,7 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
           style={[
             styles.statusDot,
             {
-              backgroundColor: getStatusColor(connectionStatus),
+              backgroundColor: getStatusColor(overallConnectionStatus),
               width: size,
               height: size,
               borderRadius: size / 2,
@@ -179,7 +216,7 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
                     <View
                       style={[
                         styles.overallStatusDot,
-                        { backgroundColor: getStatusColor(connectionStatus) },
+                        { backgroundColor: getStatusColor(overallConnectionStatus) },
                       ]}
                     />
                   </View>
@@ -187,9 +224,15 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
                     <ThemedText style={styles.detailLabel}>Overall Status</ThemedText>
                     <ThemedText style={styles.detailValue}>
                       {!isOnline && 'Device Offline'}
-                      {isOnline && connectionStatus === 'connected' && 'All Systems Connected'}
-                      {isOnline && connectionStatus === 'partial' && 'Partial Connection'}
-                      {isOnline && connectionStatus === 'disconnected' && 'Connection Issues'}
+                      {isOnline &&
+                        overallConnectionStatus === 'connected' &&
+                        'All Systems Connected'}
+                      {isOnline &&
+                        overallConnectionStatus === 'partial' &&
+                        'Connection Issues Detected'}
+                      {isOnline &&
+                        overallConnectionStatus === 'disconnected' &&
+                        'Connection Issues'}
                     </ThemedText>
                   </View>
                 </View>
@@ -201,19 +244,109 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
                   {/* Relay Status */}
                   <View style={styles.detailRow}>
                     <View style={styles.detailIcon}>
-                      <Wifi size={20} color={relayStatus ? Colors.green : '#FF4444'} />
+                      <Wifi
+                        size={20}
+                        color={relayDetails.allRelaysConnected ? Colors.green : '#FFA500'}
+                      />
                     </View>
                     <View style={styles.detailContent}>
                       <ThemedText style={styles.detailLabel}>Relay Connections</ThemedText>
                       <ThemedText style={styles.detailValue}>
-                        {getStatusText(relayStatus)}
+                        {relayDetails.allRelaysConnected ? 'All Connected' : 'Partial Connection'}
                       </ThemedText>
                       <ThemedText style={styles.detailDescription}>
-                        Nostr relay connections for messaging
+                        {relayDetails.relays.length > 0
+                          ? (() => {
+                              const connected = relayDetails.relays.filter(r => r.connected).length;
+                              const total = relayDetails.relays.length;
+                              return `${connected}/${total} relays connected`;
+                            })()
+                          : 'Nostr relay connections for messaging'}
                       </ThemedText>
+
+                      {/* More Info Toggle */}
+                      {relayDetails.relays.length > 0 && (
+                        <TouchableOpacity
+                          style={styles.moreInfoButton}
+                          onPress={() => setShowRelayDetails(!showRelayDetails)}
+                        >
+                          <ThemedText style={styles.moreInfoText}>
+                            {showRelayDetails ? 'Less info' : 'More info'}
+                          </ThemedText>
+                          <ThemedText
+                            style={[
+                              styles.moreInfoArrow,
+                              { transform: [{ rotate: showRelayDetails ? '180deg' : '0deg' }] },
+                            ]}
+                          >
+                            ▼
+                          </ThemedText>
+                        </TouchableOpacity>
+                      )}
                     </View>
-                    <View style={styles.detailRight}>{getConnectionIcon(relayStatus)}</View>
+                    <View style={styles.detailRight}>
+                      {getConnectionIcon(relayDetails.allRelaysConnected)}
+                    </View>
                   </View>
+
+                  {/* Expandable Relay Details */}
+                  {showRelayDetails && relayDetails.relays.length > 0 && (
+                    <View style={styles.expandedRelayDetails}>
+                      <View style={styles.compactRelayGrid}>
+                        {relayDetails.relays
+                          .slice() // Create a copy to avoid mutating original array
+                          .sort((a, b) => a.url.localeCompare(b.url)) // Sort by URL for consistent order
+                          .map((relay: RelayInfo) => {
+                            // Get status color
+                            const getStatusColor = (status: string) => {
+                              switch (status) {
+                                case 'Connected':
+                                  return Colors.green;
+                                case 'Connecting':
+                                case 'Pending':
+                                case 'Initialized':
+                                  return '#FFA500';
+                                case 'Disconnected':
+                                case 'Terminated':
+                                case 'Banned':
+                                  return '#FF4444';
+                                default:
+                                  return Colors.gray;
+                              }
+                            };
+
+                            // Get short relay name
+                            const getShortRelayName = (url: string) => {
+                              try {
+                                const hostname = new URL(url).hostname;
+                                return hostname.replace('relay.', '').replace('.', '').slice(0, 8);
+                              } catch {
+                                return url.slice(0, 8);
+                              }
+                            };
+
+                            return (
+                              <View key={relay.url} style={styles.detailedRelayItem}>
+                                <View style={styles.detailedRelayHeader}>
+                                  <ThemedText style={styles.detailedRelayName}>
+                                    {getShortRelayName(relay.url)}
+                                  </ThemedText>
+                                  <ThemedText
+                                    style={[
+                                      styles.detailedRelayStatus,
+                                      { color: getStatusColor(relay.status) },
+                                    ]}
+                                  >
+                                    {relay.status}
+                                  </ThemedText>
+                                </View>
+                                <ThemedText style={styles.detailedRelayUrl}>{relay.url}</ThemedText>
+                              </View>
+                            );
+                          })}
+                      </View>
+                    </View>
+                  )}
 
                   <View style={styles.separator} />
 
@@ -223,22 +356,30 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
                       <Wallet
                         size={20}
                         color={
-                          nwcWallet ? (isWalletConnected ? Colors.green : '#FF4444') : Colors.gray
+                          isWalletConfigured
+                            ? isWalletConnectedState
+                              ? Colors.green
+                              : '#FF4444'
+                            : Colors.gray
                         }
                       />
                     </View>
                     <View style={styles.detailContent}>
                       <ThemedText style={styles.detailLabel}>Wallet Connection</ThemedText>
                       <ThemedText style={styles.detailValue}>
-                        {nwcWallet ? getStatusText(isWalletConnected) : 'Not connected'}
+                        {isWalletConfigured
+                          ? getStatusText(isWalletConnectedState)
+                          : 'Not configured'}
                       </ThemedText>
                       <ThemedText style={styles.detailDescription}>
-                        {nwcWallet ? 'NWC wallet connected' : 'No wallet configured'}
+                        {isWalletConfigured
+                          ? 'NWC wallet configured'
+                          : 'No wallet configured in settings'}
                       </ThemedText>
                     </View>
                     <View style={styles.detailRight}>
-                      {nwcWallet ? (
-                        getConnectionIcon(isWalletConnected)
+                      {isWalletConfigured ? (
+                        getConnectionIcon(isWalletConnectedState)
                       ) : (
                         <AlertCircle size={20} color={Colors.gray} />
                       )}
@@ -277,9 +418,9 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: '#121212',
     borderRadius: 12,
-    padding: 24,
-    width: '85%',
-    maxWidth: 400,
+    padding: 20,
+    width: '90%',
+    maxWidth: 380,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -297,9 +438,9 @@ const styles = StyleSheet.create({
   },
   detailCard: {
     backgroundColor: '#1E1E1E',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
   },
   detailRow: {
     flexDirection: 'row',
@@ -346,5 +487,57 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
+  },
+  moreInfoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingVertical: 4,
+  },
+  moreInfoText: {
+    fontSize: 12,
+    color: Colors.almostWhite,
+    fontWeight: '500',
+    marginRight: 6,
+  },
+  moreInfoArrow: {
+    fontSize: 10,
+    color: Colors.almostWhite,
+  },
+  expandedRelayDetails: {
+    marginTop: 12,
+    paddingLeft: 16,
+  },
+  compactRelayGrid: {
+    flexDirection: 'column',
+    gap: 4,
+  },
+  detailedRelayItem: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    padding: 8,
+    borderRadius: 6,
+  },
+  detailedRelayHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  detailedRelayName: {
+    fontSize: 13,
+    color: Colors.almostWhite,
+    fontWeight: '600',
+  },
+  detailedRelayStatus: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  detailedRelayUrl: {
+    fontSize: 10,
+    color: Colors.dirtyWhite,
+  },
+  relayUrl: {
+    fontSize: 12,
+    color: Colors.dirtyWhite,
   },
 });
