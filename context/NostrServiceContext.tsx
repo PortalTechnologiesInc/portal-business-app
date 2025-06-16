@@ -139,6 +139,8 @@ interface NostrServiceContextType {
   // Connection management functions
   getConnectionSummary: () => ConnectionSummary;
   refreshConnectionStatus: () => Promise<void>;
+  startPeriodicMonitoring: () => void;
+  stopPeriodicMonitoring: () => void;
   connectionStatus: any; // Keep for backwards compatibility, but prefer getConnectionSummary
 }
 
@@ -448,13 +450,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
 
   // Get processed connection summary
   const getConnectionSummary = useCallback((): ConnectionSummary => {
-    console.log(
-      '🔍 NostrService: getConnectionSummary called with connectionStatus:',
-      connectionStatus
-    );
-
     if (!connectionStatus) {
-      console.log('🔍 NostrService: connectionStatus is null/undefined');
       return {
         allRelaysConnected: false,
         connectedCount: 0,
@@ -465,19 +461,12 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
 
     if (connectionStatus instanceof Map) {
       const relayEntries = Array.from(connectionStatus.entries());
-      console.log('🔍 NostrService: Processing relay entries:', relayEntries);
 
       const relays: RelayInfo[] = relayEntries
         .map(([url, status]) => {
-          console.log(
-            `🔍 NostrService: Processing relay ${url}: status = ${status}, type = ${typeof status}`
-          );
-
           // Convert numeric status to string using the mapping function
           const finalStatus: RelayConnectionStatus =
             typeof status === 'number' ? mapNumericStatusToString(status) : 'Unknown';
-
-          console.log(`🔍 NostrService: Mapped status for ${url}: ${status} -> ${finalStatus}`);
 
           return {
             url,
@@ -491,13 +480,6 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       const totalCount = relays.length;
       const allRelaysConnected = totalCount > 0 && connectedCount === totalCount;
 
-      console.log('🔍 NostrService: Processed connection summary:', {
-        allRelaysConnected,
-        connectedCount,
-        totalCount,
-        relays,
-      });
-
       return {
         allRelaysConnected,
         connectedCount,
@@ -506,12 +488,6 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       };
     }
 
-    console.log(
-      '🔍 NostrService: connectionStatus is not a Map, type:',
-      typeof connectionStatus,
-      'value:',
-      connectionStatus
-    );
     return {
       allRelaysConnected: false,
       connectedCount: 0,
@@ -520,14 +496,18 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     };
   }, [connectionStatus]);
 
-  // Fetch connection status periodically
+  // Simple monitoring control functions (to be used by navigation-based polling)
+  const startPeriodicMonitoring = useCallback(() => {
+    console.warn('startPeriodicMonitoring is deprecated. Use navigation-based monitoring instead.');
+  }, []);
+
+  const stopPeriodicMonitoring = useCallback(() => {
+    console.warn('stopPeriodicMonitoring is deprecated. Use navigation-based monitoring instead.');
+  }, []);
+
+  // Initial connection status fetch (but no periodic refresh here)
   useEffect(() => {
     refreshConnectionStatus();
-
-    // Set up periodic refresh
-    const interval = setInterval(refreshConnectionStatus, 5000); // Check every 5 seconds
-
-    return () => clearInterval(interval);
   }, [refreshConnectionStatus]);
 
   // Context value
@@ -549,6 +529,8 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     getConnectionSummary,
     refreshConnectionStatus,
     connectionStatus,
+    startPeriodicMonitoring,
+    stopPeriodicMonitoring,
   };
 
   return (

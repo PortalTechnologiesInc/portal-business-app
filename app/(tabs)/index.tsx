@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   StyleSheet,
   View,
@@ -56,6 +57,28 @@ export default function Home() {
       isMounted.current = false;
     };
   }, []);
+
+  // Periodic connection status monitoring (only when homepage is focused)
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🏠 Homepage: Starting connection monitoring');
+
+      // Initial fetch when entering homepage
+      nostrService.refreshConnectionStatus();
+
+      // Set up periodic refresh for connection status
+      const interval = setInterval(() => {
+        if (isMounted.current) {
+          nostrService.refreshConnectionStatus();
+        }
+      }, 5000); // Check every 5 seconds
+
+      return () => {
+        console.log('🏠 Homepage: Stopping connection monitoring');
+        clearInterval(interval);
+      };
+    }, [nostrService.refreshConnectionStatus])
+  );
 
   useEffect(() => {
     setUserPublicKey(nostrService.publicKey || '');
