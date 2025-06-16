@@ -1,5 +1,6 @@
 import type React from 'react';
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import * as SecureStore from 'expo-secure-store';
 import {
   getMnemonic as getSecureMnemonic,
   saveMnemonic as saveSecureMnemonic,
@@ -57,7 +58,24 @@ export const MnemonicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Set a new mnemonic
   const setMnemonic = useCallback(async (newMnemonic: string) => {
     try {
+      // Check if this is actually a different mnemonic
+      const currentMnemonic = await getSecureMnemonic();
+      const isNewMnemonic = currentMnemonic !== newMnemonic;
+
       await saveSecureMnemonic(newMnemonic);
+
+      // Only clear profile initialization flag if this is actually a new/different mnemonic
+      if (isNewMnemonic) {
+        try {
+          await SecureStore.deleteItemAsync('profile_initialized');
+          console.log('Cleared profile_initialized flag for new mnemonic');
+        } catch (e) {
+          // Silent fail - this is not critical
+          console.log('Could not clear profile_initialized flag:', e);
+        }
+      } else {
+        console.log('Same mnemonic imported, keeping existing profile initialization state');
+      }
 
       // Update state directly
       setMnemonicState(newMnemonic);

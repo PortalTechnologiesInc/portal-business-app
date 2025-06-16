@@ -15,8 +15,6 @@ import {
   LookupInvoiceResponse,
   PortalAppInterface,
   AuthResponseStatus,
-  PaymentStatus,
-  RecurringPaymentStatus,
   CloseRecurringPaymentResponse,
   ClosedRecurringPaymentListener,
 } from 'portal-app-lib';
@@ -31,8 +29,13 @@ const DEFAULT_RELAYS = [
   'wss://relay.orangepill.dev',
   'wss://nostr.milou.lol',
   'wss://nostr.wine',
-  'wss://relay.orangepill.dev',
-  'wss://nostr.milou.lol',
+  // Add more reliable and diverse relays
+  'wss://nostr-pub.wellorder.net',
+  'wss://relay.nostr.band',
+  'wss://nos.lol',
+  'wss://relay.snort.social',
+  'wss://offchain.pub',
+  'wss://brb.io',
 ];
 
 // Types for connection management
@@ -390,8 +393,17 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       if (!portalApp) {
         throw new Error('PortalApp not initialized');
       }
-      const service = await portalApp.fetchProfile(pubKey);
-      return service;
+      console.log('DEBUG: NostrService.getServiceName called with pubKey:', pubKey);
+      console.log('DEBUG: PortalApp is initialized:', !!portalApp);
+
+      try {
+        const service = await portalApp.fetchProfile(pubKey);
+        console.log('DEBUG: portalApp.fetchProfile returned:', service);
+        return service;
+      } catch (error) {
+        console.log('DEBUG: portalApp.fetchProfile error:', error);
+        throw error;
+      }
     },
     [portalApp]
   );
@@ -428,16 +440,8 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   const refreshConnectionStatus = useCallback(async () => {
     if (portalApp) {
       try {
-        console.log('🔍 NostrService: Fetching connection status from portalApp...');
+        console.log('🔄 Refreshing connection status');
         const status = await portalApp.connectionStatus();
-        console.log('🔍 NostrService: Raw connectionStatus from portalApp:', status);
-        console.log('🔍 NostrService: Status type:', typeof status);
-        console.log('🔍 NostrService: Is Map?:', status instanceof Map);
-
-        if (status instanceof Map) {
-          console.log('🔍 NostrService: Map entries:', Array.from(status.entries()));
-        }
-
         setConnectionStatus(status);
         setLastConnectionUpdate(new Date());
       } catch (error) {

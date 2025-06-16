@@ -16,7 +16,9 @@ type UserProfileContextType = {
   isProfileEditable: boolean;
   setUsername: (username: string) => Promise<void>;
   setAvatarUri: (uri: string | null) => Promise<void>;
-  fetchProfile: (publicKey: string) => Promise<void>;
+  fetchProfile: (
+    publicKey: string
+  ) => Promise<{ found: boolean; username?: string; avatarUri?: string }>;
 };
 
 const UserProfileContext = createContext<UserProfileContextType | null>(null);
@@ -52,17 +54,19 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
     loadLocalProfile();
   }, []);
 
-  const fetchProfile = async (publicKey: string) => {
+  const fetchProfile = async (
+    publicKey: string
+  ): Promise<{ found: boolean; username?: string; avatarUri?: string }> => {
     if (!publicKey || syncStatus === 'syncing') {
       console.log('Profile fetch skipped: no publicKey or already syncing');
-      return;
+      return { found: false };
     }
 
     // Check if NostrService is ready
     if (!nostrService.isInitialized || !nostrService.portalApp) {
       console.log('NostrService not ready, will retry profile fetch later');
       setSyncStatus('failed');
-      return;
+      return { found: false };
     }
 
     console.log('Starting profile fetch for:', publicKey);
@@ -70,60 +74,58 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
     try {
       // Fetch fresh profile data
+      console.log('DEBUG: About to call nostrService.getServiceName with pubkey:', publicKey);
       const fetchedProfile = await nostrService.getServiceName(publicKey);
+      console.log('DEBUG: getServiceName returned:', fetchedProfile);
 
       if (fetchedProfile) {
         console.log('Fetched profile:', fetchedProfile);
 
-        // Get current local data
-        const currentUsername = await SecureStore.getItemAsync(USERNAME_KEY);
-        const currentAvatarUri = await SecureStore.getItemAsync(AVATAR_KEY);
-
         // Extract data from fetched profile
-        const fetchedUsername = fetchedProfile.nip05?.split('@')[0] || '';
+        const fetchedUsername = fetchedProfile.nip05?.split('@')[0] || fetchedProfile.name || '';
         const fetchedAvatarUri = fetchedProfile.picture || '';
 
-        let needsUpdate = false;
+        console.log('Extracted username from profile:', fetchedUsername);
+        console.log('Extracted avatar from profile:', fetchedAvatarUri);
 
-        // Check username sync
-        if (!currentUsername && fetchedUsername) {
-          // Local is empty, save fetched data
-          console.log('Local username empty, saving fetched username:', fetchedUsername);
+        // Save the fetched data to local storage
+        if (fetchedUsername) {
           await setUsername(fetchedUsername);
-          needsUpdate = true;
-        } else if (currentUsername && fetchedUsername && currentUsername !== fetchedUsername) {
-          // Data mismatch, update with fetched data
-          console.log('Username mismatch, updating:', currentUsername, '->', fetchedUsername);
-          await setUsername(fetchedUsername);
-          needsUpdate = true;
         }
 
-        // Check avatar sync
-        if (!currentAvatarUri && fetchedAvatarUri) {
-          // Local is empty, save fetched data
-          console.log('Local avatar empty, saving fetched avatar');
+        if (fetchedAvatarUri) {
           await setAvatarUri(fetchedAvatarUri);
-          needsUpdate = true;
-        } else if (currentAvatarUri && fetchedAvatarUri && currentAvatarUri !== fetchedAvatarUri) {
-          // Data mismatch, update with fetched data
-          console.log('Avatar mismatch, updating');
-          await setAvatarUri(fetchedAvatarUri);
-          needsUpdate = true;
         }
 
-        if (needsUpdate) {
-          console.log('Profile data updated from fetch');
-        } else {
-          console.log('Profile data already in sync');
-        }
+        setSyncStatus('completed');
+
+        // Return the fetched data directly
+        return {
+          found: true,
+          username: fetchedUsername || undefined,
+          avatarUri: fetchedAvatarUri || undefined,
+        };
       } else {
         console.log('No profile found for public key');
+        setSyncStatus('completed');
+        return { found: false }; // No profile found
+      }
+    } catch (error) {
+      // Handle specific connection errors more gracefully
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      if (
+        errorMessage.includes('ListenerDisconnected') ||
+        errorMessage.includes('AppError.ListenerDisconnected')
+      ) {
+        console.log('Nostr listener disconnected during profile fetch, will retry...');
+        setSyncStatus('failed');
+        return { found: false };
       }
 
-      setSyncStatus('completed');
-    } catch (error) {
       console.log('Failed to fetch profile:', error);
       setSyncStatus('failed');
+      return { found: false };
     }
   };
 

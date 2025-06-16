@@ -99,6 +99,9 @@ export default function Home() {
     checkFirstLaunch();
   }, [nostrService]);
 
+  // Add state to prevent multiple concurrent initializations
+  const [isInitializing, setIsInitializing] = useState(false);
+
   // Fetch profile when NostrService is ready and initialize if needed
   useEffect(() => {
     const initializeProfile = async () => {
@@ -111,6 +114,15 @@ export default function Home() {
       if (syncStatus !== 'idle') {
         return;
       }
+
+      // Prevent concurrent initializations
+      if (isInitializing) {
+        console.log('Profile initialization already in progress, skipping...');
+        return;
+      }
+
+      console.log('Setting isInitializing to true');
+      setIsInitializing(true);
 
       // Prevent re-initialization if already done
       const hasInitialized = await SecureStore.getItemAsync('profile_initialized');
@@ -128,15 +140,95 @@ export default function Home() {
         let currentUsername = '';
 
         if (seedOrigin === 'imported') {
-          // For imported seeds, fetch existing profile first
-          console.log('Imported seed detected, fetching existing profile...');
-          await fetchProfile(nostrService.publicKey);
+          console.log('Imported seed detected, checking for existing profile...');
 
-          // Wait a moment for the fetch to complete and update local state
-          await new Promise(resolve => setTimeout(resolve, 1500));
+          // First, check if we already have a local profile for this key
+          const existingLocalUsername = await SecureStore.getItemAsync('portal_username');
 
-          // Check if we have a username after the fetch
-          currentUsername = (await SecureStore.getItemAsync('portal_username')) || '';
+          if (
+            existingLocalUsername &&
+            existingLocalUsername.trim() &&
+            existingLocalUsername !== 'Loading...'
+          ) {
+            console.log('Found existing local profile:', existingLocalUsername);
+            currentUsername = existingLocalUsername;
+          } else {
+            console.log('No local profile found, fetching from network...');
+
+            // Set loading username while waiting for relays
+            await setUsername('Loading...');
+
+            // Wait for at least one relay to be connected before attempting profile fetch
+            const waitForRelayConnection = async (): Promise<boolean> => {
+              const maxWait = 10000; // 10 seconds max wait (reduced since we attempt fetch anyway)
+              const checkInterval = 1000; // Check every 1 second
+              const startTime = Date.now();
+
+              console.log('Waiting for relay connections...');
+
+              // Check immediately first (no initial delay)
+              await nostrService.refreshConnectionStatus();
+              await new Promise(resolve => setTimeout(resolve, 100));
+              let connectionSummary = nostrService.getConnectionSummary();
+              if (connectionSummary.connectedCount > 0) {
+                console.log('Relays connected successfully!');
+                return true;
+              }
+
+              while (Date.now() - startTime < maxWait) {
+                // Log less frequently to reduce noise
+                if ((Date.now() - startTime) % 5000 < 1100) {
+                  console.log('Still waiting for relay connections...');
+                }
+
+                // Wait before next check
+                await new Promise(resolve => setTimeout(resolve, checkInterval));
+
+                // Refresh connection status to get the latest data
+                await nostrService.refreshConnectionStatus();
+                // Small delay to allow state to update
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                connectionSummary = nostrService.getConnectionSummary();
+                if (connectionSummary.connectedCount > 0) {
+                  console.log('Relays connected successfully!');
+                  return true;
+                }
+              }
+              console.log(
+                'Timeout waiting for relay connections - proceeding with profile fetch anyway'
+              );
+              return false;
+            };
+
+            const hasRelayConnection = await waitForRelayConnection();
+            console.log('DEBUG: hasRelayConnection result:', hasRelayConnection);
+            console.log(
+              'DEBUG: Connection summary after wait:',
+              nostrService.getConnectionSummary()
+            );
+
+            // Try to fetch profile regardless of relay connection status
+            // The profile fetch might still work if some relays connect during the fetch
+            console.log('DEBUG: Attempting profile fetch...');
+            try {
+              const profileResult = await fetchProfile(nostrService.publicKey);
+
+              // Check if profile fetch was successful and has username
+              if (profileResult.found && profileResult.username) {
+                currentUsername = profileResult.username;
+                console.log('Profile fetch completed, found username:', currentUsername);
+              } else {
+                console.log('Profile fetch failed or no profile found on network');
+                // Clear loading username if no profile found
+                await setUsername('');
+              }
+            } catch (error) {
+              console.log('Profile fetch error:', error);
+              // Clear loading username on error
+              await setUsername('');
+            }
+          }
         } else {
           // For generated seeds, skip fetch (new keypair = no existing profile)
           console.log('Generated seed detected, skipping profile fetch...');
@@ -148,25 +240,44 @@ export default function Home() {
         // Clean up the seed origin flag after first use
         await SecureStore.deleteItemAsync('portal_seed_origin');
 
-        // If no username found, create a dummy profile
+        // Check if we should allow manual profile entry instead of dummy profile
         if (!currentUsername.trim()) {
-          console.log('No existing profile found, creating dummy profile...');
+          if (seedOrigin === 'imported') {
+            console.log('No profile found on network. For imported seeds, this could mean:');
+            console.log('1. Profile was never published to relays');
+            console.log('2. Network connectivity issues');
+            console.log('3. Profile exists on different relays');
+            console.log('Creating dummy profile, but user can change it in settings...');
+          }
 
-          const randomGamertag = generateRandomGamertag();
-          console.log('Generated random gamertag:', randomGamertag);
+          if (seedOrigin === 'generated' || seedOrigin === 'imported') {
+            console.log('No existing profile found, creating dummy profile...');
 
-          // Set local username first
-          await setUsername(randomGamertag);
+            // Double-check that we're still the only initialization running
+            const recentInitCheck = await SecureStore.getItemAsync('profile_initialized');
+            if (recentInitCheck === 'true') {
+              console.log(
+                'Profile was initialized by another process, aborting dummy profile creation'
+              );
+              return;
+            }
 
-          // Then set the profile on the nostr network
-          await nostrService.setUserProfile({
-            nip05: `${randomGamertag}@getportal.cc`,
-            name: randomGamertag,
-            picture: '',
-            displayName: randomGamertag,
-          });
+            const randomGamertag = generateRandomGamertag();
+            console.log('Generated random gamertag:', randomGamertag);
 
-          console.log('Dummy profile created successfully:', randomGamertag);
+            // Set local username first
+            await setUsername(randomGamertag);
+
+            // Then set the profile on the nostr network
+            await nostrService.setUserProfile({
+              nip05: `${randomGamertag}@getportal.cc`,
+              name: randomGamertag,
+              picture: '',
+              displayName: randomGamertag,
+            });
+
+            console.log('Dummy profile created successfully:', randomGamertag);
+          }
         } else {
           console.log('Existing profile found:', currentUsername);
         }
@@ -176,19 +287,13 @@ export default function Home() {
       } catch (error) {
         console.error('Profile initialization failed:', error);
         // Don't retry automatically - user can manually refresh
+      } finally {
+        setIsInitializing(false);
       }
     };
 
     initializeProfile();
-  }, [
-    nostrService.isInitialized,
-    nostrService.publicKey,
-    syncStatus,
-    fetchProfile,
-    setUsername,
-    nostrService.portalApp,
-    nostrService.setUserProfile,
-  ]);
+  }, [nostrService.isInitialized, nostrService.publicKey, syncStatus, isInitializing]);
 
   const onRefresh = async () => {
     setRefreshing(true);
