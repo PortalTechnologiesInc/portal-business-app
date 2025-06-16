@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  TextInput,
-  View,
-  ToastAndroid,
-} from 'react-native';
+import { StyleSheet, TouchableOpacity, Alert, TextInput, View, ToastAndroid } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
@@ -22,7 +15,8 @@ import { TSelectedItem } from 'react-native-input-select/lib/typescript/src/type
 import { useNostrService } from '@/context/NostrServiceContext';
 
 function makeList(text: string): string[] {
-  return text.split(/\r?\n/)
+  return text
+    .split(/\r?\n/)
     .map((line: string) => line.trim())
     .filter((line: string) => line.length > 0);
 }
@@ -38,7 +32,7 @@ function splitArray<T>(arr: T[], predicate: (item: T) => boolean): [T[], T[]] {
 
 function isWebsocketUri(uri: string): boolean {
   const regex = /^wss?:\/\/([a-zA-Z0-9.-]+)(:\d+)?(\/[^\s]*)?$/;
-  return regex.test(uri)
+  return regex.test(uri);
 }
 
 export default function NostrRelayManagementScreen() {
@@ -48,11 +42,11 @@ export default function NostrRelayManagementScreen() {
   const [selectedRelays, setSelectedRelays] = useState<string[]>([]);
   const [customRelayTextFieldValue, setCustomRelayTextFieldValue] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [activeRelaysList, setActiveRelaysList] = useState<string[]>([]); // Fix: Make this a state variable
 
   const nostrService = useNostrService();
   const sqliteContext = useSQLiteContext();
   const DB = new DatabaseService(sqliteContext);
-  let activeRelaysList: string[] = [];
 
   // Load relay data on mount
   useEffect(() => {
@@ -65,14 +59,17 @@ export default function NostrRelayManagementScreen() {
       } finally {
         setIsLoading(false);
       }
-
-    }
-    loadEveryRelayList()
+    };
+    loadEveryRelayList();
 
     const loadRelaysData = async () => {
       try {
-        activeRelaysList = (await DB.getRelays()).map(value => value.ws_uri);
-        const [popularRelays, customRelays] = splitArray(activeRelaysList, item => partialList.includes(item))
+        const currentRelays = (await DB.getRelays()).map(value => value.ws_uri);
+        setActiveRelaysList(currentRelays); // Fix: Use setter function
+
+        const [popularRelays, customRelays] = splitArray(currentRelays, item =>
+          partialList.includes(item)
+        );
 
         setSelectedRelays(popularRelays);
         setCustomRelayTextFieldValue(customRelays.join('\n'));
@@ -82,7 +79,7 @@ export default function NostrRelayManagementScreen() {
         setIsLoading(false);
       }
     };
-    loadRelaysData()
+    loadRelaysData();
   }, []);
 
   // Navigate back to previous screen
@@ -114,12 +111,15 @@ export default function NostrRelayManagementScreen() {
     const customRelays = makeList(customRelayTextFieldValue);
     for (const relay of customRelays) {
       if (!isWebsocketUri(relay)) {
-        ToastAndroid.showWithGravity('Websocket format is wrong', ToastAndroid.LONG, ToastAndroid.CENTER);
-        return
+        ToastAndroid.showWithGravity(
+          'Websocket format is wrong',
+          ToastAndroid.LONG,
+          ToastAndroid.CENTER
+        );
+        return;
       }
     }
-    let newlySelectedRelays = selectedRelays?.concat(customRelays)
-
+    let newlySelectedRelays = selectedRelays?.concat(customRelays);
 
     let promises: Promise<void>[] = [];
     for (const oldRelay of activeRelaysList) {
@@ -141,11 +141,14 @@ export default function NostrRelayManagementScreen() {
 
     try {
       await Promise.all([...promises, DB.updateRelays(newlySelectedRelays)]);
+
+      // Refresh connection status to show updated relays
+      await nostrService.refreshConnectionStatus();
     } catch (error) {
       console.error(error);
     }
     router.back();
-  }
+  };
 
   if (isLoading) {
     return (
@@ -186,7 +189,9 @@ export default function NostrRelayManagementScreen() {
 
         <ThemedView style={styles.content}>
           <ThemedText style={styles.description}>
-            Choose the Nostr relays you want to use for Nostr Wallet Connect. Relays help broadcast and receive transactions—pick reliable ones for better speed and connectivity. You can add custom relays or use trusted defaults.
+            Choose the Nostr relays you want to use for Nostr Wallet Connect. Relays help broadcast
+            and receive transactions—pick reliable ones for better speed and connectivity. You can
+            add custom relays or use trusted defaults.
           </ThemedText>
 
           {/* Add Relays Input */}
@@ -207,7 +212,7 @@ export default function NostrRelayManagementScreen() {
             listComponentStyles={{
               itemSeparatorStyle: {
                 opacity: 0,
-                margin: 2
+                margin: 2,
               },
             }}
             dropdownStyle={{
@@ -224,14 +229,18 @@ export default function NostrRelayManagementScreen() {
                 borderRadius: 30,
               },
               checkboxComponent: <View />,
-              checkboxUnselectedColor: Colors.almostWhite
+              checkboxUnselectedColor: Colors.almostWhite,
             }}
             isMultiple
             isSearchable
             placeholder="Select an option..."
-            options={everyPopularRelayList.map((relay) => { return { label: relay, value: relay } })}
+            options={everyPopularRelayList.map(relay => {
+              return { label: relay, value: relay };
+            })}
             selectedValue={selectedRelays as TSelectedItem[]}
-            onValueChange={(value) => { setSelectedRelays(value as string[]) }}
+            onValueChange={value => {
+              setSelectedRelays(value as string[]);
+            }}
             primaryColor={Colors.darkGray}
           />
 
@@ -260,13 +269,8 @@ export default function NostrRelayManagementScreen() {
             </View>
           </View>
 
-          <TouchableOpacity
-            style={styles.saveButton}
-            onPress={updateRelays}
-          >
-            <ThemedText style={styles.saveButtonText}>
-              Save relays
-            </ThemedText>
+          <TouchableOpacity style={styles.saveButton} onPress={updateRelays}>
+            <ThemedText style={styles.saveButtonText}>Save relays</ThemedText>
           </TouchableOpacity>
         </ThemedView>
       </ThemedView>
@@ -335,19 +339,19 @@ const styles = StyleSheet.create({
   textFieldAction: {
     paddingHorizontal: 8,
   },
-	saveButton: {
-		backgroundColor: Colors.primaryDark,
-		padding: 16,
-		borderRadius: 8,
-		width: '100%',
-		maxWidth: 500,
-		alignItems: 'center',
-		alignSelf: 'center',
-		marginBottom: 8,
-	},
-	saveButtonText: {
-		color: Colors.almostWhite,
-		fontSize: 16,
-		fontWeight: 'bold',
-	},
+  saveButton: {
+    backgroundColor: Colors.primaryDark,
+    padding: 16,
+    borderRadius: 8,
+    width: '100%',
+    maxWidth: 500,
+    alignItems: 'center',
+    alignSelf: 'center',
+    marginBottom: 8,
+  },
+  saveButtonText: {
+    color: Colors.almostWhite,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });

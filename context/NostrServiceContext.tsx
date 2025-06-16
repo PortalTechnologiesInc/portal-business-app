@@ -26,8 +26,6 @@ import { useSQLiteContext } from 'expo-sqlite';
 // Constants and helper classes from original NostrService
 const DEFAULT_RELAYS = [
   'wss://relay.damus.io',
-  'wss://relay.orangepill.dev',
-  'wss://nostr.milou.lol',
   'wss://nostr.wine',
   // Add more reliable and diverse relays
   'wss://nostr-pub.wellorder.net',
@@ -35,7 +33,6 @@ const DEFAULT_RELAYS = [
   'wss://nos.lol',
   'wss://relay.snort.social',
   'wss://offchain.pub',
-  'wss://brb.io',
 ];
 
 // Types for connection management
@@ -440,12 +437,11 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   const refreshConnectionStatus = useCallback(async () => {
     if (portalApp) {
       try {
-        console.log('🔄 Refreshing connection status');
         const status = await portalApp.connectionStatus();
         setConnectionStatus(status);
         setLastConnectionUpdate(new Date());
       } catch (error) {
-        console.error('🔍 NostrService: Error fetching connection status:', error);
+        console.error('NostrService: Error fetching connection status:', error);
         setConnectionStatus(null);
         setLastConnectionUpdate(new Date());
       }
