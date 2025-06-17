@@ -25,6 +25,7 @@ import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
 import { generateRandomGamertag } from '@/utils';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 const FIRST_LAUNCH_KEY = 'portal_first_launch_completed';
 
@@ -35,6 +36,22 @@ export default function Home() {
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const isMounted = useRef(true);
+
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const cardBackgroundColor = useThemeColor(
+    { light: Colors.secondaryWhite, dark: '#1E1E1E' },
+    'cardBackground'
+  );
+  const primaryTextColor = useThemeColor(
+    { light: Colors.gray900, dark: Colors.almostWhite },
+    'text'
+  );
+  const secondaryTextColor = useThemeColor(
+    { light: Colors.gray600, dark: Colors.dirtyWhite },
+    'text'
+  );
+  const iconColor = useThemeColor({ light: Colors.gray700, dark: Colors.almostWhite }, 'text');
 
   // This would come from a real user context in the future
   const [userPublicKey, setUserPublicKey] = useState('unknown pubkey');
@@ -379,14 +396,14 @@ export default function Home() {
   // Don't render anything until we've checked the onboarding status and first launch status
   if (isLoading || isFirstLaunch === null) {
     return (
-      <View style={styles.loaderContainer}>
+      <View style={[styles.loaderContainer, { backgroundColor }]}>
         <ActivityIndicator size="large" color={Colors.green} />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
       <ThemedView style={styles.container}>
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -397,7 +414,7 @@ export default function Home() {
               colors={[Colors.green]}
               tintColor={Colors.green}
               title="Pull to refresh profile"
-              titleColor={Colors.almostWhite}
+              titleColor={secondaryTextColor}
             />
           }
         >
@@ -407,7 +424,7 @@ export default function Home() {
                 <View style={styles.welcomeRow}>
                   <ThemedText
                     style={styles.welcomeText}
-                    lightColor={Colors.darkGray}
+                    lightColor={Colors.gray700}
                     darkColor={Colors.dirtyWhite}
                     numberOfLines={1}
                     ellipsizeMode="middle"
@@ -423,7 +440,7 @@ export default function Home() {
                       <Image source={{ uri: avatarUri }} style={styles.avatar} />
                     ) : (
                       <View style={styles.avatarPlaceholder}>
-                        <User size={18} color={Colors.almostWhite} />
+                        <User size={18} color={iconColor} />
                       </View>
                     )}
                   </View>
@@ -438,7 +455,7 @@ export default function Home() {
                         ]}
                         numberOfLines={1}
                         ellipsizeMode="middle"
-                        lightColor={Colors.darkGray}
+                        lightColor={Colors.gray900}
                         darkColor={Colors.almostWhite}
                       >
                         <ThemedText>{username}</ThemedText>
@@ -447,14 +464,14 @@ export default function Home() {
                     ) : null}
                     <ThemedText
                       style={styles.publicKey}
-                      lightColor={username ? Colors.gray : Colors.darkGray}
+                      lightColor={username ? Colors.gray600 : Colors.gray700}
                       darkColor={username ? Colors.dirtyWhite : Colors.almostWhite}
                     >
                       {truncatedPublicKey}
                     </ThemedText>
                   </View>
                   <TouchableOpacity style={styles.qrButton} onPress={handleQrScan}>
-                    <QrCode size={40} color={Colors.almostWhite} />
+                    <QrCode size={40} color={iconColor} />
                   </TouchableOpacity>
                 </View>
               </TouchableOpacity>
@@ -463,12 +480,12 @@ export default function Home() {
 
           {isFirstLaunch === true ? (
             <View style={styles.welcomeContainer}>
-              <View style={styles.welcomeCard}>
+              <View style={[styles.welcomeCard, { backgroundColor: cardBackgroundColor }]}>
                 <ThemedText
                   type="title"
                   style={styles.welcomeTitle}
                   darkColor={Colors.almostWhite}
-                  lightColor={Colors.almostWhite}
+                  lightColor={Colors.gray900}
                 >
                   Welcome to Portal App!
                 </ThemedText>
@@ -476,7 +493,7 @@ export default function Home() {
                 <ThemedText
                   style={styles.welcomeSubtitle}
                   darkColor={Colors.dirtyWhite}
-                  lightColor={Colors.darkGray}
+                  lightColor={Colors.gray700}
                 >
                   Your secure portal to the web3 world
                 </ThemedText>
@@ -488,22 +505,22 @@ export default function Home() {
                 <ThemedText
                   style={styles.welcomeDescription}
                   darkColor={Colors.dirtyWhite}
-                  lightColor={Colors.darkGray}
+                  lightColor={Colors.gray700}
                 >
                   Get started by scanning a QR code to log in to a website or make a payment.
                 </ThemedText>
 
                 <View style={styles.scanQrContainer}>
                   <TouchableOpacity style={styles.scanQrButton} onPress={handleQrScan}>
-                    <QrCode size={24} color={Colors.almostWhite} style={styles.qrIcon} />
+                    <QrCode size={24} color={Colors.white} style={styles.qrIcon} />
                     <ThemedText
                       style={styles.scanQrText}
                       darkColor={Colors.almostWhite}
-                      lightColor={Colors.almostWhite}
+                      lightColor={Colors.white}
                     >
                       Scan QR Code
                     </ThemedText>
-                    <ArrowRight size={18} color={Colors.almostWhite} />
+                    <ArrowRight size={18} color={Colors.white} />
                   </TouchableOpacity>
                 </View>
 
@@ -511,7 +528,7 @@ export default function Home() {
                   <ThemedText
                     style={styles.dismissText}
                     darkColor={Colors.dirtyWhite}
-                    lightColor={Colors.darkGray}
+                    lightColor={Colors.gray600}
                   >
                     Dismiss Welcome
                   </ThemedText>
@@ -539,15 +556,12 @@ export default function Home() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.darkerGray,
   },
   container: {
     flex: 1,
     padding: 0,
-    backgroundColor: Colors.darkerGray,
   },
   header: {
-    backgroundColor: Colors.darkerGray,
     paddingHorizontal: 20,
     paddingVertical: 12,
     width: '100%',
@@ -625,7 +639,6 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   welcomeCard: {
-    backgroundColor: '#1E1E1E',
     borderRadius: 20,
     padding: 24,
     minHeight: 200,
@@ -699,6 +712,5 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.darkerGray,
   },
 });

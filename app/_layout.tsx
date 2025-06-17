@@ -16,6 +16,8 @@ import { AppLockScreen } from '@/components/AppLockScreen';
 import { StatusBar } from 'expo-status-bar';
 import { Colors } from '@/constants/Colors';
 import { Asset } from 'expo-asset';
+import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
@@ -45,6 +47,50 @@ const AppContentWrapper = () => {
   }
 
   return <AppContent />;
+};
+
+// Status bar wrapper that respects theme
+const ThemedStatusBar = () => {
+  const { currentTheme } = useTheme();
+  return (
+    <StatusBar
+      style={currentTheme === 'light' ? 'dark' : 'light'}
+      backgroundColor={currentTheme === 'light' ? Colors.primaryWhite : Colors.darkerGray}
+    />
+  );
+};
+
+// Loading screen content that respects theme
+const LoadingScreenContent = () => {
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor }}>
+      <ThemedStatusBar />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: textColor }}>Loading...</Text>
+      </View>
+    </SafeAreaView>
+  );
+};
+
+// Themed root view wrapper
+const ThemedRootView = () => {
+  const backgroundColor = useThemeColor({}, 'background');
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor }}>
+      <ThemedStatusBar />
+      <MnemonicProvider>
+        <OnboardingProvider>
+          <AppLockProvider>
+            <AppContentWrapper />
+          </AppLockProvider>
+        </OnboardingProvider>
+      </MnemonicProvider>
+    </GestureHandlerRootView>
+  );
 };
 
 // Main app structure with NostrService initialization
@@ -121,25 +167,15 @@ export default function RootLayout() {
 
   if (!isReady) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: '#000000' }}>
-        <StatusBar style="light" />
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text style={{ color: Colors.almostWhite }}>Loading...</Text>
-        </View>
-      </SafeAreaView>
+      <ThemeProvider>
+        <LoadingScreenContent />
+      </ThemeProvider>
     );
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: '#000000' }}>
-      <StatusBar style="light" backgroundColor={Colors.darkerGray} />
-      <MnemonicProvider>
-        <OnboardingProvider>
-          <AppLockProvider>
-            <AppContentWrapper />
-          </AppLockProvider>
-        </OnboardingProvider>
-      </MnemonicProvider>
-    </GestureHandlerRootView>
+    <ThemeProvider>
+      <ThemedRootView />
+    </ThemeProvider>
   );
 }

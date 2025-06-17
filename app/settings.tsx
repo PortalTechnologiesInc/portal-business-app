@@ -16,6 +16,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, User, Pencil, ChevronRight, Fingerprint, Shield } from 'lucide-react-native';
+import { Moon, Sun, Smartphone } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { useUserProfile } from '@/context/UserProfileContext';
@@ -32,6 +33,7 @@ import { showToast } from '@/utils/Toast';
 import { authenticateForSensitiveAction } from '@/services/BiometricAuthService';
 import { isAppLockEnabled, setAppLockEnabled, canEnableAppLock } from '@/services/AppLockService';
 import { useAppLock } from '@/context/AppLockContext';
+import { useTheme, ThemeMode } from '@/context/ThemeContext';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -40,6 +42,7 @@ export default function SettingsScreen() {
     useUserProfile();
   const nostrService = useNostrService();
   const { refreshLockStatus } = useAppLock();
+  const { themeMode, setThemeMode } = useTheme();
   const [isWalletConnectedState, setIsWalletConnectedState] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [usernameInput, setUsernameInput] = useState('');
@@ -326,6 +329,20 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleThemeChange = () => {
+    // Cycle through theme options: auto -> light -> dark -> auto
+    const nextTheme: ThemeMode =
+      themeMode === 'auto' ? 'light' : themeMode === 'light' ? 'dark' : 'auto';
+
+    setThemeMode(nextTheme);
+    showToast(
+      `Theme changed to ${
+        nextTheme === 'auto' ? 'Auto (System)' : nextTheme === 'light' ? 'Light' : 'Dark'
+      }`,
+      'success'
+    );
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -491,6 +508,51 @@ export default function SettingsScreen() {
             </ThemedView>
           </ThemedView>
 
+          {/* Theme Section */}
+          <ThemedView style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>Appearance</ThemedText>
+            <ThemedView style={styles.themeSection}>
+              <ThemedView
+                style={styles.themeCard}
+                lightColor={Colors.secondaryWhite}
+                darkColor={Colors.darkGray}
+              >
+                <TouchableOpacity
+                  onPress={handleThemeChange}
+                  activeOpacity={0.7}
+                  style={styles.themeCardTouchable}
+                >
+                  <View style={styles.themeCardContent}>
+                    <View style={styles.themeCardLeft}>
+                      <View style={styles.themeIconContainer}>
+                        {themeMode === 'auto' ? (
+                          <Smartphone size={24} color={Colors.primary} />
+                        ) : themeMode === 'light' ? (
+                          <Sun size={24} color={Colors.warning} />
+                        ) : (
+                          <Moon size={24} color={Colors.info} />
+                        )}
+                      </View>
+                      <View style={styles.themeTextContainer}>
+                        <ThemedText style={styles.themeTitle}>Theme</ThemedText>
+                        <ThemedText style={styles.themeStatus}>
+                          {themeMode === 'auto'
+                            ? 'Auto (System)'
+                            : themeMode === 'light'
+                              ? 'Light'
+                              : 'Dark'}
+                        </ThemedText>
+                      </View>
+                    </View>
+                    <View style={styles.themeIndicator}>
+                      <ThemedText style={styles.tapToChange}>Tap to change</ThemedText>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              </ThemedView>
+            </ThemedView>
+          </ThemedView>
+
           {/* Security Section */}
           <ThemedView style={styles.section}>
             <ThemedText style={styles.sectionTitle}>Security</ThemedText>
@@ -621,6 +683,10 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   walletSection: {
+    paddingVertical: 12,
+    width: '100%',
+  },
+  themeSection: {
     paddingVertical: 12,
     width: '100%',
   },
@@ -838,5 +904,50 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.dirtyWhite,
     lineHeight: 18,
+  },
+  themeCard: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  themeCardContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  themeCardLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  themeIconContainer: {
+    marginRight: 12,
+  },
+  themeTextContainer: {
+    flex: 1,
+  },
+  themeTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.almostWhite,
+    marginBottom: 4,
+  },
+  themeStatus: {
+    fontSize: 14,
+    color: Colors.dirtyWhite,
+  },
+  themeIndicator: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: Colors.primary,
+    borderRadius: 20,
+  },
+  tapToChange: {
+    fontSize: 12,
+    color: Colors.white,
+    fontWeight: '500',
+  },
+  themeCardTouchable: {
+    width: '100%',
   },
 });

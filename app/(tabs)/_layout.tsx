@@ -5,6 +5,7 @@ import { Colors } from '@/constants/Colors';
 import { View, Platform, ToastAndroid } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { HapticTab } from '@/components/HapticTab';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 // Memoized tab icons to prevent unnecessary re-rendering
 const HomeIcon = React.memo(({ color }: { color: string }) => <Home size={24} color={color} />);
@@ -24,30 +25,42 @@ const IdentityIcon = React.memo(({ color }: { color: string }) => (
 ));
 
 // Memoized tab bar background to prevent unnecessary re-rendering
-const TabBarBackground = React.memo(() => (
-  <View
-    style={{
-      backgroundColor: '#000000',
-      height: '100%',
-      width: '100%',
-      position: 'absolute',
-    }}
-  />
-));
+const TabBarBackground = React.memo(() => {
+  const backgroundColor = useThemeColor({}, 'background');
+  return (
+    <View
+      style={{
+        backgroundColor,
+        height: '100%',
+        width: '100%',
+        position: 'absolute',
+      }}
+    />
+  );
+});
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
+  const tabBarBackgroundColor = useThemeColor({}, 'background');
+  const tabBarActiveTintColor = useThemeColor(
+    { light: Colors.primary, dark: Colors.almostWhite },
+    'text'
+  );
+  const tabBarInactiveTintColor = useThemeColor(
+    { light: Colors.gray600, dark: Colors.unselectedGray },
+    'text'
+  );
 
   // Memoize tab options to prevent recreation on every render
   const screenOptions = useMemo(
     () => ({
-      tabBarActiveTintColor: Colors.almostWhite,
-      tabBarInactiveTintColor: Colors.unselectedGray,
+      tabBarActiveTintColor,
+      tabBarInactiveTintColor,
       headerShown: false,
       tabBarStyle: {
         paddingTop: 16,
         alignItems: 'center' as const,
-        backgroundColor: '#000',
+        backgroundColor: tabBarBackgroundColor,
         height: Platform.OS === 'ios' ? 80 : 70,
         borderTopWidth: 0,
         paddingBottom: Platform.OS === 'ios' ? insets.bottom : 16,
@@ -66,7 +79,7 @@ export default function TabLayout() {
       // Use hardware acceleration where possible
       detachInactiveScreens: false,
     }),
-    [insets.bottom]
+    [insets.bottom, tabBarBackgroundColor, tabBarActiveTintColor, tabBarInactiveTintColor]
   );
 
   return (
