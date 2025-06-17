@@ -15,7 +15,21 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, User, Pencil, ChevronRight, Fingerprint, Shield } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  User,
+  Pencil,
+  ChevronRight,
+  Fingerprint,
+  Shield,
+  Wifi,
+  Wallet,
+  Smartphone,
+  AlertTriangle,
+  Trash2,
+  CheckCircle,
+  XCircle,
+} from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { useUserProfile } from '@/context/UserProfileContext';
@@ -49,7 +63,7 @@ export default function SettingsScreen() {
   const [biometricAvailable, setBiometricAvailable] = useState(false);
 
   // Get real NWC connection status
-  const { nwcConnectionStatus } = nostrService;
+  const { nwcConnectionStatus, nwcConnectionError, nwcWallet } = nostrService;
 
   // Initialize wallet connection status and app lock settings
   useEffect(() => {
@@ -244,23 +258,15 @@ export default function SettingsScreen() {
     );
   };
 
-  const handleWalletCardPress = () => {
+  const handleWalletPress = () => {
     router.push({
       pathname: '/wallet',
-      params: {
-        source: 'settings',
-      },
+      params: { source: 'settings' },
     });
   };
 
-  const handleNostrCardPress = () => {
-    // Navigate to nostr management page with proper source parameter
-    router.push({
-      pathname: '/relays',
-      params: {
-        source: 'settings',
-      },
-    });
+  const handleRelaysPress = () => {
+    router.push('/relays');
   };
 
   const handleExportMnemonic = () => {
@@ -331,6 +337,36 @@ export default function SettingsScreen() {
     }
   };
 
+  // Simple wallet status derivation
+  const getWalletStatus = () => {
+    if (!nwcWallet) return { connected: false, configured: false, text: 'Not configured' };
+    if (nwcConnectionStatus === null)
+      return { connected: false, configured: true, text: 'Connecting...' };
+    return {
+      connected: nwcConnectionStatus === true,
+      configured: true,
+      text: nwcConnectionStatus === true ? 'Connected' : 'Disconnected',
+    };
+  };
+
+  const walletStatus = getWalletStatus();
+
+  const getWalletIcon = () => {
+    if (!walletStatus.configured) return <AlertTriangle size={20} color={Colors.gray} />;
+    if (nwcConnectionStatus === null) return <CheckCircle size={20} color="#FFA500" />;
+    return walletStatus.connected ? (
+      <CheckCircle size={20} color={Colors.green} />
+    ) : (
+      <XCircle size={20} color="#FF4444" />
+    );
+  };
+
+  const getWalletStatusColor = () => {
+    if (!walletStatus.configured) return Colors.gray;
+    if (nwcConnectionStatus === null) return '#FFA500';
+    return walletStatus.connected ? Colors.green : '#FF4444';
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -385,189 +421,94 @@ export default function SettingsScreen() {
             />
           }
         >
-          {/* Profile Section */}
-          <ThemedView style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <ThemedText style={styles.sectionTitle}>Profile</ThemedText>
-            </View>
-            <ThemedView style={styles.profileSection}>
-              <TouchableOpacity
-                style={[
-                  styles.avatarContainer,
-                  !isProfileEditable && styles.avatarContainerDisabled,
-                ]}
-                onPress={handleAvatarPress}
-                disabled={!isProfileEditable}
-              >
-                {avatarUri ? (
-                  <Image source={{ uri: avatarUri }} style={styles.avatar} />
-                ) : (
-                  <View style={styles.avatarPlaceholder}>
-                    <User size={40} color={Colors.almostWhite} />
-                  </View>
-                )}
-                <View
-                  style={[
-                    styles.avatarEditBadge,
-                    !isProfileEditable && styles.avatarEditBadgeDisabled,
-                  ]}
-                >
-                  <Pencil size={12} color={Colors.almostWhite} />
-                </View>
-              </TouchableOpacity>
+          {/* Connection Settings */}
+          <View style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>Connection</ThemedText>
 
-              <View style={styles.usernameContainer}>
-                <TextInput
-                  style={[styles.usernameInput, !isProfileEditable && styles.usernameInputDisabled]}
-                  value={usernameInput}
-                  onChangeText={setUsernameInput}
-                  placeholder="username"
-                  placeholderTextColor={Colors.gray}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={isProfileEditable}
-                />
-                <ThemedText style={styles.usernameSuffix}>@getportal.cc</ThemedText>
+            {/* Relays */}
+            <TouchableOpacity style={styles.settingItem} onPress={handleRelaysPress}>
+              <View style={styles.settingIcon}>
+                <Wifi size={20} color={Colors.almostWhite} />
               </View>
+              <View style={styles.settingContent}>
+                <ThemedText style={styles.settingTitle}>Nostr Relays</ThemedText>
+                <ThemedText style={styles.settingSubtitle}>
+                  Manage your Nostr relay connections
+                </ThemedText>
+              </View>
+              <View style={styles.settingRight}>
+                <ThemedText style={styles.settingStatus}>Configure</ThemedText>
+              </View>
+            </TouchableOpacity>
 
-              <View style={styles.profileButtonsContainer}>
-                <TouchableOpacity
-                  style={[
-                    styles.saveButton,
-                    (!isProfileEditable || profileIsLoading) && styles.saveButtonDisabled,
-                  ]}
-                  onPress={handleSaveProfile}
-                  disabled={!isProfileEditable || profileIsLoading}
-                >
-                  <ThemedText
-                    style={[
-                      styles.saveButtonText,
-                      (!isProfileEditable || profileIsLoading) && styles.saveButtonTextDisabled,
-                    ]}
-                  >
-                    {profileIsLoading ? 'Saving...' : 'Save Profile'}
+            {/* Wallet */}
+            <TouchableOpacity style={styles.settingItem} onPress={handleWalletPress}>
+              <View style={styles.settingIcon}>
+                <Wallet size={20} color={Colors.almostWhite} />
+              </View>
+              <View style={styles.settingContent}>
+                <ThemedText style={styles.settingTitle}>NWC Wallet</ThemedText>
+                <ThemedText style={styles.settingSubtitle}>
+                  Nostr Wallet Connect configuration
+                </ThemedText>
+              </View>
+              <View style={styles.settingRight}>
+                <View style={styles.statusContainer}>
+                  {getWalletIcon()}
+                  <ThemedText style={[styles.settingStatus, { color: getWalletStatusColor() }]}>
+                    {walletStatus.text}
                   </ThemedText>
-                </TouchableOpacity>
+                </View>
               </View>
-            </ThemedView>
-          </ThemedView>
+            </TouchableOpacity>
 
-          {/* Wallet Section */}
-          <ThemedView style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Wallet</ThemedText>
-            <ThemedView style={styles.walletSection}>
-              <TouchableOpacity
-                style={styles.card}
-                onPress={handleWalletCardPress}
-                activeOpacity={0.7}
-              >
-                <View style={styles.cardContent}>
-                  <View style={styles.cardLeft}>
-                    <ThemedText style={styles.cardTitle}>Wallet Connect</ThemedText>
-                    <ThemedText style={styles.cardStatus}>
-                      {isWalletConnectedState ? 'Connected' : 'Not connected'}
-                    </ThemedText>
-                  </View>
-                  <ChevronRight size={24} color={Colors.almostWhite} />
-                </View>
-              </TouchableOpacity>
-            </ThemedView>
-          </ThemedView>
-
-          {/* Nostr Section */}
-          <ThemedView style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Relays</ThemedText>
-            <ThemedView style={styles.walletSection}>
-              <TouchableOpacity
-                style={styles.card}
-                onPress={handleNostrCardPress}
-                activeOpacity={0.7}
-              >
-                <View style={styles.cardContent}>
-                  <View style={styles.cardLeft}>
-                    <ThemedText style={styles.cardTitle}>Nostr relays</ThemedText>
-                    <ThemedText style={styles.cardStatus}>
-                      Manage the Nostr relays your app connects to
-                    </ThemedText>
-                  </View>
-                  <ChevronRight size={24} color={Colors.almostWhite} />
-                </View>
-              </TouchableOpacity>
-            </ThemedView>
-          </ThemedView>
-
-          {/* Security Section */}
-          <ThemedView style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Security</ThemedText>
-            <ThemedView style={styles.securitySection}>
-              <View style={styles.appLockOption}>
-                <View style={styles.appLockLeft}>
-                  <View style={styles.appLockIconContainer}>
-                    <Shield size={24} color={Colors.almostWhite} />
-                  </View>
-                  <View style={styles.appLockTextContainer}>
-                    <ThemedText style={styles.appLockTitle}>App Lock</ThemedText>
-                    <ThemedText style={styles.appLockDescription}>
-                      {biometricAvailable
-                        ? 'Require biometric authentication to open the app'
-                        : 'Biometric authentication not available'}
-                    </ThemedText>
-                  </View>
-                </View>
-                <Switch
-                  value={appLockEnabled}
-                  onValueChange={handleToggleAppLock}
-                  disabled={!biometricAvailable}
-                  trackColor={{
-                    false: Colors.gray,
-                    true: Colors.green,
-                  }}
-                  thumbColor={appLockEnabled ? Colors.almostWhite : Colors.dirtyWhite}
-                  ios_backgroundColor={Colors.gray}
-                />
+            {walletStatus.configured && !walletStatus.connected && nwcConnectionError && (
+              <View style={styles.errorContainer}>
+                <ThemedText style={styles.errorText}>{nwcConnectionError}</ThemedText>
               </View>
-            </ThemedView>
-          </ThemedView>
+            )}
+          </View>
 
-          {/* Export Section */}
-          <ThemedView style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Export</ThemedText>
-            <ThemedView style={styles.exportSection}>
-              <TouchableOpacity style={styles.exportButton} onPress={handleExportMnemonic}>
-                <View style={styles.exportButtonContent}>
-                  <ThemedText style={styles.exportButtonText}>Export Mnemonic</ThemedText>
-                  <View style={styles.fingerprintIcon}>
-                    <Fingerprint size={20} color={Colors.almostWhite} />
-                  </View>
-                </View>
-              </TouchableOpacity>
-            </ThemedView>
-            <ThemedView style={styles.exportSection}>
-              <TouchableOpacity style={styles.exportButton} onPress={handleExportAppData}>
-                <View style={styles.exportButtonContent}>
-                  <ThemedText style={styles.exportButtonText}>Export App Data</ThemedText>
-                  <View style={styles.fingerprintIcon}>
-                    <Fingerprint size={20} color={Colors.almostWhite} />
-                  </View>
-                </View>
-              </TouchableOpacity>
-            </ThemedView>
-          </ThemedView>
+          {/* Device Settings */}
+          <View style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>Device</ThemedText>
 
-          {/* Extra Section */}
-          <ThemedView style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Extra</ThemedText>
-            <ThemedView style={styles.extraSection}>
-              <TouchableOpacity style={styles.clearDataButton} onPress={handleClearAppData}>
-                <View style={styles.clearDataButtonContent}>
-                  <ThemedText style={styles.clearDataButtonText}>Reset App</ThemedText>
-                  <View style={styles.fingerprintIcon}>
-                    <Fingerprint size={20} color="white" />
-                  </View>
-                </View>
-              </TouchableOpacity>
-            </ThemedView>
-          </ThemedView>
+            {/* App Lock */}
+            <View style={styles.settingItem}>
+              <View style={styles.settingIcon}>
+                <Smartphone size={20} color={Colors.almostWhite} />
+              </View>
+              <View style={styles.settingContent}>
+                <ThemedText style={styles.settingTitle}>App Lock</ThemedText>
+                <ThemedText style={styles.settingSubtitle}>
+                  Biometric authentication for app access
+                </ThemedText>
+              </View>
+              <View style={styles.settingRight}>
+                <ThemedText style={styles.settingStatus}>Coming Soon</ThemedText>
+              </View>
+            </View>
+          </View>
+
+          {/* Data Management */}
+          <View style={styles.section}>
+            <ThemedText style={styles.sectionTitle}>Data</ThemedText>
+
+            {/* Clear All Data */}
+            <TouchableOpacity style={styles.settingItem} onPress={handleClearAppData}>
+              <View style={styles.settingIcon}>
+                <Trash2 size={20} color="#FF4444" />
+              </View>
+              <View style={styles.settingContent}>
+                <ThemedText style={[styles.settingTitle, { color: '#FF4444' }]}>
+                  Clear All Data
+                </ThemedText>
+                <ThemedText style={styles.settingSubtitle}>
+                  Remove all stored data and reset the app
+                </ThemedText>
+              </View>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </ThemedView>
     </SafeAreaView>
@@ -843,5 +784,51 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.dirtyWhite,
     lineHeight: 18,
+  },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.gray,
+  },
+  settingIcon: {
+    marginRight: 16,
+  },
+  settingContent: {
+    flex: 1,
+  },
+  settingTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.almostWhite,
+    marginBottom: 4,
+  },
+  settingSubtitle: {
+    fontSize: 14,
+    color: Colors.dirtyWhite,
+  },
+  settingRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  settingStatus: {
+    fontSize: 14,
+    color: Colors.dirtyWhite,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  errorContainer: {
+    padding: 16,
+    backgroundColor: '#FF4444',
+    borderRadius: 8,
+    marginTop: 16,
+  },
+  errorText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });

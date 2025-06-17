@@ -332,13 +332,9 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
 
   // Connect wallet when walletUrl changes
   useEffect(() => {
-    if (!isInitialized) {
-      return;
-    }
+    if (!isInitialized) return;
 
     if (!walletUrl) {
-      // Clear wallet and connection status when wallet URL is removed
-      console.log('Wallet URL cleared, disconnecting wallet');
       setNwcWallet(null);
       setNwcConnectionStatus(null);
       setNwcConnectionError(null);
@@ -347,31 +343,9 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
 
     const connectWallet = async () => {
       try {
-        console.log('Connecting to wallet with URL');
         const wallet = new Nwc(walletUrl);
         setNwcWallet(wallet);
-        console.log('Wallet connected successfully');
-
-        // Immediately refresh NWC connection status after connecting (similar to relay updates)
-        setTimeout(async () => {
-          try {
-            const status = await wallet.connectionStatus();
-            const isConnected = status !== null && status !== undefined;
-            setNwcConnectionStatus(isConnected);
-            if (!isConnected) {
-              setNwcConnectionError('Unable to connect to wallet service');
-            } else {
-              setNwcConnectionError(null);
-            }
-            console.log('Initial NWC wallet connection status:', isConnected);
-          } catch (error) {
-            console.error('Error checking initial NWC connection status:', error);
-            setNwcConnectionStatus(false);
-            setNwcConnectionError('Failed to verify wallet connection');
-          }
-        }, 1000); // Small delay to allow wallet to initialize
       } catch (error) {
-        console.error('Failed to connect wallet:', error);
         setNwcWallet(null);
         setNwcConnectionStatus(null);
         setNwcConnectionError('Failed to connect to wallet');
@@ -546,94 +520,26 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   const refreshNwcConnectionStatus = useCallback(async () => {
     if (nwcWallet) {
       try {
-        console.log('Checking NWC wallet connection status...');
-
-        // Clear previous error
-        setNwcConnectionError(null);
-
-        // Add timeout to connectionStatus call to detect unreachable/invalid URLs
+        // Simple timeout wrapper
         const timeoutPromise = new Promise<any>((_, reject) => {
-          setTimeout(() => reject(new Error('Connection timeout')), 10000); // 10 second timeout
+          setTimeout(() => reject(new Error('Connection timeout')), 8000);
         });
 
         const status: any = await Promise.race([nwcWallet.connectionStatus(), timeoutPromise]);
 
-        console.log('NWC wallet raw status response:', status);
-        console.log('NWC wallet status type:', typeof status);
-        console.log('NWC wallet status instanceof Map:', status instanceof Map);
-
-        if (status instanceof Map) {
-          console.log('NWC status Map size:', status.size);
-          console.log('NWC status Map entries:', Array.from(status.entries()));
-        }
-
-        // For now, use a more permissive approach - if we get any response without timeout, consider it connected
-        // We can refine this based on the actual response format we see in logs
-        let isConnected = false;
-
-        if (status !== null && status !== undefined) {
-          // If status is a Map and has entries, consider it connected
-          if (status instanceof Map) {
-            isConnected = status.size > 0;
-          }
-          // If status is a boolean
-          else if (typeof status === 'boolean') {
-            isConnected = status;
-          }
-          // If status is a number, consider >0 or any positive response as connected
-          else if (typeof status === 'number') {
-            isConnected = status >= 0; // More permissive - even 0 might mean "connected but no activity"
-          }
-          // If status is a string, be more permissive
-          else if (typeof status === 'string') {
-            // Only consider it disconnected if it explicitly says so
-            const statusStr = status.toLowerCase();
-            isConnected =
-              !statusStr.includes('disconnected') &&
-              !statusStr.includes('error') &&
-              !statusStr.includes('failed');
-          }
-          // If status is an object, check for explicit failure indicators
-          else if (typeof status === 'object') {
-            const hasExplicitFailure =
-              (status as any).connected === false ||
-              (status as any).success === false ||
-              (status as any).status === 'disconnected' ||
-              (status as any).error;
-            isConnected = !hasExplicitFailure;
-          }
-          // Default: if we get any response without timeout, consider it connected
-          else {
-            isConnected = true;
-          }
-        }
+        // Simple interpretation: if we get a response without timeout, it's connected
+        const isConnected = status !== null && status !== undefined;
 
         setNwcConnectionStatus(isConnected);
-        if (!isConnected) {
-          setNwcConnectionError('Unable to connect to wallet service');
-        }
-        console.log(
-          'NWC wallet connection status determined as:',
-          isConnected ? 'Connected' : 'Disconnected'
-        );
+        setNwcConnectionError(isConnected ? null : 'Unable to connect to wallet service');
       } catch (error) {
-        console.error('NostrService: Error fetching NWC connection status:', error);
-
-        // Determine if this is a timeout, network error, or invalid URL
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        console.log('NWC connection error message:', errorMessage);
-
-        let userFriendlyError = 'Connection failed';
-        if (errorMessage.includes('timeout')) {
-          userFriendlyError = 'Connection timeout - wallet may be unreachable';
-        } else if (errorMessage.includes('network')) {
-          userFriendlyError = 'Network error - check your connection';
-        } else if (errorMessage.includes('connection')) {
-          userFriendlyError = 'Unable to connect to wallet service';
-        }
-
+        // Connection failed
         setNwcConnectionStatus(false);
-        setNwcConnectionError(userFriendlyError);
+        setNwcConnectionError(
+          error instanceof Error && error.message.includes('timeout')
+            ? 'Connection timeout - wallet may be unreachable'
+            : 'Connection failed'
+        );
       }
     } else {
       setNwcConnectionStatus(null);
@@ -644,9 +550,18 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   // Initial connection status fetch (but no periodic refresh here)
   useEffect(() => {
     refreshConnectionStatus();
-    // Also refresh NWC status when wallet changes
-    refreshNwcConnectionStatus();
-  }, [refreshConnectionStatus, refreshNwcConnectionStatus]);
+  }, [refreshConnectionStatus]);
+
+  // Check NWC status when wallet changes
+  useEffect(() => {
+    if (nwcWallet) {
+      // Small delay to allow wallet to initialize
+      const timer = setTimeout(() => refreshNwcConnectionStatus(), 1000);
+      return () => clearTimeout(timer);
+    } else {
+      refreshNwcConnectionStatus();
+    }
+  }, [nwcWallet, refreshNwcConnectionStatus]);
 
   // Context value
   const contextValue: NostrServiceContextType = {
