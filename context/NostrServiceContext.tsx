@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { AppState } from 'react-native';
 import {
   AuthChallengeEvent,
   AuthInitUrl,
@@ -139,6 +140,7 @@ interface NostrServiceContextType {
   // Connection management functions
   getConnectionSummary: () => ConnectionSummary;
   refreshConnectionStatus: () => Promise<void>;
+  forceReconnect: () => Promise<void>;
   startPeriodicMonitoring: () => void;
   stopPeriodicMonitoring: () => void;
   connectionStatus: any; // Keep for backwards compatibility, but prefer getConnectionSummary
@@ -683,12 +685,63 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     }
   }, [nwcWallet]);
 
+  // Force reconnect function to trigger immediate reconnection
+  const forceReconnect = useCallback(async () => {
+    if (!portalApp) {
+      console.warn('PortalApp not initialized, cannot force reconnect');
+      return;
+    }
+
+    console.log('🔄 Force reconnecting to relays...');
+
+    try {
+      // Note: The portal-app-lib might not have a direct "reconnect" method,
+      // but we can trigger multiple rapid status checks to encourage reconnection
+      await Promise.all([refreshConnectionStatus(), refreshNwcConnectionStatus()]);
+
+      // Trigger another check after a short delay
+      setTimeout(async () => {
+        await refreshConnectionStatus();
+      }, 1000);
+
+      console.log('✅ Force reconnect initiated');
+    } catch (error) {
+      console.error('❌ Error during force reconnect:', error);
+    }
+  }, [portalApp, refreshConnectionStatus, refreshNwcConnectionStatus]);
+
   // Initial connection status fetch (but no periodic refresh here)
   useEffect(() => {
     refreshConnectionStatus();
     // Also refresh NWC status when wallet changes
     refreshNwcConnectionStatus();
   }, [refreshConnectionStatus, refreshNwcConnectionStatus]);
+
+  // Add AppState listener to handle background/foreground transitions
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: string) => {
+      console.log('🔄 AppState changed to:', nextAppState);
+
+      if (nextAppState === 'active' && portalApp) {
+        console.log('📱 App became active - refreshing connection status immediately');
+        // Trigger immediate connection status refresh when app becomes active
+        refreshConnectionStatus();
+        refreshNwcConnectionStatus();
+
+        // Also trigger force reconnect for more aggressive reconnection
+        setTimeout(() => {
+          forceReconnect();
+        }, 100);
+      }
+    };
+
+    // Subscribe to app state changes
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [portalApp, refreshConnectionStatus, refreshNwcConnectionStatus, forceReconnect]);
 
   // Context value
   const contextValue: NostrServiceContextType = {
@@ -714,6 +767,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     nwcConnectionStatus,
     nwcConnectionError,
     refreshNwcConnectionStatus,
+    forceReconnect,
   };
 
   return (

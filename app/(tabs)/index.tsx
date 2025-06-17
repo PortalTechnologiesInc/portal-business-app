@@ -80,20 +80,29 @@ export default function Home() {
     useCallback(() => {
       console.log('🏠 Entered Homepage: Starting connection monitoring');
 
-      // Initial fetch when entering homepage
-      nostrService.refreshConnectionStatus();
-      nostrService.refreshNwcConnectionStatus();
+      // Initial fetch when entering homepage - trigger immediately with shorter delay
+      const initialCheck = () => {
+        nostrService.refreshConnectionStatus();
+        nostrService.refreshNwcConnectionStatus();
+      };
 
-      // Set up periodic refresh for connection status
+      // Immediate check
+      initialCheck();
+
+      // Also check again after a brief delay to catch any quick state changes
+      const quickRecheck = setTimeout(initialCheck, 500);
+
+      // Set up periodic refresh for connection status with shorter interval
       const interval = setInterval(() => {
         if (isMounted.current) {
           nostrService.refreshConnectionStatus();
           nostrService.refreshNwcConnectionStatus();
         }
-      }, 5000); // Check every 5 seconds
+      }, 2000); // Check every 2 seconds (reduced from 5 seconds)
 
       return () => {
         console.log('🏠 Leaved Homepage: Stopping connection monitoring');
+        clearTimeout(quickRecheck);
         clearInterval(interval);
       };
     }, [nostrService.refreshConnectionStatus, nostrService.refreshNwcConnectionStatus])
