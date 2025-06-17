@@ -27,6 +27,23 @@ interface ConnectionStatusIndicatorProps {
   size?: number;
 }
 
+// Pure function for wallet status derivation - better performance and testability
+const deriveWalletStatus = (
+  nwcWallet: any,
+  nwcConnectionStatus: boolean | null,
+  isWalletConnectedState: boolean
+) => {
+  const isConfigured = Boolean(nwcWallet);
+  if (!isConfigured) {
+    return { configured: false, connected: false };
+  }
+
+  // Use real NWC connection status if available, otherwise fall back to wallet connected state
+  const realWalletStatus =
+    nwcConnectionStatus !== null ? nwcConnectionStatus : isWalletConnectedState;
+  return { configured: true, connected: realWalletStatus };
+};
+
 export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
   size = 12,
 }) => {
@@ -35,16 +52,13 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
   const [scaleValue] = useState(new Animated.Value(1));
   const [opacityValue] = useState(new Animated.Value(1));
   const [isOnline, setIsOnline] = useState(true);
-  const [isWalletConfigured, setIsWalletConfigured] = useState(false);
   const [showRelayDetails, setShowRelayDetails] = useState(false);
 
   const {
-    isInitialized: nostrInitialized,
     isWalletConnected: isWalletConnectedState,
     nwcWallet,
     getConnectionSummary,
     nwcConnectionStatus,
-    refreshNwcConnectionStatus,
     nwcConnectionError,
   } = useNostrService();
 
@@ -53,89 +67,53 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
     const unsubscribe = NetInfo.addEventListener(state => {
       setIsOnline(state.isConnected ?? false);
     });
-
     return () => unsubscribe();
   }, []);
 
-  // Check wallet configuration
-  useEffect(() => {
-    const checkWalletConfiguration = async () => {
-      try {
-        const configured = await isWalletConnected();
-        setIsWalletConfigured(configured);
-      } catch (error) {
-        console.error('Error checking wallet configuration:', error);
-        setIsWalletConfigured(false);
-      }
-    };
-
-    checkWalletConfiguration();
-
-    // Subscribe to wallet URL changes to update configuration status immediately
-    const subscription = walletUrlEvents.addListener('walletUrlChanged', async newUrl => {
-      setIsWalletConfigured(Boolean(newUrl?.trim()));
-    });
-
-    return () => subscription.remove();
-  }, []);
-
-  // Get relay details from context
+  // Memoized relay details from context
   const relayDetails: ConnectionSummary = useMemo(() => {
     return getConnectionSummary();
   }, [getConnectionSummary]);
 
-  // Calculate overall status
+  // Memoized wallet status - eliminates redundant effect and state
+  const walletStatus = useMemo(() => {
+    return deriveWalletStatus(nwcWallet, nwcConnectionStatus, isWalletConnectedState);
+  }, [nwcWallet, nwcConnectionStatus, isWalletConnectedState]);
+
+  // Optimized overall status calculation with fewer dependencies
   const overallConnectionStatus: ConnectionStatus = useMemo(() => {
-    // If device is offline, status is disconnected (red)
     if (!isOnline) return 'disconnected';
 
-    // When online, check relay status and wallet (only if wallet is configured)
-    const statusChecks = [];
-
-    // Check relay status
-    statusChecks.push(relayDetails.allRelaysConnected);
+    const statusChecks = [relayDetails.allRelaysConnected];
 
     // Only include wallet status if a wallet is actually configured
-    if (isWalletConfigured) {
-      // Use real NWC connection status if available, otherwise fall back to wallet connected state
-      const realWalletStatus =
-        nwcConnectionStatus !== null ? nwcConnectionStatus : isWalletConnectedState;
-      statusChecks.push(realWalletStatus);
+    if (walletStatus.configured) {
+      statusChecks.push(walletStatus.connected);
     }
 
     const connectedCount = statusChecks.filter(Boolean).length;
     const totalChecks = statusChecks.length;
 
-    // Green only when ALL systems are connected
     if (connectedCount === totalChecks && totalChecks > 0) return 'connected';
-
-    // Orange for any partial connection (some relays have issues OR wallet issues)
-    // This means if even 1 relay is not "Connected", we show orange
     return 'partial';
-  }, [
-    isOnline,
-    relayDetails.allRelaysConnected,
-    isWalletConnectedState,
-    isWalletConfigured,
-    nwcConnectionStatus,
-  ]);
+  }, [isOnline, relayDetails.allRelaysConnected, walletStatus]);
 
-  // Get status color
+  // Pure function for status color - better performance
   const getStatusColor = (status: ConnectionStatus) => {
     switch (status) {
       case 'connected':
         return Colors.green;
       case 'partial':
-        return '#FFA500'; // Orange
+        return '#FFA500';
       case 'disconnected':
-        return '#FF4444'; // Red
+        return '#FF4444';
       default:
         return Colors.gray;
     }
   };
 
-  // Pulse animation for non-green status
-  React.useEffect(() => {
+  // Optimized animation effect with proper cleanup
+  useEffect(() => {
     if (overallConnectionStatus !== 'connected') {
       const pulse = Animated.loop(
         Animated.sequence([
@@ -158,7 +136,7 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
     }
   }, [overallConnectionStatus, opacityValue]);
 
-  // Handle press with animation
+  // Optimized press handler with better animation sequence
   const handlePress = () => {
     Animated.sequence([
       Animated.timing(scaleValue, {
@@ -176,6 +154,7 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
     setModalVisible(true);
   };
 
+  // Pure helper functions - better testability
   const getConnectionIcon = (isConnected: boolean) => {
     return isConnected ? (
       <CheckCircle size={20} color={Colors.green} />
@@ -193,9 +172,7 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
     setModalVisible(false);
     router.push({
       pathname: '/wallet',
-      params: {
-        source: 'modal',
-      },
+      params: { source: 'modal' },
     });
   };
 
@@ -404,14 +381,10 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
                       <Wallet
                         size={20}
                         color={
-                          isWalletConfigured
-                            ? nwcConnectionStatus !== null
-                              ? nwcConnectionStatus
-                                ? Colors.green
-                                : '#FF4444'
-                              : isWalletConnectedState
-                                ? Colors.green
-                                : '#FF4444'
+                          walletStatus.configured
+                            ? walletStatus.connected
+                              ? Colors.green
+                              : '#FF4444'
                             : Colors.gray
                         }
                       />
@@ -419,25 +392,19 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
                     <View style={styles.detailContent}>
                       <ThemedText style={styles.detailLabel}>Wallet Connection</ThemedText>
                       <ThemedText style={styles.detailValue}>
-                        {isWalletConfigured
-                          ? nwcConnectionStatus !== null
-                            ? getStatusText(nwcConnectionStatus)
-                            : getStatusText(isWalletConnectedState)
+                        {walletStatus.configured
+                          ? getStatusText(walletStatus.connected)
                           : 'Not configured'}
                       </ThemedText>
                       <ThemedText style={styles.detailDescription}>
-                        {isWalletConfigured
+                        {walletStatus.configured
                           ? nwcConnectionError || 'NWC wallet configured'
                           : 'No wallet configured in settings'}
                       </ThemedText>
                     </View>
                     <View style={styles.detailRight}>
-                      {isWalletConfigured ? (
-                        nwcConnectionStatus !== null ? (
-                          getConnectionIcon(nwcConnectionStatus)
-                        ) : (
-                          getConnectionIcon(isWalletConnectedState)
-                        )
+                      {walletStatus.configured ? (
+                        getConnectionIcon(walletStatus.connected)
                       ) : (
                         <AlertCircle size={20} color={Colors.gray} />
                       )}
