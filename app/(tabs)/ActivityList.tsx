@@ -9,10 +9,21 @@ import type { ActivityWithDates } from '@/services/database';
 import { useActivities } from '@/context/ActivitiesContext';
 import { ActivityRow } from '@/components/ActivityRow';
 import { router } from 'expo-router';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 const ItemList: React.FC = () => {
   const { activities, isDbReady, refreshData } = useActivities();
   const [filter, setFilter] = useState<ActivityTypeEnum | null>(null);
+
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const surfaceSecondaryColor = useThemeColor({}, 'surfaceSecondary');
+  const primaryTextColor = useThemeColor({}, 'textPrimary');
+  const secondaryTextColor = useThemeColor({}, 'textSecondary');
+  const buttonSecondaryColor = useThemeColor({}, 'buttonSecondary');
+  const buttonPrimaryColor = useThemeColor({}, 'buttonPrimary');
+  const buttonSecondaryTextColor = useThemeColor({}, 'buttonSecondaryText');
+  const buttonPrimaryTextColor = useThemeColor({}, 'buttonPrimaryText');
 
   // Refresh data when component mounts or becomes focused
   useEffect(() => {
@@ -49,11 +60,11 @@ const ItemList: React.FC = () => {
   // Memoize section header to prevent recreation on every render
   const renderSectionHeader = useCallback(
     ({ section: { title } }: { section: { title: string } }) => (
-      <ThemedText type="subtitle" style={styles.date}>
+      <ThemedText type="subtitle" style={[styles.date, { color: secondaryTextColor }]}>
         {title}
       </ThemedText>
     ),
-    []
+    [secondaryTextColor]
   );
 
   // Memoize filter handlers
@@ -79,7 +90,10 @@ const ItemList: React.FC = () => {
       <>
         {renderSectionHeader({ section: { title: item.title } })}
         {item.data.map((activity: ActivityWithDates) => (
-          <TouchableOpacity onPress={() => handleLinkPress(activity)} key={`${activity.id}-${activity.date.getTime()}`}>
+          <TouchableOpacity
+            onPress={() => handleLinkPress(activity)}
+            key={`${activity.id}-${activity.date.getTime()}`}
+          >
             <React.Fragment>
               <ActivityRow activity={activity} />
             </React.Fragment>
@@ -93,17 +107,13 @@ const ItemList: React.FC = () => {
   // Show a database initialization message when database isn't ready
   if (!isDbReady) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
         <ThemedView style={styles.container}>
-          <ThemedText type="title" darkColor={Colors.almostWhite}>
+          <ThemedText type="title" style={{ color: primaryTextColor }}>
             Your activities
           </ThemedText>
-          <View style={styles.emptyContainer}>
-            <ThemedText
-              style={styles.emptyText}
-              darkColor={Colors.dirtyWhite}
-              lightColor={Colors.darkGray}
-            >
+          <View style={[styles.emptyContainer, { backgroundColor: surfaceSecondaryColor }]}>
+            <ThemedText style={[styles.emptyText, { color: secondaryTextColor }]}>
               Activities will be available after setup is complete
             </ThemedText>
           </View>
@@ -113,46 +123,74 @@ const ItemList: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
       <ThemedView style={styles.container}>
-        <ThemedText type="title" darkColor={Colors.almostWhite}>
+        <ThemedText type="title" style={{ color: primaryTextColor }}>
           Your activities
         </ThemedText>
         <View style={styles.filterContainer}>
           <TouchableOpacity
-            style={[styles.filterChip, filter === null && styles.filterChipActive]}
+            style={[
+              styles.filterChip,
+              { backgroundColor: filter === null ? buttonPrimaryColor : buttonSecondaryColor },
+            ]}
             onPress={handleFilterAll}
           >
             <ThemedText
               type="subtitle"
-              style={[styles.filterChipText, filter === null && styles.filterChipTextActive]}
+              style={[
+                styles.filterChipText,
+                { color: filter === null ? buttonPrimaryTextColor : buttonSecondaryTextColor },
+              ]}
             >
               All
             </ThemedText>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.filterChip, filter === ActivityTypeEnum.Pay && styles.filterChipActive]}
+            style={[
+              styles.filterChip,
+              {
+                backgroundColor:
+                  filter === ActivityTypeEnum.Pay ? buttonPrimaryColor : buttonSecondaryColor,
+              },
+            ]}
             onPress={handleFilterPay}
           >
             <ThemedText
               type="subtitle"
               style={[
                 styles.filterChipText,
-                filter === ActivityTypeEnum.Pay && styles.filterChipTextActive,
+                {
+                  color:
+                    filter === ActivityTypeEnum.Pay
+                      ? buttonPrimaryTextColor
+                      : buttonSecondaryTextColor,
+                },
               ]}
             >
               Pay
             </ThemedText>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.filterChip, filter === ActivityTypeEnum.Auth && styles.filterChipActive]}
+            style={[
+              styles.filterChip,
+              {
+                backgroundColor:
+                  filter === ActivityTypeEnum.Auth ? buttonPrimaryColor : buttonSecondaryColor,
+              },
+            ]}
             onPress={handleFilterAuth}
           >
             <ThemedText
               type="subtitle"
               style={[
                 styles.filterChipText,
-                filter === ActivityTypeEnum.Auth && styles.filterChipTextActive,
+                {
+                  color:
+                    filter === ActivityTypeEnum.Auth
+                      ? buttonPrimaryTextColor
+                      : buttonSecondaryTextColor,
+                },
               ]}
             >
               Login
@@ -161,12 +199,8 @@ const ItemList: React.FC = () => {
         </View>
 
         {listData.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <ThemedText
-              style={styles.emptyText}
-              darkColor={Colors.dirtyWhite}
-              lightColor={Colors.darkGray}
-            >
+          <View style={[styles.emptyContainer, { backgroundColor: surfaceSecondaryColor }]}>
+            <ThemedText style={[styles.emptyText, { color: secondaryTextColor }]}>
               No activities found
             </ThemedText>
           </View>
@@ -192,14 +226,14 @@ const ItemList: React.FC = () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.darkerGray,
+    // backgroundColor handled by theme
   },
   container: {
     width: '100%',
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 16,
-    backgroundColor: Colors.darkerGray,
+    // backgroundColor handled by theme
   },
   filterContainer: {
     paddingVertical: 16,
@@ -207,29 +241,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  filterChipActive: {
-    backgroundColor: Colors.dirtyWhite,
-  },
-  filterChipText: {
-    color: Colors.darkerGray,
-  },
-  filterChipTextActive: {
-    color: Colors.darkGray,
-  },
   filterChip: {
-    backgroundColor: Colors.darkGray,
-    paddingVertical: 4,
+    // backgroundColor handled by theme
+    paddingVertical: 8,
     paddingHorizontal: 16,
     marginEnd: 8,
-    borderRadius: 8,
+    borderRadius: 20,
+  },
+  filterChipText: {
+    // color handled by theme
+    fontSize: 14,
+    fontWeight: '500',
   },
   date: {
     marginBottom: 6,
-    color: Colors.dirtyWhite,
+    // color handled by theme
   },
   emptyContainer: {
     flex: 1,
-    backgroundColor: '#1E1E1E',
+    // backgroundColor handled by theme
     borderRadius: 20,
     padding: 20,
     alignItems: 'center',
@@ -239,6 +269,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     textAlign: 'center',
+    // color handled by theme
   },
 });
 

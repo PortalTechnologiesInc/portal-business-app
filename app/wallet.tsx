@@ -30,6 +30,7 @@ import {
   walletUrlEvents,
 } from '@/services/SecureStorageService';
 import { useNostrService } from '@/context/NostrServiceContext';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 // NWC connection states
 type NwcConnectionState = 'none' | 'connecting' | 'connected' | 'disconnected' | 'error';
@@ -107,6 +108,23 @@ export default function WalletManagementScreen() {
   const handledUrlRef = useRef<string | null>(null);
 
   const { nwcConnectionStatus, nwcConnectionError, refreshNwcConnectionStatus } = useNostrService();
+
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const cardBackgroundColor = useThemeColor({}, 'cardBackground');
+  const surfaceSecondaryColor = useThemeColor({}, 'surfaceSecondary');
+  const primaryTextColor = useThemeColor({}, 'textPrimary');
+  const secondaryTextColor = useThemeColor({}, 'textSecondary');
+  const inputBackgroundColor = useThemeColor({}, 'inputBackground');
+  const inputBorderColor = useThemeColor({}, 'inputBorder');
+  const inputPlaceholderColor = useThemeColor({}, 'inputPlaceholder');
+  const buttonPrimaryColor = useThemeColor({}, 'buttonPrimary');
+  const buttonPrimaryTextColor = useThemeColor({}, 'buttonPrimaryText');
+  const statusConnectedColor = useThemeColor({}, 'statusConnected');
+  const statusConnectingColor = useThemeColor({}, 'statusConnecting');
+  const statusErrorColor = useThemeColor({}, 'statusError');
+  const shadowColor = useThemeColor({}, 'shadowColor');
+  const modalBackgroundColor = useThemeColor({}, 'modalBackground');
 
   // Memoized connection state derivation - eliminates complex state updates
   const connectionState = useMemo(() => {
@@ -322,23 +340,19 @@ export default function WalletManagementScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <ThemedView style={styles.container}>
-        <ThemedView style={styles.header}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
+      <ThemedView style={[styles.container, { backgroundColor }]}>
+        <ThemedView style={[styles.header, { backgroundColor }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft size={20} color={Colors.almostWhite} />
+            <ArrowLeft size={20} color={primaryTextColor} />
           </TouchableOpacity>
-          <ThemedText
-            style={styles.headerText}
-            lightColor={Colors.darkGray}
-            darkColor={Colors.almostWhite}
-          >
+          <ThemedText style={[styles.headerText, { color: primaryTextColor }]}>
             Wallet Management
           </ThemedText>
         </ThemedView>
 
         <ThemedView style={styles.content}>
-          <ThemedText style={styles.description}>
+          <ThemedText style={[styles.description, { color: secondaryTextColor }]}>
             Connect your wallet by entering the wallet URL below or scanning a QR code. This allows
             you to manage your crypto assets and make seamless transactions within the app.
           </ThemedText>
@@ -347,58 +361,74 @@ export default function WalletManagementScreen() {
           <View style={styles.walletUrlContainer}>
             <View style={styles.walletUrlInputContainer}>
               <TextInput
-                style={styles.walletUrlInput}
+                style={[
+                  styles.walletUrlInput,
+                  { color: primaryTextColor, borderBottomColor: inputBorderColor },
+                ]}
                 value={inputValue}
                 onChangeText={setInputValue}
                 placeholder="Enter wallet URL"
-                placeholderTextColor={Colors.gray}
+                placeholderTextColor={inputPlaceholderColor}
                 onFocus={() => setIsEditing(true)}
               />
               <TouchableOpacity style={styles.walletUrlAction} onPress={handleIconPress}>
                 {!isEditing ? (
-                  <Pencil size={20} color={Colors.almostWhite} />
+                  <Pencil size={20} color={primaryTextColor} />
                 ) : hasChanged ? (
-                  <Check size={20} color={Colors.green} />
+                  <Check size={20} color={statusConnectedColor} />
                 ) : (
-                  <X size={20} color={Colors.almostWhite} />
+                  <X size={20} color={primaryTextColor} />
                 )}
               </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.qrCodeButton} onPress={handleScanQrCode}>
-              <QrCode size={24} color={Colors.almostWhite} />
+            <TouchableOpacity
+              style={[styles.qrCodeButton, { backgroundColor: cardBackgroundColor }]}
+              onPress={handleScanQrCode}
+            >
+              <QrCode size={24} color={primaryTextColor} />
             </TouchableOpacity>
           </View>
 
           {/* Connection Status Display */}
-          <View style={styles.connectionStatusContainer}>
+          <View
+            style={[styles.connectionStatusContainer, { backgroundColor: cardBackgroundColor }]}
+          >
             <View style={styles.connectionStatusRow}>
-              <View style={styles.connectionStatusIcon}>
+              <View
+                style={[styles.connectionStatusIcon, { backgroundColor: surfaceSecondaryColor }]}
+              >
                 {connectionState.state === 'connected' && (
-                  <CheckCircle size={20} color={Colors.green} />
+                  <CheckCircle size={20} color={statusConnectedColor} />
                 )}
                 {connectionState.state === 'connecting' && (
                   <View style={styles.loadingSpinner}>
-                    <CheckCircle size={20} color="#FFA500" />
+                    <CheckCircle size={20} color={statusConnectingColor} />
                   </View>
                 )}
-                {connectionState.state === 'disconnected' && <XCircle size={20} color="#FF4444" />}
-                {connectionState.state === 'error' && <AlertTriangle size={20} color="#FF4444" />}
+                {connectionState.state === 'disconnected' && (
+                  <XCircle size={20} color={statusErrorColor} />
+                )}
+                {connectionState.state === 'error' && (
+                  <AlertTriangle size={20} color={statusErrorColor} />
+                )}
                 {connectionState.state === 'none' && (
-                  <AlertTriangle size={20} color={Colors.gray} />
+                  <AlertTriangle size={20} color={secondaryTextColor} />
                 )}
               </View>
               <View style={styles.connectionStatusContent}>
-                <ThemedText style={styles.connectionStatusLabel}>Wallet Connection</ThemedText>
+                <ThemedText style={[styles.connectionStatusLabel, { color: primaryTextColor }]}>
+                  Wallet Connection
+                </ThemedText>
                 <ThemedText
                   style={[
                     styles.connectionStatusValue,
-                    connectionState.state === 'connected' && { color: Colors.green },
-                    connectionState.state === 'connecting' && { color: '#FFA500' },
+                    connectionState.state === 'connected' && { color: statusConnectedColor },
+                    connectionState.state === 'connecting' && { color: statusConnectingColor },
                     (connectionState.state === 'disconnected' ||
                       connectionState.state === 'error') && {
-                      color: '#FF4444',
+                      color: statusErrorColor,
                     },
-                    connectionState.state === 'none' && { color: Colors.gray },
+                    connectionState.state === 'none' && { color: secondaryTextColor },
                   ]}
                 >
                   {connectionState.state === 'connected' && 'Connected'}
@@ -408,12 +438,14 @@ export default function WalletManagementScreen() {
                   {connectionState.state === 'none' && 'No Wallet Configured'}
                 </ThemedText>
                 {connectionState.error && (
-                  <ThemedText style={styles.connectionStatusError}>
+                  <ThemedText style={[styles.connectionStatusError, { color: statusErrorColor }]}>
                     {connectionState.error}
                   </ThemedText>
                 )}
                 {connectionState.state === 'none' && (
-                  <ThemedText style={styles.connectionStatusDescription}>
+                  <ThemedText
+                    style={[styles.connectionStatusDescription, { color: secondaryTextColor }]}
+                  >
                     Enter a wallet URL above to connect your wallet
                   </ThemedText>
                 )}
@@ -464,11 +496,11 @@ export default function WalletManagementScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#000000',
+    // backgroundColor handled by theme
   },
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    // backgroundColor handled by theme
   },
   header: {
     flexDirection: 'row',
@@ -476,7 +508,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 20,
-    backgroundColor: '#000000',
+    // backgroundColor handled by theme
   },
   backButton: {
     marginRight: 15,
@@ -491,7 +523,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   description: {
-    color: Colors.almostWhite,
+    // color handled by theme
     fontSize: 16,
     lineHeight: 24,
     marginBottom: 24,
@@ -506,12 +538,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.gray,
+    // borderBottomColor handled by theme
     marginRight: 12,
   },
   walletUrlInput: {
     flex: 1,
-    color: Colors.almostWhite,
+    // color handled by theme
     fontSize: 16,
     paddingVertical: 8,
   },
@@ -519,7 +551,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   qrCodeButton: {
-    backgroundColor: Colors.darkGray,
+    // backgroundColor handled by theme
     width: 48,
     height: 48,
     borderRadius: 24,
@@ -535,16 +567,23 @@ const styles = StyleSheet.create({
     color: Colors.almostWhite,
   },
   connectionStatusContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 8,
+    // backgroundColor handled by theme
+    borderRadius: 20,
     padding: 16,
     marginTop: 16,
+    minHeight: 80,
   },
   connectionStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   connectionStatusIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    // backgroundColor handled by theme
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 12,
   },
   loadingSpinner: {

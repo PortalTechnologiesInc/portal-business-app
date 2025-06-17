@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSQLiteContext } from 'expo-sqlite';
 import { DatabaseService } from '@/services/database';
 import Dropdown from 'react-native-input-select';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 import relayListFile from '../assets/RelayListist.json';
 import { TSelectedItem } from 'react-native-input-select/lib/typescript/src/types/index.types';
@@ -43,6 +44,17 @@ export default function NostrRelayManagementScreen() {
   const [customRelayTextFieldValue, setCustomRelayTextFieldValue] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [activeRelaysList, setActiveRelaysList] = useState<string[]>([]); // Fix: Make this a state variable
+
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const surfaceSecondaryColor = useThemeColor({}, 'surfaceSecondary');
+  const primaryTextColor = useThemeColor({}, 'textPrimary');
+  const secondaryTextColor = useThemeColor({}, 'textSecondary');
+  const inputBackgroundColor = useThemeColor({}, 'inputBackground');
+  const inputBorderColor = useThemeColor({}, 'inputBorder');
+  const inputPlaceholderColor = useThemeColor({}, 'inputPlaceholder');
+  const buttonSecondaryColor = useThemeColor({}, 'buttonSecondary');
+  const buttonSecondaryTextColor = useThemeColor({}, 'buttonSecondaryText');
 
   const nostrService = useNostrService();
   const sqliteContext = useSQLiteContext();
@@ -137,19 +149,15 @@ export default function NostrRelayManagementScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
         <ThemedView style={styles.container}>
           <ThemedView style={styles.header}>
-            <ThemedText
-              style={styles.headerText}
-              lightColor={Colors.darkGray}
-              darkColor={Colors.almostWhite}
-            >
+            <ThemedText style={[styles.headerText, { color: primaryTextColor }]}>
               Nostr Management
             </ThemedText>
           </ThemedView>
           <ThemedView style={styles.content}>
-            <ThemedText>Loading...</ThemedText>
+            <ThemedText style={{ color: primaryTextColor }}>Loading...</ThemedText>
           </ThemedView>
         </ThemedView>
       </SafeAreaView>
@@ -157,105 +165,102 @@ export default function NostrRelayManagementScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
       <ThemedView style={styles.container}>
         <ThemedView style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft size={20} color={Colors.almostWhite} />
+            <ArrowLeft size={20} color={primaryTextColor} />
           </TouchableOpacity>
-          <ThemedText
-            style={styles.headerText}
-            lightColor={Colors.darkGray}
-            darkColor={Colors.almostWhite}
-          >
+          <ThemedText style={[styles.headerText, { color: primaryTextColor }]}>
             Relay Management
           </ThemedText>
         </ThemedView>
 
         <ThemedView style={styles.content}>
-          <ThemedText style={styles.description}>
+          <ThemedText style={[styles.description, { color: secondaryTextColor }]}>
             Choose the Nostr relays you want to use for Nostr Wallet Connect. Relays help broadcast
             and receive transactions—pick reliable ones for better speed and connectivity. You can
             add custom relays or use trusted defaults.
           </ThemedText>
 
           {/* Add Relays Input */}
-          <ThemedText
-            style={styles.titleText}
-            lightColor={Colors.darkGray}
-            darkColor={Colors.almostWhite}
-          >
+          <ThemedText style={[styles.titleText, { color: primaryTextColor }]}>
             Popular relays:
           </ThemedText>
-          <Dropdown
-            modalControls={{
-              modalOptionsContainerStyle: {
-                padding: 10,
-                backgroundColor: Colors.almostWhite,
-              },
-            }}
-            listComponentStyles={{
-              itemSeparatorStyle: {
-                opacity: 0,
-                margin: 2,
-              },
-            }}
-            dropdownStyle={{
-              paddingEnd: 50,
-              backgroundColor: Colors.almostWhite,
-            }}
-            searchControls={{
-              textInputStyle: {
-                backgroundColor: Colors.almostWhite,
-              },
-            }}
-            checkboxControls={{
-              checkboxStyle: {
-                borderRadius: 30,
-              },
-              checkboxComponent: <View />,
-              checkboxUnselectedColor: Colors.almostWhite,
-            }}
-            isMultiple
-            isSearchable
-            placeholder="Select an option..."
-            options={everyPopularRelayList.map(relay => {
-              return { label: relay, value: relay };
-            })}
-            selectedValue={selectedRelays as TSelectedItem[]}
-            onValueChange={value => {
-              setSelectedRelays(value as string[]);
-            }}
-            primaryColor={Colors.darkGray}
-          />
+          <View style={[styles.dropdownContainer, { backgroundColor: surfaceSecondaryColor }]}>
+            <Dropdown
+              modalControls={{
+                modalOptionsContainerStyle: {
+                  padding: 10,
+                  backgroundColor: surfaceSecondaryColor,
+                },
+              }}
+              listComponentStyles={{
+                itemSeparatorStyle: {
+                  opacity: 0,
+                  margin: 2,
+                },
+              }}
+              dropdownStyle={{
+                paddingEnd: 50,
+                backgroundColor: surfaceSecondaryColor,
+                borderColor: inputBorderColor,
+              }}
+              searchControls={{
+                textInputStyle: {
+                  backgroundColor: inputBackgroundColor,
+                  color: primaryTextColor,
+                },
+              }}
+              checkboxControls={{
+                checkboxStyle: {
+                  borderRadius: 30,
+                },
+                checkboxComponent: <View />,
+                checkboxUnselectedColor: inputBorderColor,
+              }}
+              isMultiple
+              isSearchable
+              placeholder="Select an option..."
+              options={everyPopularRelayList.map(relay => {
+                return { label: relay, value: relay };
+              })}
+              selectedValue={selectedRelays as TSelectedItem[]}
+              onValueChange={value => {
+                setSelectedRelays(value as string[]);
+              }}
+              primaryColor={buttonSecondaryColor}
+            />
+          </View>
 
           {/* Custom Relays Input */}
-          <ThemedText
-            style={styles.titleText}
-            lightColor={Colors.darkGray}
-            darkColor={Colors.almostWhite}
-          >
+          <ThemedText style={[styles.titleText, { color: primaryTextColor }]}>
             Custom relays:
           </ThemedText>
           <View style={styles.relaysUrlContainer}>
-            <View style={styles.relaysUrlInputContainer}>
+            <View style={[styles.relaysUrlInputContainer, { borderBottomColor: inputBorderColor }]}>
               <TextInput
-                style={styles.relaysUrlInput}
+                style={[styles.relaysUrlInput, { color: primaryTextColor }]}
                 value={customRelayTextFieldValue}
                 multiline
                 numberOfLines={9}
                 onChangeText={setCustomRelayTextFieldValue}
                 placeholder="Enter a list of relays url separated by a newline char"
-                placeholderTextColor={Colors.gray}
+                placeholderTextColor={inputPlaceholderColor}
               />
               <TouchableOpacity style={styles.textFieldAction} onPress={handleClearInput}>
-                <X size={20} color={Colors.almostWhite} />
+                <X size={20} color={primaryTextColor} />
               </TouchableOpacity>
             </View>
           </View>
 
-          <TouchableOpacity style={styles.saveButton} onPress={updateRelays}>
-            <ThemedText style={styles.saveButtonText}>Save relays</ThemedText>
+          <TouchableOpacity
+            style={[styles.saveButton, { backgroundColor: buttonSecondaryColor }]}
+            onPress={updateRelays}
+          >
+            <ThemedText style={[styles.saveButtonText, { color: buttonSecondaryTextColor }]}>
+              Save relays
+            </ThemedText>
           </TouchableOpacity>
         </ThemedView>
       </ThemedView>
@@ -266,11 +271,11 @@ export default function NostrRelayManagementScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#000000',
+    // backgroundColor handled by theme
   },
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    // backgroundColor handled by theme
   },
   header: {
     flexDirection: 'row',
@@ -278,7 +283,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 20,
-    backgroundColor: '#000000',
+    // backgroundColor handled by theme
   },
   backButton: {
     marginRight: 15,
@@ -286,10 +291,14 @@ const styles = StyleSheet.create({
   headerText: {
     fontSize: 20,
     fontWeight: 'bold',
+    // color handled by theme
   },
   titleText: {
     fontSize: 18,
     fontWeight: 'bold',
+    marginTop: 20,
+    marginBottom: 12,
+    // color handled by theme
   },
   content: {
     flex: 1,
@@ -297,10 +306,16 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   description: {
-    color: Colors.almostWhite,
+    // color handled by theme
     fontSize: 16,
     lineHeight: 24,
     marginBottom: 24,
+  },
+  dropdownContainer: {
+    // backgroundColor handled by theme
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 8,
   },
   relaysUrlContainer: {
     flexDirection: 'row',
@@ -312,12 +327,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.gray,
+    // borderBottomColor handled by theme
     marginRight: 12,
   },
   relaysUrlInput: {
     flex: 1,
-    color: Colors.almostWhite,
+    // color handled by theme
     fontSize: 16,
     paddingVertical: 8,
   },
@@ -325,9 +340,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   saveButton: {
-    backgroundColor: Colors.primaryDark,
+    // backgroundColor handled by theme
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     width: '100%',
     maxWidth: 500,
     alignItems: 'center',
@@ -335,7 +350,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   saveButtonText: {
-    color: Colors.almostWhite,
+    // color handled by theme
     fontSize: 16,
     fontWeight: 'bold',
   },

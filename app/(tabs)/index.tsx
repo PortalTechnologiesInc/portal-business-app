@@ -39,19 +39,10 @@ export default function Home() {
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
-  const cardBackgroundColor = useThemeColor(
-    { light: Colors.secondaryWhite, dark: '#1E1E1E' },
-    'cardBackground'
-  );
-  const primaryTextColor = useThemeColor(
-    { light: Colors.gray900, dark: Colors.almostWhite },
-    'text'
-  );
-  const secondaryTextColor = useThemeColor(
-    { light: Colors.gray600, dark: Colors.dirtyWhite },
-    'text'
-  );
-  const iconColor = useThemeColor({ light: Colors.gray700, dark: Colors.almostWhite }, 'text');
+  const cardBackgroundColor = useThemeColor({}, 'cardBackground');
+  const primaryTextColor = useThemeColor({}, 'textPrimary');
+  const secondaryTextColor = useThemeColor({}, 'textSecondary');
+  const iconColor = useThemeColor({}, 'icon');
 
   // This would come from a real user context in the future
   const [userPublicKey, setUserPublicKey] = useState('unknown pubkey');
@@ -406,7 +397,7 @@ export default function Home() {
   if (isLoading || isFirstLaunch === null) {
     return (
       <View style={[styles.loaderContainer, { backgroundColor }]}>
-        <ActivityIndicator size="large" color={Colors.green} />
+        <ActivityIndicator size="large" color={useThemeColor({}, 'statusConnected')} />
       </View>
     );
   }
@@ -420,8 +411,8 @@ export default function Home() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[Colors.green]}
-              tintColor={Colors.green}
+              colors={[useThemeColor({}, 'statusConnected')]}
+              tintColor={useThemeColor({}, 'statusConnected')}
               title="Pull to refresh profile"
               titleColor={secondaryTextColor}
             />
@@ -432,9 +423,7 @@ export default function Home() {
               <TouchableOpacity style={styles.headerLeft} onPress={handleSettingsNavigate}>
                 <View style={styles.welcomeRow}>
                   <ThemedText
-                    style={styles.welcomeText}
-                    lightColor={Colors.gray700}
-                    darkColor={Colors.dirtyWhite}
+                    style={[styles.welcomeText, { color: secondaryTextColor }]}
                     numberOfLines={1}
                     ellipsizeMode="middle"
                   >
@@ -444,12 +433,22 @@ export default function Home() {
                 </View>
                 <View style={styles.userInfoContainer}>
                   {/* Profile Avatar */}
-                  <View style={styles.avatarContainer}>
+                  <View
+                    style={[
+                      styles.avatarContainer,
+                      { backgroundColor: useThemeColor({}, 'surfaceSecondary') },
+                    ]}
+                  >
                     {avatarUri ? (
                       <Image source={{ uri: avatarUri }} style={styles.avatar} />
                     ) : (
-                      <View style={styles.avatarPlaceholder}>
-                        <User size={18} color={iconColor} />
+                      <View
+                        style={[
+                          styles.avatarPlaceholder,
+                          { backgroundColor: useThemeColor({}, 'buttonPrimary') },
+                        ]}
+                      >
+                        <User size={18} color={useThemeColor({}, 'buttonPrimaryText')} />
                       </View>
                     )}
                   </View>
@@ -479,8 +478,14 @@ export default function Home() {
                       {truncatedPublicKey}
                     </ThemedText>
                   </View>
-                  <TouchableOpacity style={styles.qrButton} onPress={handleQrScan}>
-                    <QrCode size={40} color={iconColor} />
+                  <TouchableOpacity
+                    style={[
+                      styles.qrButton,
+                      { backgroundColor: useThemeColor({}, 'buttonPrimary') },
+                    ]}
+                    onPress={handleQrScan}
+                  >
+                    <QrCode size={40} color={useThemeColor({}, 'buttonPrimaryText')} />
                   </TouchableOpacity>
                 </View>
               </TouchableOpacity>
@@ -508,7 +513,11 @@ export default function Home() {
                 </ThemedText>
 
                 <View style={styles.illustrationContainer}>
-                  <QrCode size={80} color={Colors.green} style={styles.illustration} />
+                  <QrCode
+                    size={80}
+                    color={useThemeColor({}, 'statusConnected')}
+                    style={styles.illustration}
+                  />
                 </View>
 
                 <ThemedText
@@ -520,16 +529,24 @@ export default function Home() {
                 </ThemedText>
 
                 <View style={styles.scanQrContainer}>
-                  <TouchableOpacity style={styles.scanQrButton} onPress={handleQrScan}>
-                    <QrCode size={24} color={Colors.white} style={styles.qrIcon} />
+                  <TouchableOpacity
+                    style={[
+                      styles.scanQrButton,
+                      { backgroundColor: useThemeColor({}, 'buttonSuccess') },
+                    ]}
+                    onPress={handleQrScan}
+                  >
+                    <QrCode
+                      size={24}
+                      color={useThemeColor({}, 'buttonSuccessText')}
+                      style={styles.qrIcon}
+                    />
                     <ThemedText
-                      style={styles.scanQrText}
-                      darkColor={Colors.almostWhite}
-                      lightColor={Colors.white}
+                      style={[styles.scanQrText, { color: useThemeColor({}, 'buttonSuccessText') }]}
                     >
                       Scan QR Code
                     </ThemedText>
-                    <ArrowRight size={18} color={Colors.white} />
+                    <ArrowRight size={18} color={useThemeColor({}, 'buttonSuccessText')} />
                   </TouchableOpacity>
                 </View>
 
@@ -601,7 +618,7 @@ const styles = StyleSheet.create({
     width: 55,
     height: 55,
     borderRadius: 32,
-    backgroundColor: Colors.gray,
+    // backgroundColor handled by theme
     marginRight: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -616,7 +633,7 @@ const styles = StyleSheet.create({
     width: 55,
     height: 55,
     borderRadius: 32,
-    backgroundColor: Colors.primaryDark,
+    // backgroundColor handled by theme (buttonPrimary)
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -637,7 +654,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 50,
-    backgroundColor: Colors.primaryDark,
+    // backgroundColor handled by theme (buttonPrimary)
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 12,
@@ -683,7 +700,7 @@ const styles = StyleSheet.create({
   },
   scanQrButton: {
     flexDirection: 'row',
-    backgroundColor: Colors.green,
+    // backgroundColor handled by theme (buttonSuccess)
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 30,
@@ -700,8 +717,8 @@ const styles = StyleSheet.create({
   },
   button: {
     fontSize: 16,
-    backgroundColor: 'white',
-    color: 'black',
+    // backgroundColor handled by theme (surfacePrimary)
+    // color handled by theme (textPrimary)
     padding: 15,
     borderRadius: 8,
     marginVertical: 10,

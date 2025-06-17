@@ -11,6 +11,7 @@ import { ThemedText } from './ThemedText';
 import { Colors } from '@/constants/Colors';
 import { useEffect, useState } from 'react';
 import { serviceNameCache } from '@/utils/serviceNameCache';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 80; // Adjusted for proper padding
@@ -37,6 +38,12 @@ export const PendingRequestsList: React.FC = () => {
   const nostrService = useNostrService();
   const [combinedData, setCombinedData] = useState<PendingRequest[]>([]);
   const [isLoadingServiceNames, setIsLoadingServiceNames] = useState(false);
+
+  // Theme colors
+  const cardBackgroundColor = useThemeColor({}, 'cardBackground');
+  const primaryTextColor = useThemeColor({}, 'textPrimary');
+  const secondaryTextColor = useThemeColor({}, 'textSecondary');
+  const statusConnectedColor = useThemeColor({}, 'statusConnected');
 
   useEffect(() => {
     // Add a loading state while fetching service names
@@ -139,18 +146,15 @@ export const PendingRequestsList: React.FC = () => {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <ThemedText
-            type="title"
-            style={styles.title}
-            darkColor={Colors.almostWhite}
-            lightColor={Colors.almostWhite}
-          >
+          <ThemedText type="title" style={[styles.title, { color: primaryTextColor }]}>
             Pending Requests
           </ThemedText>
         </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.almostWhite} />
-          <ThemedText style={styles.loadingText}>Loading requests...</ThemedText>
+        <View style={[styles.loadingContainer, { backgroundColor: cardBackgroundColor }]}>
+          <ActivityIndicator size="large" color={statusConnectedColor} />
+          <ThemedText style={[styles.loadingText, { color: secondaryTextColor }]}>
+            Loading requests...
+          </ThemedText>
         </View>
       </View>
     );
@@ -160,23 +164,14 @@ export const PendingRequestsList: React.FC = () => {
     <View style={styles.container}>
       {/* Title section - similar to other homepage sections */}
       <View style={styles.header}>
-        <ThemedText
-          type="title"
-          style={styles.title}
-          darkColor={Colors.almostWhite}
-          lightColor={Colors.almostWhite}
-        >
+        <ThemedText type="title" style={[styles.title, { color: primaryTextColor }]}>
           Pending Requests
         </ThemedText>
       </View>
 
       {combinedData.length === 0 && !isLoadingRequest && !requestFailed ? (
-        <View style={styles.emptyContainer}>
-          <ThemedText
-            style={styles.emptyText}
-            darkColor={Colors.dirtyWhite}
-            lightColor={Colors.darkGray}
-          >
+        <View style={[styles.emptyContainer, { backgroundColor: cardBackgroundColor }]}>
+          <ThemedText style={[styles.emptyText, { color: secondaryTextColor }]}>
             No pending requests
           </ThemedText>
         </View>
@@ -250,7 +245,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   emptyContainer: {
-    backgroundColor: '#1E1E1E',
+    // backgroundColor handled by theme
     borderRadius: 20,
     padding: 20,
     alignItems: 'center',
@@ -258,7 +253,7 @@ const styles = StyleSheet.create({
     minHeight: 100,
   },
   loadingContainer: {
-    backgroundColor: '#1E1E1E',
+    // backgroundColor handled by theme
     borderRadius: 20,
     padding: 20,
     alignItems: 'center',
@@ -270,7 +265,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 10,
     textAlign: 'center',
-    color: Colors.dirtyWhite, // Use the same color as empty text
+    // color handled by theme
   },
   emptyText: {
     fontSize: 16,

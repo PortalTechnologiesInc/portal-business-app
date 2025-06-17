@@ -34,6 +34,7 @@ import { authenticateForSensitiveAction } from '@/services/BiometricAuthService'
 import { isAppLockEnabled, setAppLockEnabled, canEnableAppLock } from '@/services/AppLockService';
 import { useAppLock } from '@/context/AppLockContext';
 import { useTheme, ThemeMode } from '@/context/ThemeContext';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -50,6 +51,22 @@ export default function SettingsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [appLockEnabled, setAppLockEnabledState] = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
+
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const cardBackgroundColor = useThemeColor({}, 'cardBackground');
+  const primaryTextColor = useThemeColor({}, 'textPrimary');
+  const secondaryTextColor = useThemeColor({}, 'textSecondary');
+  const inputBackgroundColor = useThemeColor({}, 'inputBackground');
+  const inputBorderColor = useThemeColor({}, 'inputBorder');
+  const inputPlaceholderColor = useThemeColor({}, 'inputPlaceholder');
+  const buttonPrimaryColor = useThemeColor({}, 'buttonPrimary');
+  const buttonSecondaryColor = useThemeColor({}, 'buttonSecondary');
+  const buttonDangerColor = useThemeColor({}, 'buttonDanger');
+  const buttonPrimaryTextColor = useThemeColor({}, 'buttonPrimaryText');
+  const buttonSecondaryTextColor = useThemeColor({}, 'buttonSecondaryText');
+  const buttonDangerTextColor = useThemeColor({}, 'buttonDangerText');
+  const statusConnectedColor = useThemeColor({}, 'statusConnected');
 
   // Get real NWC connection status
   const { nwcConnectionStatus } = nostrService;
@@ -345,22 +362,22 @@ export default function SettingsScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: backgroundColor }]} edges={['top']}>
         <ThemedView style={styles.container}>
           <ThemedView style={styles.header}>
             <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-              <ArrowLeft size={20} color={Colors.almostWhite} />
+              <ArrowLeft size={20} color={primaryTextColor} />
             </TouchableOpacity>
             <ThemedText
               style={styles.headerText}
-              lightColor={Colors.darkGray}
-              darkColor={Colors.almostWhite}
+              lightColor={primaryTextColor}
+              darkColor={primaryTextColor}
             >
               Settings
             </ThemedText>
           </ThemedView>
           <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-            <ThemedText>Loading...</ThemedText>
+            <ThemedText style={{ color: primaryTextColor }}>Loading...</ThemedText>
           </ScrollView>
         </ThemedView>
       </SafeAreaView>
@@ -368,16 +385,16 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: backgroundColor }]} edges={['top']}>
       <ThemedView style={styles.container}>
         <ThemedView style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <ArrowLeft size={20} color={Colors.almostWhite} />
+            <ArrowLeft size={20} color={primaryTextColor} />
           </TouchableOpacity>
           <ThemedText
             style={styles.headerText}
-            lightColor={Colors.darkGray}
-            darkColor={Colors.almostWhite}
+            lightColor={primaryTextColor}
+            darkColor={primaryTextColor}
           >
             Settings
           </ThemedText>
@@ -390,17 +407,19 @@ export default function SettingsScreen() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[Colors.green]}
-              tintColor={Colors.green}
+              colors={[statusConnectedColor]}
+              tintColor={statusConnectedColor}
               title="Pull to refresh profile"
-              titleColor={Colors.almostWhite}
+              titleColor={primaryTextColor}
             />
           }
         >
           {/* Profile Section */}
           <ThemedView style={styles.section}>
             <View style={styles.sectionHeader}>
-              <ThemedText style={styles.sectionTitle}>Profile</ThemedText>
+              <ThemedText style={[styles.sectionTitle, { color: primaryTextColor }]}>
+                Profile
+              </ThemedText>
             </View>
             <ThemedView style={styles.profileSection}>
               <TouchableOpacity
@@ -412,41 +431,60 @@ export default function SettingsScreen() {
                 disabled={!isProfileEditable}
               >
                 {avatarUri ? (
-                  <Image source={{ uri: avatarUri }} style={styles.avatar} />
+                  <Image
+                    source={{ uri: avatarUri }}
+                    style={[styles.avatar, { borderColor: inputBorderColor }]}
+                  />
                 ) : (
-                  <View style={styles.avatarPlaceholder}>
-                    <User size={40} color={Colors.almostWhite} />
+                  <View
+                    style={[
+                      styles.avatarPlaceholder,
+                      { backgroundColor: cardBackgroundColor, borderColor: inputBorderColor },
+                    ]}
+                  >
+                    <User size={40} color={primaryTextColor} />
                   </View>
                 )}
                 <View
                   style={[
                     styles.avatarEditBadge,
+                    { backgroundColor: cardBackgroundColor, borderColor: inputBorderColor },
                     !isProfileEditable && styles.avatarEditBadgeDisabled,
                   ]}
                 >
-                  <Pencil size={12} color={Colors.almostWhite} />
+                  <Pencil size={12} color={primaryTextColor} />
                 </View>
               </TouchableOpacity>
 
-              <View style={styles.usernameContainer}>
+              <View style={[styles.usernameContainer, { borderBottomColor: inputBorderColor }]}>
                 <TextInput
-                  style={[styles.usernameInput, !isProfileEditable && styles.usernameInputDisabled]}
+                  style={[
+                    styles.usernameInput,
+                    { color: primaryTextColor },
+                    !isProfileEditable && styles.usernameInputDisabled,
+                  ]}
                   value={usernameInput}
                   onChangeText={setUsernameInput}
                   placeholder="username"
-                  placeholderTextColor={Colors.gray}
+                  placeholderTextColor={inputPlaceholderColor}
                   autoCapitalize="none"
                   autoCorrect={false}
                   editable={isProfileEditable}
                 />
-                <ThemedText style={styles.usernameSuffix}>@getportal.cc</ThemedText>
+                <ThemedText style={[styles.usernameSuffix, { color: secondaryTextColor }]}>
+                  @getportal.cc
+                </ThemedText>
               </View>
 
               <View style={styles.profileButtonsContainer}>
                 <TouchableOpacity
                   style={[
                     styles.saveButton,
-                    (!isProfileEditable || profileIsLoading) && styles.saveButtonDisabled,
+                    { backgroundColor: buttonPrimaryColor },
+                    (!isProfileEditable || profileIsLoading) && {
+                      backgroundColor: inputBorderColor,
+                      opacity: 0.5,
+                    },
                   ]}
                   onPress={handleSaveProfile}
                   disabled={!isProfileEditable || profileIsLoading}
@@ -454,7 +492,8 @@ export default function SettingsScreen() {
                   <ThemedText
                     style={[
                       styles.saveButtonText,
-                      (!isProfileEditable || profileIsLoading) && styles.saveButtonTextDisabled,
+                      { color: buttonPrimaryTextColor },
+                      (!isProfileEditable || profileIsLoading) && { color: secondaryTextColor },
                     ]}
                   >
                     {profileIsLoading ? 'Saving...' : 'Save Profile'}
@@ -466,21 +505,25 @@ export default function SettingsScreen() {
 
           {/* Wallet Section */}
           <ThemedView style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Wallet</ThemedText>
+            <ThemedText style={[styles.sectionTitle, { color: primaryTextColor }]}>
+              Wallet
+            </ThemedText>
             <ThemedView style={styles.walletSection}>
               <TouchableOpacity
-                style={styles.card}
+                style={[styles.card, { backgroundColor: cardBackgroundColor }]}
                 onPress={handleWalletCardPress}
                 activeOpacity={0.7}
               >
                 <View style={styles.cardContent}>
                   <View style={styles.cardLeft}>
-                    <ThemedText style={styles.cardTitle}>Wallet Connect</ThemedText>
-                    <ThemedText style={styles.cardStatus}>
+                    <ThemedText style={[styles.cardTitle, { color: primaryTextColor }]}>
+                      Wallet Connect
+                    </ThemedText>
+                    <ThemedText style={[styles.cardStatus, { color: secondaryTextColor }]}>
                       {isWalletConnectedState ? 'Connected' : 'Not connected'}
                     </ThemedText>
                   </View>
-                  <ChevronRight size={24} color={Colors.almostWhite} />
+                  <ChevronRight size={24} color={secondaryTextColor} />
                 </View>
               </TouchableOpacity>
             </ThemedView>
@@ -488,21 +531,25 @@ export default function SettingsScreen() {
 
           {/* Nostr Section */}
           <ThemedView style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Relays</ThemedText>
+            <ThemedText style={[styles.sectionTitle, { color: primaryTextColor }]}>
+              Relays
+            </ThemedText>
             <ThemedView style={styles.walletSection}>
               <TouchableOpacity
-                style={styles.card}
+                style={[styles.card, { backgroundColor: cardBackgroundColor }]}
                 onPress={handleNostrCardPress}
                 activeOpacity={0.7}
               >
                 <View style={styles.cardContent}>
                   <View style={styles.cardLeft}>
-                    <ThemedText style={styles.cardTitle}>Nostr relays</ThemedText>
-                    <ThemedText style={styles.cardStatus}>
+                    <ThemedText style={[styles.cardTitle, { color: primaryTextColor }]}>
+                      Nostr relays
+                    </ThemedText>
+                    <ThemedText style={[styles.cardStatus, { color: secondaryTextColor }]}>
                       Manage the Nostr relays your app connects to
                     </ThemedText>
                   </View>
-                  <ChevronRight size={24} color={Colors.almostWhite} />
+                  <ChevronRight size={24} color={secondaryTextColor} />
                 </View>
               </TouchableOpacity>
             </ThemedView>
@@ -510,13 +557,11 @@ export default function SettingsScreen() {
 
           {/* Theme Section */}
           <ThemedView style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Appearance</ThemedText>
+            <ThemedText style={[styles.sectionTitle, { color: primaryTextColor }]}>
+              Appearance
+            </ThemedText>
             <ThemedView style={styles.themeSection}>
-              <ThemedView
-                style={styles.themeCard}
-                lightColor={Colors.secondaryWhite}
-                darkColor={Colors.darkGray}
-              >
+              <ThemedView style={[styles.themeCard, { backgroundColor: cardBackgroundColor }]}>
                 <TouchableOpacity
                   onPress={handleThemeChange}
                   activeOpacity={0.7}
@@ -526,16 +571,18 @@ export default function SettingsScreen() {
                     <View style={styles.themeCardLeft}>
                       <View style={styles.themeIconContainer}>
                         {themeMode === 'auto' ? (
-                          <Smartphone size={24} color={Colors.primary} />
+                          <Smartphone size={24} color={buttonPrimaryColor} />
                         ) : themeMode === 'light' ? (
-                          <Sun size={24} color={Colors.warning} />
+                          <Sun size={24} color={statusConnectedColor} />
                         ) : (
-                          <Moon size={24} color={Colors.info} />
+                          <Moon size={24} color={buttonPrimaryColor} />
                         )}
                       </View>
                       <View style={styles.themeTextContainer}>
-                        <ThemedText style={styles.themeTitle}>Theme</ThemedText>
-                        <ThemedText style={styles.themeStatus}>
+                        <ThemedText style={[styles.themeTitle, { color: primaryTextColor }]}>
+                          Theme
+                        </ThemedText>
+                        <ThemedText style={[styles.themeStatus, { color: secondaryTextColor }]}>
                           {themeMode === 'auto'
                             ? 'Auto (System)'
                             : themeMode === 'light'
@@ -544,8 +591,10 @@ export default function SettingsScreen() {
                         </ThemedText>
                       </View>
                     </View>
-                    <View style={styles.themeIndicator}>
-                      <ThemedText style={styles.tapToChange}>Tap to change</ThemedText>
+                    <View style={[styles.themeIndicator, { backgroundColor: buttonPrimaryColor }]}>
+                      <ThemedText style={[styles.tapToChange, { color: buttonPrimaryTextColor }]}>
+                        Tap to change
+                      </ThemedText>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -555,16 +604,20 @@ export default function SettingsScreen() {
 
           {/* Security Section */}
           <ThemedView style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Security</ThemedText>
+            <ThemedText style={[styles.sectionTitle, { color: primaryTextColor }]}>
+              Security
+            </ThemedText>
             <ThemedView style={styles.securitySection}>
-              <View style={styles.appLockOption}>
+              <View style={[styles.appLockOption, { backgroundColor: cardBackgroundColor }]}>
                 <View style={styles.appLockLeft}>
                   <View style={styles.appLockIconContainer}>
-                    <Shield size={24} color={Colors.almostWhite} />
+                    <Shield size={24} color={primaryTextColor} />
                   </View>
                   <View style={styles.appLockTextContainer}>
-                    <ThemedText style={styles.appLockTitle}>App Lock</ThemedText>
-                    <ThemedText style={styles.appLockDescription}>
+                    <ThemedText style={[styles.appLockTitle, { color: primaryTextColor }]}>
+                      App Lock
+                    </ThemedText>
+                    <ThemedText style={[styles.appLockDescription, { color: secondaryTextColor }]}>
                       {biometricAvailable
                         ? 'Require biometric authentication to open the app'
                         : 'Biometric authentication not available'}
@@ -576,11 +629,11 @@ export default function SettingsScreen() {
                   onValueChange={handleToggleAppLock}
                   disabled={!biometricAvailable}
                   trackColor={{
-                    false: Colors.gray,
-                    true: Colors.green,
+                    false: inputBorderColor,
+                    true: buttonPrimaryColor,
                   }}
-                  thumbColor={appLockEnabled ? Colors.almostWhite : Colors.dirtyWhite}
-                  ios_backgroundColor={Colors.gray}
+                  thumbColor={appLockEnabled ? primaryTextColor : secondaryTextColor}
+                  ios_backgroundColor={inputBorderColor}
                 />
               </View>
             </ThemedView>
@@ -588,23 +641,35 @@ export default function SettingsScreen() {
 
           {/* Export Section */}
           <ThemedView style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Export</ThemedText>
+            <ThemedText style={[styles.sectionTitle, { color: primaryTextColor }]}>
+              Export
+            </ThemedText>
             <ThemedView style={styles.exportSection}>
-              <TouchableOpacity style={styles.exportButton} onPress={handleExportMnemonic}>
+              <TouchableOpacity
+                style={[styles.exportButton, { backgroundColor: buttonPrimaryColor }]}
+                onPress={handleExportMnemonic}
+              >
                 <View style={styles.exportButtonContent}>
-                  <ThemedText style={styles.exportButtonText}>Export Mnemonic</ThemedText>
+                  <ThemedText style={[styles.exportButtonText, { color: buttonPrimaryTextColor }]}>
+                    Export Mnemonic
+                  </ThemedText>
                   <View style={styles.fingerprintIcon}>
-                    <Fingerprint size={20} color={Colors.almostWhite} />
+                    <Fingerprint size={20} color={buttonPrimaryTextColor} />
                   </View>
                 </View>
               </TouchableOpacity>
             </ThemedView>
             <ThemedView style={styles.exportSection}>
-              <TouchableOpacity style={styles.exportButton} onPress={handleExportAppData}>
+              <TouchableOpacity
+                style={[styles.exportButton, { backgroundColor: buttonPrimaryColor }]}
+                onPress={handleExportAppData}
+              >
                 <View style={styles.exportButtonContent}>
-                  <ThemedText style={styles.exportButtonText}>Export App Data</ThemedText>
+                  <ThemedText style={[styles.exportButtonText, { color: buttonPrimaryTextColor }]}>
+                    Export App Data
+                  </ThemedText>
                   <View style={styles.fingerprintIcon}>
-                    <Fingerprint size={20} color={Colors.almostWhite} />
+                    <Fingerprint size={20} color={buttonPrimaryTextColor} />
                   </View>
                 </View>
               </TouchableOpacity>
@@ -613,13 +678,22 @@ export default function SettingsScreen() {
 
           {/* Extra Section */}
           <ThemedView style={styles.section}>
-            <ThemedText style={styles.sectionTitle}>Extra</ThemedText>
+            <ThemedText style={[styles.sectionTitle, { color: primaryTextColor }]}>
+              Extra
+            </ThemedText>
             <ThemedView style={styles.extraSection}>
-              <TouchableOpacity style={styles.clearDataButton} onPress={handleClearAppData}>
+              <TouchableOpacity
+                style={[styles.clearDataButton, { backgroundColor: buttonDangerColor }]}
+                onPress={handleClearAppData}
+              >
                 <View style={styles.clearDataButtonContent}>
-                  <ThemedText style={styles.clearDataButtonText}>Reset App</ThemedText>
+                  <ThemedText
+                    style={[styles.clearDataButtonText, { color: buttonDangerTextColor }]}
+                  >
+                    Reset App
+                  </ThemedText>
                   <View style={styles.fingerprintIcon}>
-                    <Fingerprint size={20} color="white" />
+                    <Fingerprint size={20} color={buttonDangerTextColor} />
                   </View>
                 </View>
               </TouchableOpacity>
@@ -634,11 +708,9 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   container: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   header: {
     flexDirection: 'row',
@@ -646,7 +718,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 10,
     paddingBottom: 20,
-    backgroundColor: '#000000',
   },
   backButton: {
     marginRight: 15,
@@ -675,7 +746,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: Colors.almostWhite,
   },
   profileSection: {
     alignItems: 'center',
@@ -699,7 +769,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   card: {
-    backgroundColor: Colors.darkGray,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -715,12 +784,10 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.almostWhite,
     marginBottom: 4,
   },
   cardStatus: {
     fontSize: 14,
-    color: Colors.dirtyWhite,
   },
   avatarContainer: {
     position: 'relative',
@@ -733,15 +800,12 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 2,
-    borderColor: Colors.almostWhite,
   },
   avatarPlaceholder: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: Colors.darkGray,
     borderWidth: 2,
-    borderColor: Colors.almostWhite,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -749,33 +813,28 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 8,
     right: 8,
-    backgroundColor: Colors.darkGray,
     width: 35,
     height: 35,
     borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: Colors.almostWhite,
   },
   usernameContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.gray,
     marginBottom: 24,
     width: '100%',
     maxWidth: 500,
     alignSelf: 'center',
   },
   usernameInput: {
-    color: Colors.almostWhite,
     fontSize: 16,
     flex: 1,
     paddingVertical: 8,
   },
   usernameSuffix: {
-    color: Colors.gray,
     fontSize: 16,
   },
   profileButtonsContainer: {
@@ -787,7 +846,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   saveButton: {
-    backgroundColor: Colors.darkGray,
     padding: 16,
     borderRadius: 8,
     width: '100%',
@@ -796,18 +854,16 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   saveButtonText: {
-    color: Colors.almostWhite,
     fontSize: 16,
     fontWeight: 'bold',
   },
   saveButtonDisabled: {
-    backgroundColor: Colors.gray,
+    opacity: 0.5,
   },
   saveButtonTextDisabled: {
-    color: Colors.dirtyWhite,
+    opacity: 0.5,
   },
   clearDataButton: {
-    backgroundColor: '#FF3B30',
     padding: 16,
     borderRadius: 8,
     width: '100%',
@@ -816,7 +872,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   clearDataButtonText: {
-    color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
@@ -839,7 +894,6 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   exportButton: {
-    backgroundColor: Colors.primaryDark,
     padding: 16,
     borderRadius: 8,
     width: '100%',
@@ -849,7 +903,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   exportButtonText: {
-    color: Colors.almostWhite,
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -876,7 +929,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   appLockOption: {
-    backgroundColor: Colors.darkGray,
     borderRadius: 12,
     padding: 16,
     flexDirection: 'row',
@@ -897,12 +949,10 @@ const styles = StyleSheet.create({
   appLockTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.almostWhite,
     marginBottom: 4,
   },
   appLockDescription: {
     fontSize: 14,
-    color: Colors.dirtyWhite,
     lineHeight: 18,
   },
   themeCard: {
@@ -929,22 +979,18 @@ const styles = StyleSheet.create({
   themeTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: Colors.almostWhite,
     marginBottom: 4,
   },
   themeStatus: {
     fontSize: 14,
-    color: Colors.dirtyWhite,
   },
   themeIndicator: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: Colors.primary,
     borderRadius: 20,
   },
   tapToChange: {
     fontSize: 12,
-    color: Colors.white,
     fontWeight: '500',
   },
   themeCardTouchable: {

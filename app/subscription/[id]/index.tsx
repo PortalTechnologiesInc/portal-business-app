@@ -18,6 +18,7 @@ import { useActivities } from '@/context/ActivitiesContext';
 import { parseCalendar } from 'portal-app-lib';
 import { useSQLiteContext } from 'expo-sqlite';
 import { DatabaseService, fromUnixSeconds, type SubscriptionWithDates } from '@/services/database';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 // Mock payment history for a subscription
 interface PaymentHistory {
@@ -34,6 +35,17 @@ export default function SubscriptionDetailScreen() {
   const [subscription, setSubscription] = useState<SubscriptionWithDates | null>(null);
   const [paymentHistory, setPaymentHistory] = useState<PaymentHistory[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const surfaceSecondaryColor = useThemeColor({}, 'surfaceSecondary');
+  const primaryTextColor = useThemeColor({}, 'textPrimary');
+  const secondaryTextColor = useThemeColor({}, 'textSecondary');
+  const buttonDangerColor = useThemeColor({}, 'buttonDanger');
+  const buttonDangerTextColor = useThemeColor({}, 'buttonDangerText');
+  const statusConnectedColor = useThemeColor({}, 'statusConnected');
+  const statusWarningColor = useThemeColor({}, 'statusWarning');
+  const statusErrorColor = useThemeColor({}, 'statusError');
 
   const sqliteContext = useSQLiteContext();
 
@@ -98,21 +110,21 @@ export default function SubscriptionDetailScreen() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
-        return Colors.green;
+        return statusConnectedColor;
       case 'pending':
-        return Colors.gray;
+        return statusWarningColor;
       case 'failed':
-        return Colors.red;
+        return statusErrorColor;
       default:
-        return Colors.dirtyWhite;
+        return secondaryTextColor;
     }
   };
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
         <ThemedView style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors.almostWhite} />
+          <ActivityIndicator size="large" color={primaryTextColor} />
         </ThemedView>
       </SafeAreaView>
     );
@@ -120,21 +132,21 @@ export default function SubscriptionDetailScreen() {
 
   if (!subscription) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
         <ThemedView style={styles.container}>
           <View style={styles.header}>
             <FontAwesome6
               name="arrow-left"
               size={24}
-              color={Colors.almostWhite}
+              color={primaryTextColor}
               onPress={handleBackPress}
               style={styles.backButton}
             />
-            <ThemedText type="title" style={styles.title}>
+            <ThemedText type="title" style={[styles.title, { color: primaryTextColor }]}>
               Subscription Not Found
             </ThemedText>
           </View>
-          <ThemedText style={styles.noDataText}>
+          <ThemedText style={[styles.noDataText, { color: secondaryTextColor }]}>
             The subscription you're looking for doesn't exist.
           </ThemedText>
         </ThemedView>
@@ -153,74 +165,56 @@ export default function SubscriptionDetailScreen() {
         );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]}>
       <ThemedView style={styles.container}>
         <View style={styles.header}>
           <FontAwesome6
             name="arrow-left"
             size={24}
-            color={Colors.almostWhite}
+            color={primaryTextColor}
             onPress={handleBackPress}
             style={styles.backButton}
           />
-          <ThemedText type="title" style={styles.title}>
+          <ThemedText type="title" style={[styles.title, { color: primaryTextColor }]}>
             Subscription Details
           </ThemedText>
         </View>
 
         <ScrollView style={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: surfaceSecondaryColor }]}>
             <View style={styles.serviceHeader}>
-              <ThemedText type="subtitle" style={styles.serviceName}>
+              <ThemedText type="subtitle" style={[styles.serviceName, { color: primaryTextColor }]}>
                 {subscription.service_name}
               </ThemedText>
-              <ThemedText style={styles.amount}>
+              <ThemedText style={[styles.amount, { color: primaryTextColor }]}>
                 {subscription.amount} {subscription.currency}
               </ThemedText>
             </View>
 
             <View style={styles.recurrencyBadge}>
               <ThemedText
-                style={styles.recurrency}
+                style={[styles.recurrency, { color: secondaryTextColor }]}
                 type="defaultSemiBold"
-                darkColor={Colors.dirtyWhite}
-                lightColor={Colors.dirtyWhite}
               >
                 {parsedCalendar.toHumanReadable(false)}
               </ThemedText>
             </View>
 
             <View style={styles.detailsContainer}>
-              <ThemedText
-                style={styles.detail}
-                darkColor={Colors.dirtyWhite}
-                lightColor={Colors.dirtyWhite}
-              >
+              <ThemedText style={[styles.detail, { color: secondaryTextColor }]}>
                 First payment:{' '}
                 {formatDayAndDate(new Date(subscription.recurrence_first_payment_due))}
               </ThemedText>
-              <ThemedText
-                style={styles.detail}
-                darkColor={Colors.dirtyWhite}
-                lightColor={Colors.dirtyWhite}
-              >
+              <ThemedText style={[styles.detail, { color: secondaryTextColor }]}>
                 Next payment: {formatDayAndDate(nextPayment)}
               </ThemedText>
               {subscription.recurrence_max_payments && (
-                <ThemedText
-                  style={styles.detail}
-                  darkColor={Colors.dirtyWhite}
-                  lightColor={Colors.dirtyWhite}
-                >
+                <ThemedText style={[styles.detail, { color: secondaryTextColor }]}>
                   {subscription.recurrence_max_payments - paymentHistory.length} payments left
                 </ThemedText>
               )}
               {subscription.recurrence_until && (
-                <ThemedText
-                  style={styles.detail}
-                  darkColor={Colors.dirtyWhite}
-                  lightColor={Colors.dirtyWhite}
-                >
+                <ThemedText style={[styles.detail, { color: secondaryTextColor }]}>
                   Until: {formatDayAndDate(new Date(subscription.recurrence_until ?? 0))}
                 </ThemedText>
               )}
@@ -228,7 +222,7 @@ export default function SubscriptionDetailScreen() {
           </View>
 
           <TouchableOpacity
-            style={styles.stopButton}
+            style={[styles.stopButton, { backgroundColor: buttonDangerColor }]}
             onPress={handleStopSubscription}
             activeOpacity={0.7}
           >
@@ -236,46 +230,45 @@ export default function SubscriptionDetailScreen() {
               <FontAwesome6
                 name="stop-circle"
                 size={18}
-                color={Colors.almostWhite}
+                color={buttonDangerTextColor}
                 style={styles.stopIcon}
               />
-              <ThemedText
-                style={styles.stopButtonText}
-                darkColor={Colors.almostWhite}
-                lightColor={Colors.almostWhite}
-              >
+              <ThemedText style={[styles.stopButtonText, { color: buttonDangerTextColor }]}>
                 Stop Subscription
               </ThemedText>
             </View>
           </TouchableOpacity>
 
           <View style={styles.paymentHistoryContainer}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
+            <ThemedText type="subtitle" style={[styles.sectionTitle, { color: primaryTextColor }]}>
               Payment History
             </ThemedText>
 
             {paymentHistory.length > 0 ? (
               paymentHistory.map(payment => (
-                <View key={payment.id} style={styles.paymentItem}>
+                <View
+                  key={payment.id}
+                  style={[styles.paymentItem, { backgroundColor: surfaceSecondaryColor }]}
+                >
                   <View style={styles.paymentInfo}>
-                    <ThemedText style={styles.paymentDate}>
+                    <ThemedText style={[styles.paymentDate, { color: primaryTextColor }]}>
                       {formatDayAndDate(new Date(payment.date))}
                     </ThemedText>
                     <ThemedText
-                      style={styles.paymentStatus}
-                      darkColor={getStatusColor(payment.status)}
-                      lightColor={getStatusColor(payment.status)}
+                      style={[styles.paymentStatus, { color: getStatusColor(payment.status) }]}
                     >
                       {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
                     </ThemedText>
                   </View>
-                  <ThemedText style={styles.paymentAmount}>
+                  <ThemedText style={[styles.paymentAmount, { color: primaryTextColor }]}>
                     {payment.amount} {payment.currency}
                   </ThemedText>
                 </View>
               ))
             ) : (
-              <ThemedText style={styles.noDataText}>No payment history available</ThemedText>
+              <ThemedText style={[styles.noDataText, { color: secondaryTextColor }]}>
+                No payment history available
+              </ThemedText>
             )}
           </View>
         </ScrollView>
@@ -287,17 +280,17 @@ export default function SubscriptionDetailScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.darkerGray,
+    // backgroundColor handled by theme
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.darkerGray,
+    // backgroundColor handled by theme
   },
   container: {
     flex: 1,
-    backgroundColor: Colors.darkerGray,
+    // backgroundColor handled by theme
     paddingHorizontal: 20,
   },
   header: {
@@ -311,12 +304,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '600',
+    // color handled by theme
   },
   scrollContainer: {
     flex: 1,
   },
   card: {
-    backgroundColor: '#1E1E1E',
+    // backgroundColor handled by theme
     borderRadius: 20,
     padding: 20,
     marginTop: 16,
@@ -329,31 +323,36 @@ const styles = StyleSheet.create({
   },
   serviceName: {
     fontSize: 20,
+    // color handled by theme
   },
   amount: {
     fontSize: 20,
     fontWeight: '300',
+    // color handled by theme
   },
   recurrencyBadge: {
     marginBottom: 16,
   },
   recurrency: {
     marginVertical: 8,
+    // color handled by theme
   },
   detailsContainer: {
     marginTop: 8,
   },
   detail: {
     marginVertical: 4,
+    // color handled by theme
   },
   paymentHistoryContainer: {
     marginBottom: 32,
   },
   sectionTitle: {
     marginBottom: 16,
+    // color handled by theme
   },
   paymentItem: {
-    backgroundColor: '#1E1E1E',
+    // backgroundColor handled by theme
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
@@ -366,26 +365,26 @@ const styles = StyleSheet.create({
   paymentDate: {
     fontSize: 16,
     fontWeight: '500',
-    color: Colors.almostWhite,
+    // color handled by theme
     marginBottom: 4,
   },
   paymentStatus: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#3d8c40',
+    // color handled by theme
   },
   paymentAmount: {
     fontSize: 16,
     fontWeight: '500',
-    color: Colors.almostWhite,
+    // color handled by theme
   },
   noDataText: {
     textAlign: 'center',
     marginTop: 24,
-    color: Colors.dirtyWhite,
+    // color handled by theme
   },
   stopButton: {
-    backgroundColor: '#bc1c3d',
+    // backgroundColor handled by theme
     borderRadius: 12,
     padding: 16,
     marginTop: 24,
@@ -411,5 +410,6 @@ const styles = StyleSheet.create({
   stopButtonText: {
     fontSize: 16,
     fontWeight: '600',
+    // color handled by theme
   },
 });

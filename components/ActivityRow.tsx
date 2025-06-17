@@ -20,11 +20,10 @@ export const ActivityRow: React.FC<ActivityRowProps> = ({ activity }) => {
   };
 
   const cardBackgroundColor = useThemeColor({}, 'cardBackground');
-  const iconBackgroundColor = useThemeColor(
-    { light: Colors.gray300, dark: Colors.gray700 },
-    'background'
-  );
-  const iconColor = useThemeColor({ light: Colors.gray600, dark: Colors.almostWhite }, 'text');
+  const iconBackgroundColor = useThemeColor({}, 'surfaceSecondary');
+  const iconColor = useThemeColor({}, 'icon');
+  const primaryTextColor = useThemeColor({}, 'textPrimary');
+  const secondaryTextColor = useThemeColor({}, 'textSecondary');
 
   const getActivityStatus = (detail: string): 'success' | 'failed' | 'pending' => {
     const lowerDetail = detail.toLowerCase();
@@ -45,13 +44,13 @@ export const ActivityRow: React.FC<ActivityRowProps> = ({ activity }) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'success':
-        return Colors.success;
+        return useThemeColor({}, 'statusConnected');
       case 'pending':
-        return Colors.warning;
+        return useThemeColor({}, 'statusWarning');
       case 'failed':
-        return Colors.error;
+        return useThemeColor({}, 'statusError');
       default:
-        return Colors.gray;
+        return useThemeColor({}, 'borderPrimary');
     }
   };
 
@@ -75,32 +74,20 @@ export const ActivityRow: React.FC<ActivityRowProps> = ({ activity }) => {
         )}
       </View>
       <View style={styles.activityInfo}>
-        <ThemedText type="subtitle" darkColor={Colors.almostWhite} lightColor={Colors.gray900}>
+        <ThemedText type="subtitle" style={{ color: primaryTextColor }}>
           {activity.service_name}
         </ThemedText>
-        <ThemedText
-          style={styles.typeText}
-          darkColor={Colors.dirtyWhite}
-          lightColor={Colors.gray600}
-        >
+        <ThemedText style={[styles.typeText, { color: secondaryTextColor }]}>
           {activity.type === ActivityType.Auth ? 'Login Request' : 'Payment'}
         </ThemedText>
       </View>
       <View style={styles.activityDetails}>
         {activity.type === ActivityType.Pay && activity.amount !== null && (
-          <ThemedText
-            style={styles.amount}
-            darkColor={Colors.almostWhite}
-            lightColor={Colors.gray900}
-          >
+          <ThemedText style={[styles.amount, { color: primaryTextColor }]}>
             {activity.amount} sats
           </ThemedText>
         )}
-        <ThemedText
-          style={styles.timeAgo}
-          darkColor={Colors.dirtyWhite}
-          lightColor={Colors.gray600}
-        >
+        <ThemedText style={[styles.timeAgo, { color: secondaryTextColor }]}>
           {formatRelativeTime(activity.date)}
         </ThemedText>
       </View>

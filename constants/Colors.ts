@@ -1,6 +1,6 @@
 /**
  * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * All colors should be theme-aware and centralized here.
  */
 
 const tintColorLight = '#0a7ea4';
@@ -8,23 +8,121 @@ const tintColorDark = '#fff';
 
 export const Colors = {
   light: {
+    // Basic theme colors
     text: '#11181C',
-    background: '#fafafb',
+    background: '#F1F1F1',
     cardBackground: '#ffffff',
     tint: tintColorLight,
     icon: '#687076',
     tabIconDefault: '#687076',
     tabIconSelected: tintColorLight,
+
+    // Surface colors
+    surfacePrimary: '#ffffff',
+    surfaceSecondary: '#f8f9fa',
+    surfaceTertiary: '#e9ecef',
+
+    // Text colors
+    textPrimary: '#11181C',
+    textSecondary: '#687076',
+    textTertiary: '#adb5bd',
+    textInverse: '#ffffff',
+
+    // Border colors
+    borderPrimary: '#dee2e6',
+    borderSecondary: '#e9ecef',
+    borderFocus: '#0a7ea4',
+
+    // Shadow and overlay colors
+    shadowColor: '#000000',
+    overlayBackground: 'rgba(0, 0, 0, 0.3)',
+    modalBackground: 'rgba(0, 0, 0, 0.5)',
+
+    // Input colors
+    inputBackground: '#ffffff',
+    inputBorder: '#dee2e6',
+    inputPlaceholder: '#adb5bd',
+
+    // Status colors
+    statusConnected: '#28a745',
+    statusConnecting: '#ffc107',
+    statusDisconnected: '#dc3545',
+    statusError: '#dc3545',
+    statusWarning: '#ffc107',
+
+    // Button colors
+    buttonPrimary: '#0a7ea4',
+    buttonPrimaryText: '#ffffff',
+    buttonSecondary: '#e9ecef',
+    buttonSecondaryText: '#495057',
+    buttonDanger: '#dc3545',
+    buttonDangerText: '#ffffff',
+    buttonSuccess: '#28a745',
+    buttonSuccessText: '#ffffff',
+
+    // Skeleton/loading colors
+    skeletonBase: '#e9ecef',
+    skeletonHighlight: '#f8f9fa',
   },
   dark: {
+    // Basic theme colors
     text: '#ECEDEE',
     background: '#000000',
-    cardBackground: '#222222',
+    cardBackground: '#1E1E1E',
     tint: tintColorDark,
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
+
+    // Surface colors
+    surfacePrimary: '#1E1E1E',
+    surfaceSecondary: '#2d2d2d',
+    surfaceTertiary: '#3d3d3d',
+
+    // Text colors
+    textPrimary: '#ECEDEE',
+    textSecondary: '#9BA1A6',
+    textTertiary: '#6c757d',
+    textInverse: '#000000',
+
+    // Border colors
+    borderPrimary: '#3d3d3d',
+    borderSecondary: '#2d2d2d',
+    borderFocus: '#ffffff',
+
+    // Shadow and overlay colors
+    shadowColor: '#000000',
+    overlayBackground: 'rgba(0, 0, 0, 0.75)',
+    modalBackground: 'rgba(0, 0, 0, 0.8)',
+
+    // Input colors
+    inputBackground: '#2d2d2d',
+    inputBorder: '#3d3d3d',
+    inputPlaceholder: '#6c757d',
+
+    // Status colors
+    statusConnected: '#28a745',
+    statusConnecting: '#ffc107',
+    statusDisconnected: '#dc3545',
+    statusError: '#dc3545',
+    statusWarning: '#ffc107',
+
+    // Button colors
+    buttonPrimary: '#0a7ea4',
+    buttonPrimaryText: '#ffffff',
+    buttonSecondary: '#3d3d3d',
+    buttonSecondaryText: '#ECEDEE',
+    buttonDanger: '#dc3545',
+    buttonDangerText: '#ffffff',
+    buttonSuccess: '#28a745',
+    buttonSuccessText: '#ffffff',
+
+    // Skeleton/loading colors
+    skeletonBase: '#2d2d2d',
+    skeletonHighlight: 'rgba(255, 255, 255, 0.1)',
   },
+
+  // Legacy colors - keeping for backward compatibility but should be migrated
   almostWhite: '#e6e6e6',
   dirtyWhite: '#bfbfbf',
   gray: '#b3b3b3',
@@ -59,7 +157,7 @@ export const Colors = {
   // Neutral palette
   white: '#ffffff',
   secondaryWhite: '#ffffff',
-  primaryWhite: '#fafafb',
+  primaryWhite: '#F1F1F1',
   black: '#000000',
   gray100: '#f8f9fa',
   gray200: '#e9ecef',

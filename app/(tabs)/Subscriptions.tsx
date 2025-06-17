@@ -9,9 +9,16 @@ import { formatDayAndDate } from '@/utils';
 import { useActivities } from '@/context/ActivitiesContext';
 import { fromUnixSeconds, type SubscriptionWithDates } from '@/services/database';
 import { parseCalendar } from 'portal-app-lib';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 export default function SubscriptionsScreen() {
   const { subscriptions, isDbReady } = useActivities();
+
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const surfaceSecondaryColor = useThemeColor({}, 'surfaceSecondary');
+  const primaryTextColor = useThemeColor({}, 'textPrimary');
+  const secondaryTextColor = useThemeColor({}, 'textSecondary');
 
   const handleSubscriptionPress = useCallback((subscriptionId: string) => {
     router.push({
@@ -35,55 +42,47 @@ export default function SubscriptionsScreen() {
 
       return (
         <TouchableOpacity
-          style={styles.subscriptionCard}
+          style={[styles.subscriptionCard, { backgroundColor: surfaceSecondaryColor }]}
           onPress={() => handleSubscriptionPress(item.id)}
           activeOpacity={0.7}
         >
           <View style={styles.cardContent}>
             <View style={styles.headerRow}>
-              <ThemedText type="subtitle">{item.service_name}</ThemedText>
-              <ThemedText style={styles.amount}>
+              <ThemedText type="subtitle" style={{ color: primaryTextColor }}>
+                {item.service_name}
+              </ThemedText>
+              <ThemedText style={[styles.amount, { color: primaryTextColor }]}>
                 {item.amount} {item.currency}
               </ThemedText>
             </View>
 
             <ThemedText
-              style={styles.recurrency}
+              style={[styles.recurrency, { color: secondaryTextColor }]}
               type="defaultSemiBold"
-              darkColor={Colors.dirtyWhite}
-              lightColor={Colors.dirtyWhite}
             >
               {parsedCalendar.toHumanReadable(false)}
             </ThemedText>
 
-            <ThemedText
-              style={styles.nextPayment}
-              darkColor={Colors.dirtyWhite}
-              lightColor={Colors.dirtyWhite}
-            >
+            <ThemedText style={[styles.nextPayment, { color: secondaryTextColor }]}>
               Next payment: {formatDayAndDate(nextPayment)}
             </ThemedText>
           </View>
         </TouchableOpacity>
       );
     },
-    [handleSubscriptionPress]
+    [handleSubscriptionPress, surfaceSecondaryColor, primaryTextColor, secondaryTextColor]
   );
 
   // Show a database initialization message when database isn't ready
   if (!isDbReady) {
     return (
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
         <ThemedView style={styles.container}>
-          <ThemedText type="title" darkColor={Colors.almostWhite}>
+          <ThemedText type="title" style={{ color: primaryTextColor }}>
             Your subscriptions
           </ThemedText>
-          <View style={styles.emptyContainer}>
-            <ThemedText
-              style={styles.emptyText}
-              darkColor={Colors.dirtyWhite}
-              lightColor={Colors.darkGray}
-            >
+          <View style={[styles.emptyContainer, { backgroundColor: surfaceSecondaryColor }]}>
+            <ThemedText style={[styles.emptyText, { color: secondaryTextColor }]}>
               Subscriptions will be available after setup is complete
             </ThemedText>
           </View>
@@ -93,19 +92,15 @@ export default function SubscriptionsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
       <ThemedView style={styles.container}>
-        <ThemedText type="title" darkColor={Colors.almostWhite}>
+        <ThemedText type="title" style={{ color: primaryTextColor }}>
           Your subscriptions
         </ThemedText>
 
         {subscriptions.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <ThemedText
-              style={styles.emptyText}
-              darkColor={Colors.dirtyWhite}
-              lightColor={Colors.darkGray}
-            >
+          <View style={[styles.emptyContainer, { backgroundColor: surfaceSecondaryColor }]}>
+            <ThemedText style={[styles.emptyText, { color: secondaryTextColor }]}>
               No subscriptions found
             </ThemedText>
           </View>
@@ -127,7 +122,7 @@ export default function SubscriptionsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.darkerGray,
+    // backgroundColor handled by theme
   },
   header: {
     justifyContent: 'space-between',
@@ -141,12 +136,14 @@ const styles = StyleSheet.create({
   },
   recurrency: {
     marginBottom: 12,
+    // color handled by theme
   },
   nextPayment: {
     marginVertical: 2,
+    // color handled by theme
   },
   subscriptionCard: {
-    backgroundColor: '#1E1E1E',
+    // backgroundColor handled by theme
     borderRadius: 20,
     padding: 18,
     marginBottom: 10,
@@ -157,12 +154,13 @@ const styles = StyleSheet.create({
   amount: {
     fontSize: 20,
     fontWeight: '300',
+    // color handled by theme
   },
   container: {
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 16,
-    backgroundColor: Colors.darkerGray,
+    // backgroundColor handled by theme
   },
   list: {
     marginTop: 24,
@@ -173,7 +171,7 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     flex: 1,
-    backgroundColor: '#1E1E1E',
+    // backgroundColor handled by theme
     borderRadius: 20,
     padding: 20,
     alignItems: 'center',
@@ -183,5 +181,6 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     textAlign: 'center',
+    // color handled by theme
   },
 });

@@ -8,6 +8,7 @@ import { formatCentsToCurrency, formatDayAndDate, formatRelativeTime } from '@/u
 import { Key, BanknoteIcon } from 'lucide-react-native';
 import { useActivities } from '@/context/ActivitiesContext';
 import type { ActivityWithDates } from '@/services/database';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 // Import shared activity row component that we'll create
 import { ActivityRow } from './ActivityRow';
@@ -15,6 +16,12 @@ import { ActivityRow } from './ActivityRow';
 export const RecentActivitiesList: React.FC = () => {
   // Use the activities from the context
   const { activities, isDbReady, refreshData } = useActivities();
+
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const cardBackgroundColor = useThemeColor({}, 'cardBackground');
+  const primaryTextColor = useThemeColor({}, 'textPrimary');
+  const secondaryTextColor = useThemeColor({}, 'textSecondary');
 
   // Refresh data when component mounts
   useEffect(() => {
@@ -35,54 +42,33 @@ export const RecentActivitiesList: React.FC = () => {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor }]}>
       <View style={styles.header}>
-        <ThemedText
-          type="title"
-          style={styles.title}
-          darkColor={Colors.almostWhite}
-          lightColor={Colors.almostWhite}
-        >
+        <ThemedText type="title" style={[styles.title, { color: primaryTextColor }]}>
           Recent Activities
         </ThemedText>
         <TouchableOpacity onPress={handleSeeAll}>
-          <ThemedText
-            style={styles.seeAll}
-            darkColor={Colors.dirtyWhite}
-            lightColor={Colors.dirtyWhite}
-          >
+          <ThemedText style={[styles.seeAll, { color: secondaryTextColor }]}>
             See all &gt;
           </ThemedText>
         </TouchableOpacity>
       </View>
 
       {!isDbReady ? (
-        <View style={styles.emptyContainer}>
-          <ThemedText
-            style={styles.emptyText}
-            darkColor={Colors.dirtyWhite}
-            lightColor={Colors.darkGray}
-          >
+        <View style={[styles.emptyContainer, { backgroundColor: cardBackgroundColor }]}>
+          <ThemedText style={[styles.emptyText, { color: secondaryTextColor }]}>
             Loading activities...
           </ThemedText>
         </View>
       ) : recentActivities.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <ThemedText
-            style={styles.emptyText}
-            darkColor={Colors.dirtyWhite}
-            lightColor={Colors.darkGray}
-          >
+        <View style={[styles.emptyContainer, { backgroundColor: cardBackgroundColor }]}>
+          <ThemedText style={[styles.emptyText, { color: secondaryTextColor }]}>
             No recent activities
           </ThemedText>
         </View>
       ) : (
         <>
-          <ThemedText
-            style={styles.dateHeader}
-            darkColor={Colors.dirtyWhite}
-            lightColor={Colors.dirtyWhite}
-          >
+          <ThemedText style={[styles.dateHeader, { color: secondaryTextColor }]}>
             {today}
           </ThemedText>
 
@@ -102,7 +88,7 @@ export const RecentActivitiesList: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.darkerGray,
+    // backgroundColor handled by theme
     marginTop: 8,
     marginBottom: 20,
     paddingHorizontal: 20,
@@ -125,7 +111,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   emptyContainer: {
-    backgroundColor: '#1E1E1E',
+    // backgroundColor handled by theme
     borderRadius: 20,
     padding: 20,
     alignItems: 'center',

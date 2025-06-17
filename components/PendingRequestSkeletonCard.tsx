@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { Colors } from '@/constants/Colors';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 50; // Full width minus padding
@@ -17,6 +18,7 @@ const CARD_WIDTH = width - 50; // Full width minus padding
 // Animated pulse component for skeleton loading effect
 const SkeletonPulse = ({ style }: { style: StyleProp<ViewStyle> }) => {
   const translateX = useRef(new Animated.Value(-100)).current;
+  const skeletonHighlightColor = useThemeColor({}, 'skeletonHighlight');
 
   useEffect(() => {
     const animation = Animated.loop(
@@ -40,6 +42,7 @@ const SkeletonPulse = ({ style }: { style: StyleProp<ViewStyle> }) => {
       <Animated.View
         style={[
           styles.shimmer,
+          { backgroundColor: skeletonHighlightColor },
           {
             transform: [{ translateX }],
           },
@@ -50,11 +53,29 @@ const SkeletonPulse = ({ style }: { style: StyleProp<ViewStyle> }) => {
 };
 
 export const PendingRequestSkeletonCard: React.FC = () => {
+  // Theme colors
+  const cardBackgroundColor = useThemeColor({}, 'cardBackground');
+  const skeletonBaseColor = useThemeColor({}, 'skeletonBase');
+  const skeletonHighlightColor = useThemeColor({}, 'skeletonHighlight');
+  const shadowColor = useThemeColor({}, 'shadowColor');
+
   return (
-    <View style={styles.card}>
-      <SkeletonPulse style={styles.requestTypeSkeleton} />
-      <SkeletonPulse style={styles.serviceNameSkeleton} />
-      <SkeletonPulse style={styles.serviceInfoSkeleton} />
+    <View
+      style={[
+        styles.card,
+        { backgroundColor: cardBackgroundColor, shadowColor, width: CARD_WIDTH },
+      ]}
+    >
+      <SkeletonPulse
+        style={[styles.skeletonText, styles.typeText, { backgroundColor: skeletonBaseColor }]}
+      />
+      <SkeletonPulse
+        style={[styles.skeletonText, styles.nameText, { backgroundColor: skeletonBaseColor }]}
+      />
+      <SkeletonPulse
+        style={[styles.skeletonText, styles.infoText, { backgroundColor: skeletonBaseColor }]}
+      />
+      <View style={[styles.skeletonBlock, { backgroundColor: skeletonHighlightColor }]} />
 
       {/* Add spacing to match the buttons area height */}
       <View style={styles.actionsArea}>
@@ -66,11 +87,10 @@ export const PendingRequestSkeletonCard: React.FC = () => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#1E1E1E',
     borderRadius: 20,
-    padding: 22,
-    width: CARD_WIDTH,
-    shadowColor: '#000',
+    padding: 14,
+    minWidth: 250,
+    marginHorizontal: 5,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -81,7 +101,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   pulse: {
-    backgroundColor: '#333333',
+    // backgroundColor handled by theme
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -91,23 +111,28 @@ const styles = StyleSheet.create({
     left: 0,
     width: 60,
     height: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    // backgroundColor handled by theme
     transform: [{ skewX: '-20deg' }],
   },
-  requestTypeSkeleton: {
-    height: 14,
-    width: '40%',
+  skeletonText: {
+    height: 16,
+    borderRadius: 8,
     marginBottom: 8,
   },
-  serviceNameSkeleton: {
-    height: 26,
-    width: '80%',
-    marginBottom: 4,
+  typeText: {
+    width: '40%',
   },
-  serviceInfoSkeleton: {
-    height: 14,
+  nameText: {
+    width: '80%',
+    height: 20,
+  },
+  infoText: {
     width: '60%',
-    marginBottom: 20,
+  },
+  skeletonBlock: {
+    height: 40,
+    borderRadius: 8,
+    marginTop: 8,
   },
   actionsArea: {
     height: 40, // Match the height of the action buttons

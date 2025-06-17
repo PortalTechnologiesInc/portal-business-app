@@ -10,12 +10,20 @@ import { useActivities } from '@/context/ActivitiesContext';
 import { parseCalendar } from 'portal-app-lib';
 import { fromUnixSeconds } from '@/services/database';
 import { BanknoteIcon } from 'lucide-react-native';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 export const UpcomingPaymentsList: React.FC = () => {
   // Initialize with empty array - will be populated with real data later
   const [upcomingPayments, SetUpcomingPayments] = useState<UpcomingPayment[]>([]);
 
   const { subscriptions } = useActivities();
+
+  // Theme colors
+  const cardBackgroundColor = useThemeColor({}, 'cardBackground');
+  const iconBackgroundColor = useThemeColor({}, 'surfaceSecondary');
+  const primaryTextColor = useThemeColor({}, 'textPrimary');
+  const secondaryTextColor = useThemeColor({}, 'textSecondary');
+  const iconColor = useThemeColor({}, 'icon');
 
   const handleSeeAll = useCallback(() => {
     // Will be implemented when we have a dedicated page
@@ -54,79 +62,50 @@ export const UpcomingPaymentsList: React.FC = () => {
   const renderPaymentItem = useCallback(
     ({ item }: { item: UpcomingPayment }) => (
       <TouchableOpacity
-        style={styles.paymentCard}
+        style={[styles.paymentCard, { backgroundColor: cardBackgroundColor }]}
         activeOpacity={0.7}
         onPress={() => router.push(`/subscription/${item.id}`)}
       >
-        <View style={styles.iconContainer}>
-          <BanknoteIcon size={20} color={Colors.almostWhite} />
+        <View style={[styles.iconContainer, { backgroundColor: iconBackgroundColor }]}>
+          <BanknoteIcon size={20} color={iconColor} />
         </View>
         <View style={styles.paymentInfo}>
-          <ThemedText
-            type="subtitle"
-            darkColor={Colors.almostWhite}
-            lightColor={Colors.almostWhite}
-          >
+          <ThemedText type="subtitle" style={{ color: primaryTextColor }}>
             {item.serviceName}
           </ThemedText>
-          <ThemedText
-            style={styles.typeText}
-            darkColor={Colors.dirtyWhite}
-            lightColor={Colors.dirtyWhite}
-          >
+          <ThemedText style={[styles.typeText, { color: secondaryTextColor }]}>
             Upcoming payment
           </ThemedText>
         </View>
         <View style={styles.paymentDetails}>
-          <ThemedText
-            style={styles.amount}
-            darkColor={Colors.almostWhite}
-            lightColor={Colors.almostWhite}
-          >
+          <ThemedText style={[styles.amount, { color: primaryTextColor }]}>
             {item.amount} {item.currency}
           </ThemedText>
-          <ThemedText
-            style={styles.dueDate}
-            darkColor={Colors.dirtyWhite}
-            lightColor={Colors.dirtyWhite}
-          >
+          <ThemedText style={[styles.dueDate, { color: secondaryTextColor }]}>
             {formatRelativeTime(item.dueDate)}
           </ThemedText>
         </View>
       </TouchableOpacity>
     ),
-    []
+    [cardBackgroundColor, iconBackgroundColor, primaryTextColor, secondaryTextColor, iconColor]
   );
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <ThemedText
-          type="title"
-          style={styles.title}
-          darkColor={Colors.almostWhite}
-          lightColor={Colors.almostWhite}
-        >
+        <ThemedText type="title" style={[styles.title, { color: primaryTextColor }]}>
           Upcoming Payments
         </ThemedText>
         <TouchableOpacity onPress={handleSeeAll}>
-          <ThemedText
-            style={styles.seeAll}
-            darkColor={Colors.dirtyWhite}
-            lightColor={Colors.dirtyWhite}
-          >
+          <ThemedText style={[styles.seeAll, { color: secondaryTextColor }]}>
             See all &gt;
           </ThemedText>
         </TouchableOpacity>
       </View>
 
       {upcomingPayments.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <ThemedText
-            style={styles.emptyText}
-            darkColor={Colors.dirtyWhite}
-            lightColor={Colors.darkGray}
-          >
+        <View style={[styles.emptyContainer, { backgroundColor: cardBackgroundColor }]}>
+          <ThemedText style={[styles.emptyText, { color: secondaryTextColor }]}>
             No upcoming payments
           </ThemedText>
         </View>
@@ -159,7 +138,7 @@ const styles = StyleSheet.create({
   },
   paymentCard: {
     flexDirection: 'row',
-    backgroundColor: '#1E1E1E',
+    // backgroundColor handled by theme
     borderRadius: 20,
     padding: 14,
     marginBottom: 10,
@@ -170,7 +149,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#333333',
+    // backgroundColor handled by theme
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
@@ -202,7 +181,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   emptyContainer: {
-    backgroundColor: '#1E1E1E',
+    // backgroundColor handled by theme
     borderRadius: 20,
     padding: 20,
     alignItems: 'center',

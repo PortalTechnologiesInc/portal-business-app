@@ -52,13 +52,11 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({ request }) => 
   const isMounted = useRef(true);
 
   // Theme colors
-  const cardBackgroundColor = useThemeColor(
-    { light: Colors.secondaryWhite, dark: '#1E1E1E' },
-    'cardBackground'
-  );
-  const primaryTextColor = useThemeColor({ light: Colors.gray900, dark: '#FFFFFF' }, 'text');
-  const secondaryTextColor = useThemeColor({ light: Colors.gray600, dark: '#8A8A8E' }, 'text');
-  const borderColor = useThemeColor({ light: Colors.gray300, dark: '#8A8A8E' }, 'text');
+  const cardBackgroundColor = useThemeColor({}, 'cardBackground');
+  const primaryTextColor = useThemeColor({}, 'textPrimary');
+  const secondaryTextColor = useThemeColor({}, 'textSecondary');
+  const borderColor = useThemeColor({}, 'borderPrimary');
+  const shadowColor = useThemeColor({}, 'shadowColor');
 
   // Add debug logging when a card is rendered
   console.log(`Rendering card ${id} of type ${type} with service key ${metadata.serviceKey}`);
@@ -102,7 +100,7 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({ request }) => 
     (metadata as RecurringPaymentRequest)?.content?.amount;
 
   return (
-    <View style={[styles.card, { backgroundColor: cardBackgroundColor }]}>
+    <View style={[styles.card, { backgroundColor: cardBackgroundColor, shadowColor }]}>
       <Text style={[styles.requestType, { color: secondaryTextColor }]}>
         {getRequestTypeText(type)}
       </Text>
@@ -133,13 +131,35 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({ request }) => 
       )}
 
       <View style={styles.actions}>
-        <TouchableOpacity style={[styles.button, styles.approveButton]} onPress={() => approve(id)}>
-          <Ionicons name="checkmark-outline" size={20} color="#FFFFFF" />
-          <Text style={styles.buttonText}>Approve</Text>
+        <TouchableOpacity
+          style={[
+            styles.button,
+            styles.approveButton,
+            { backgroundColor: useThemeColor({}, 'buttonSuccess') },
+          ]}
+          onPress={() => approve(id)}
+        >
+          <Ionicons
+            name="checkmark-outline"
+            size={20}
+            color={useThemeColor({}, 'buttonSuccessText')}
+          />
+          <Text style={[styles.buttonText, { color: useThemeColor({}, 'buttonSuccessText') }]}>
+            Approve
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.button, styles.denyButton]} onPress={() => deny(id)}>
-          <Ionicons name="close-outline" size={20} color="#FFFFFF" />
-          <Text style={styles.buttonText}>Deny</Text>
+        <TouchableOpacity
+          style={[
+            styles.button,
+            styles.denyButton,
+            { backgroundColor: useThemeColor({}, 'buttonDanger') },
+          ]}
+          onPress={() => deny(id)}
+        >
+          <Ionicons name="close-outline" size={20} color={useThemeColor({}, 'buttonDangerText')} />
+          <Text style={[styles.buttonText, { color: useThemeColor({}, 'buttonDangerText') }]}>
+            Deny
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -148,16 +168,16 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({ request }) => 
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 20,
-    padding: 14,
-    width: '100%',
-    minWidth: width - 90, // Ensure minimum width
-    marginHorizontal: 5, // Add margin to ensure separation
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
     elevation: 2,
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.22,
+    shadowRadius: 2.22,
   },
   requestType: {
     fontSize: 14,
@@ -216,14 +236,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   denyButton: {
-    backgroundColor: '#E53935',
+    // backgroundColor handled by theme
   },
   approveButton: {
-    backgroundColor: '#4CAF50',
+    // backgroundColor handled by theme
   },
   buttonText: {
-    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '600',
-    marginLeft: 6,
   },
 });
