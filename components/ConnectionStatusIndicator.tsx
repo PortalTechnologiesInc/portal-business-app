@@ -7,6 +7,7 @@ import {
   ScrollView,
   Text,
   Animated,
+  Dimensions,
 } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { useRouter } from 'expo-router';
@@ -53,6 +54,9 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
   const [opacityValue] = useState(new Animated.Value(1));
   const [isOnline, setIsOnline] = useState(true);
   const [showRelayDetails, setShowRelayDetails] = useState(false);
+
+  // Get screen dimensions for modal height constraint
+  const screenHeight = Dimensions.get('window').height;
 
   const {
     isWalletConnected: isWalletConnectedState,
@@ -222,7 +226,7 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView showsVerticalScrollIndicator={true}>
               {/* Overall Status */}
               <View style={styles.detailCard}>
                 <View style={styles.detailRow}>
@@ -446,6 +450,9 @@ const styles = StyleSheet.create({
     padding: 20,
     width: '90%',
     maxWidth: 380,
+    maxHeight: '60%',
+    display: 'flex',
+    flexDirection: 'column',
   },
   modalHeader: {
     flexDirection: 'row',
