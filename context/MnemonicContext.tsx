@@ -55,6 +55,19 @@ export const MnemonicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     loadData();
   }, []);
 
+  // Listen for wallet URL changes from SecureStorageService
+  useEffect(() => {
+    const walletUrlSubscription = walletUrlEvents.addListener('walletUrlChanged', async newUrl => {
+      console.log('MnemonicContext: walletUrlChanged event received:', newUrl);
+      setWalletUrlState(newUrl || null);
+      setIsWalletConnectedState(Boolean(newUrl?.trim()));
+    });
+
+    return () => {
+      walletUrlSubscription.remove();
+    };
+  }, []);
+
   // Set a new mnemonic
   const setMnemonic = useCallback(async (newMnemonic: string) => {
     try {

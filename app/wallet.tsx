@@ -215,6 +215,13 @@ export default function WalletManagementScreen() {
         handledUrlRef.current = null;
         router.setParams({});
 
+        // Trigger immediate refresh of NWC connection status for faster UI feedback
+        try {
+          await refreshNwcConnectionStatus();
+        } catch (error) {
+          console.error('Error refreshing NWC connection status after save:', error);
+        }
+
         // Set timeout to prevent infinite validating state
         const timeoutId = setTimeout(() => {
           if (isValidating) {

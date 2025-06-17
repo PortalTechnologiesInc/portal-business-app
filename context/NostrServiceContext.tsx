@@ -409,11 +409,18 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   useEffect(() => {
     if (!isInitialized) return;
 
+    // Always reset connection status when wallet URL changes (including when cleared)
+    console.log(
+      'NostrServiceContext: Wallet URL changed to:',
+      walletUrl,
+      'resetting connection status'
+    );
+    setNwcConnectionStatus(null);
+    setNwcConnectionError(null);
+
     if (!walletUrl) {
       console.log('Wallet URL cleared, disconnecting wallet');
       setNwcWallet(null);
-      setNwcConnectionStatus(null);
-      setNwcConnectionError(null);
       return;
     }
 
@@ -422,7 +429,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
 
     const connectWallet = async () => {
       try {
-        console.log('Connecting to wallet with URL');
+        console.log('Connecting to wallet with URL:', walletUrl);
         const wallet = new Nwc(walletUrl);
 
         if (isCancelled) return;
@@ -434,6 +441,12 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
           if (isCancelled) return;
 
           try {
+            // Call getInfo first to establish relay connections before checking status
+            console.log('Calling getInfo to establish relay connections...');
+            await wallet.getInfo();
+            if (isCancelled) return;
+
+            console.log('getInfo completed, now checking connection status...');
             const status = await wallet.connectionStatus();
             if (isCancelled) return;
 
@@ -631,7 +644,9 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
 
   // Optimized NWC connection status refresh with better error handling and cleanup
   const refreshNwcConnectionStatus = useCallback(async () => {
-    if (!nwcWallet) {
+    const currentWallet = nwcWallet; // Capture current wallet instance to prevent race conditions
+
+    if (!currentWallet) {
       setNwcConnectionStatus(null);
       setNwcConnectionError(null);
       return;
@@ -645,7 +660,26 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       const { promise: timeoutPromise, cleanup } = createTimeoutPromise(10000);
 
       try {
-        const status: any = await Promise.race([nwcWallet.connectionStatus(), timeoutPromise]);
+        // Call getInfo first to establish relay connections before checking status
+        console.log('Calling getInfo to establish relay connections...');
+        await Promise.race([currentWallet.getInfo(), timeoutPromise]);
+
+        // Check if wallet instance is still current (prevent race conditions)
+        if (currentWallet !== nwcWallet) {
+          console.log('Wallet instance changed during getInfo, aborting status check');
+          cleanup();
+          return;
+        }
+
+        console.log('getInfo completed, now checking connection status...');
+        const status: any = await Promise.race([currentWallet.connectionStatus(), timeoutPromise]);
+
+        // Check again if wallet instance is still current
+        if (currentWallet !== nwcWallet) {
+          console.log('Wallet instance changed during connectionStatus, aborting status update');
+          cleanup();
+          return;
+        }
 
         // Clean up timeout since we got a result
         cleanup();
@@ -676,12 +710,17 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     } catch (error) {
       console.error('NostrService: Error fetching NWC connection status:', error);
 
-      // Use pure function for error categorization
-      const userFriendlyError = categorizeNwcError(error);
-      console.log('NWC connection error message:', userFriendlyError);
+      // Only update error state if wallet instance hasn't changed
+      if (currentWallet === nwcWallet) {
+        // Use pure function for error categorization
+        const userFriendlyError = categorizeNwcError(error);
+        console.log('NWC connection error message:', userFriendlyError);
 
-      setNwcConnectionStatus(false);
-      setNwcConnectionError(userFriendlyError);
+        setNwcConnectionStatus(false);
+        setNwcConnectionError(userFriendlyError);
+      } else {
+        console.log('Wallet instance changed during error handling, skipping error state update');
+      }
     }
   }, [nwcWallet]);
 
