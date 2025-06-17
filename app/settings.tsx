@@ -178,20 +178,15 @@ export default function SettingsScreen() {
     try {
       setProfileIsLoading(true);
 
-      // Capitalize the first letter of the username if it exists
-      const capitalizedUsername = usernameInput.trim()
-        ? usernameInput.charAt(0).toUpperCase() + usernameInput.slice(1)
-        : '';
+      const username = usernameInput.trim();
 
-      // Even if username is empty, we still append @getportal.cc
-      // This ensures pubkey format is consistent regardless of username presence
-      await setUsername(capitalizedUsername);
+      await setUsername(username);
 
       await nostrService.setUserProfile({
-        nip05: `${capitalizedUsername}@getportal.cc`,
-        name: capitalizedUsername,
+        nip05: `${username}@getportal.cc`,
+        name: username,
         picture: avatarUri || '',
-        displayName: capitalizedUsername,
+        displayName: username,
       });
 
       handleRefreshProfile();

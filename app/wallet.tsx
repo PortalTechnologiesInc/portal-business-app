@@ -174,17 +174,6 @@ export default function WalletManagementScreen() {
     }
   }, [params, router]);
 
-  // Hardware back button handling
-  useEffect(() => {
-    const handleHardwareBack = () => {
-      router.back();
-      return true;
-    };
-
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', handleHardwareBack);
-    return () => backHandler.remove();
-  }, [router]);
-
   // Optimized clear input handler with better async handling
   const handleClearInput = useCallback(async () => {
     setInputValue('');
@@ -304,21 +293,6 @@ export default function WalletManagementScreen() {
     }
   };
 
-  // Navigate back to previous screen
-  const handleBackPress = () => {
-    // Check navigation parameters
-    const sourceParam = params.source as string | undefined;
-    const returnToWalletParam = params.returnToWallet as string | undefined;
-
-    // If we have a source param and it's not a QR scan from wallet itself, navigate directly to that screen
-    if (sourceParam === 'settings') {
-      router.replace('/settings');
-    } else {
-      // Otherwise use normal back navigation
-      router.back();
-    }
-  };
-
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -344,7 +318,7 @@ export default function WalletManagementScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ThemedView style={styles.container}>
         <ThemedView style={styles.header}>
-          <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <ArrowLeft size={20} color={Colors.almostWhite} />
           </TouchableOpacity>
           <ThemedText

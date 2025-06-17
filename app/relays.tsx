@@ -82,21 +82,6 @@ export default function NostrRelayManagementScreen() {
     loadRelaysData();
   }, []);
 
-  // Navigate back to previous screen
-  const handleBackPress = () => {
-    // Check navigation parameters
-    const sourceParam = params.source as string | undefined;
-    const returnToWalletParam = params.returnToWallet as string | undefined;
-
-    // If we have a source param and it's not a QR scan from wallet itself, navigate directly to that screen
-    if (sourceParam === 'settings') {
-      router.replace('/settings');
-    } else {
-      // Otherwise use normal back navigation
-      router.back();
-    }
-  };
-
   const handleClearInput = async () => {
     try {
       // Clear the wallet URL in storage
@@ -175,7 +160,7 @@ export default function NostrRelayManagementScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ThemedView style={styles.container}>
         <ThemedView style={styles.header}>
-          <TouchableOpacity onPress={handleBackPress} style={styles.backButton}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <ArrowLeft size={20} color={Colors.almostWhite} />
           </TouchableOpacity>
           <ThemedText
