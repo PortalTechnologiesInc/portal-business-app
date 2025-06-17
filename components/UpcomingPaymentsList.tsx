@@ -53,8 +53,8 @@ export const UpcomingPaymentsList: React.FC = () => {
 
   const renderPaymentItem = useCallback(
     ({ item }: { item: UpcomingPayment }) => (
-      <TouchableOpacity 
-        style={styles.paymentCard} 
+      <TouchableOpacity
+        style={styles.paymentCard}
         activeOpacity={0.7}
         onPress={() => router.push(`/subscription/${item.id}`)}
       >

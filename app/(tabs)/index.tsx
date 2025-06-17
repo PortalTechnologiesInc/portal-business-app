@@ -61,23 +61,25 @@ export default function Home() {
   // Periodic connection status monitoring (only when homepage is focused)
   useFocusEffect(
     useCallback(() => {
-      console.log('🏠 Homepage: Starting connection monitoring');
+      console.log('🏠 Entered Homepage: Starting connection monitoring');
 
       // Initial fetch when entering homepage
       nostrService.refreshConnectionStatus();
+      nostrService.refreshNwcConnectionStatus();
 
       // Set up periodic refresh for connection status
       const interval = setInterval(() => {
         if (isMounted.current) {
           nostrService.refreshConnectionStatus();
+          nostrService.refreshNwcConnectionStatus();
         }
       }, 5000); // Check every 5 seconds
 
       return () => {
-        console.log('🏠 Homepage: Stopping connection monitoring');
+        console.log('🏠 Leaved Homepage: Stopping connection monitoring');
         clearInterval(interval);
       };
-    }, [nostrService.refreshConnectionStatus])
+    }, [nostrService.refreshConnectionStatus, nostrService.refreshNwcConnectionStatus])
   );
 
   useEffect(() => {
@@ -297,10 +299,14 @@ export default function Home() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    // TODO: Add refresh functionality here when needed
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    try {
+      // Refresh connection status for both relays and NWC wallet
+      await nostrService.refreshConnectionStatus();
+      await nostrService.refreshNwcConnectionStatus();
+    } catch (error) {
+      console.error('Error refreshing connection status:', error);
+    }
+    setRefreshing(false);
   };
 
   // Memoize the truncated key to prevent recalculation on every render
@@ -352,7 +358,7 @@ export default function Home() {
   // Memoize handlers to prevent recreation on every render
   const handleQrScan = useCallback(() => {
     // Using 'modal' navigation to ensure cleaner navigation history
-    router.push({
+    router.replace({
       pathname: '/qr',
       params: {
         source: 'homepage',

@@ -12,7 +12,16 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Pencil, X, QrCode, Check } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  Pencil,
+  X,
+  QrCode,
+  Check,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+} from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   getWalletUrl,
@@ -20,6 +29,10 @@ import {
   isWalletConnected,
   walletUrlEvents,
 } from '@/services/SecureStorageService';
+import { useNostrService } from '@/context/NostrServiceContext';
+
+// NWC connection states
+type NwcConnectionState = 'none' | 'connecting' | 'connected' | 'disconnected' | 'error';
 
 export default function WalletManagementScreen() {
   const router = useRouter();
@@ -30,10 +43,74 @@ export default function WalletManagementScreen() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [scannedUrl, setScannedUrl] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [connectionState, setConnectionState] = useState<NwcConnectionState>('none');
+  const [connectionError, setConnectionError] = useState<string>('');
+  const [isValidating, setIsValidating] = useState(false);
   const hasChanged = inputValue !== walletUrl;
   const params = useLocalSearchParams();
   // Use a ref to track if we've handled the current scannedUrl
   const handledUrlRef = useRef<string | null>(null);
+
+  const { nwcConnectionStatus, nwcConnectionError, refreshNwcConnectionStatus } = useNostrService();
+
+  // Validate NWC URL format
+  const validateNwcUrl = (url: string): { isValid: boolean; error?: string } => {
+    if (!url.trim()) {
+      return { isValid: false, error: 'URL cannot be empty' };
+    }
+
+    try {
+      const urlObj = new URL(url);
+
+      // Check if it starts with nostr+walletconnect://
+      if (!url.startsWith('nostr+walletconnect://')) {
+        return { isValid: false, error: 'URL must start with nostr+walletconnect://' };
+      }
+
+      // Check if it has the required parameters
+      const searchParams = urlObj.searchParams;
+      const relay = searchParams.get('relay');
+      const secret = searchParams.get('secret');
+
+      if (!relay) {
+        return { isValid: false, error: 'Missing relay parameter' };
+      }
+
+      if (!secret) {
+        return { isValid: false, error: 'Missing secret parameter' };
+      }
+
+      // Validate relay URL format
+      if (!relay.startsWith('wss://') && !relay.startsWith('ws://')) {
+        return { isValid: false, error: 'Relay must be a websocket URL (wss:// or ws://)' };
+      }
+
+      return { isValid: true };
+    } catch (error) {
+      return { isValid: false, error: 'Invalid URL format' };
+    }
+  };
+
+  // Update connection state based on NWC status
+  const updateConnectionState = (nwcStatus: boolean | null, localError?: string) => {
+    // Use context error if available, otherwise use local error
+    const errorToShow = nwcConnectionError || localError || '';
+
+    if (localError) {
+      setConnectionState('error');
+      setConnectionError(localError);
+    } else if (nwcStatus === null) {
+      setConnectionState(walletUrl ? 'connecting' : 'none');
+      setConnectionError('');
+    } else if (nwcStatus === true) {
+      setConnectionState('connected');
+      setConnectionError('');
+    } else {
+      // Only show error if we actually have a wallet configured
+      setConnectionState('disconnected');
+      setConnectionError(walletUrl ? errorToShow || 'Unable to connect to wallet service' : '');
+    }
+  };
 
   // Load wallet data on mount
   useEffect(() => {
@@ -43,9 +120,21 @@ export default function WalletManagementScreen() {
         const connected = await isWalletConnected();
         setWalletUrlState(url);
         setInputValue(url);
-        setIsConnected(connected);
+
+        // Set initial connection state
+        if (!url.trim()) {
+          setConnectionState('none');
+        } else {
+          // Use real NWC connection status if available
+          const realConnectionStatus =
+            nwcConnectionStatus !== null ? nwcConnectionStatus : connected;
+          setIsConnected(realConnectionStatus);
+          updateConnectionState(nwcConnectionStatus);
+        }
       } catch (error) {
         console.error('Error loading wallet data:', error);
+        setConnectionState('error');
+        setConnectionError('Failed to load wallet configuration');
       } finally {
         setIsLoading(false);
       }
@@ -57,10 +146,26 @@ export default function WalletManagementScreen() {
     const subscription = walletUrlEvents.addListener('walletUrlChanged', async newUrl => {
       setWalletUrlState(newUrl || '');
       setIsConnected(Boolean(newUrl?.trim()));
+      updateConnectionState(nwcConnectionStatus);
     });
 
     return () => subscription.remove();
-  }, []);
+  }, [nwcConnectionStatus]);
+
+  // Update connection status when nwcConnectionStatus changes
+  useEffect(() => {
+    if (nwcConnectionStatus !== null) {
+      setIsConnected(nwcConnectionStatus);
+
+      // If we were validating and now have a definitive status, stop validating
+      if (isValidating) {
+        setIsValidating(false);
+      }
+    }
+
+    // Always update connection state when context status changes
+    updateConnectionState(nwcConnectionStatus);
+  }, [nwcConnectionStatus, nwcConnectionError, walletUrl]);
 
   useEffect(() => {
     // Handle scanned URL from QR code - only process if it's not the same URL we've already handled
@@ -110,14 +215,36 @@ export default function WalletManagementScreen() {
       await saveWalletUrl('');
       setWalletUrlState('');
       setIsConnected(false);
+      setConnectionState('none');
+      setConnectionError('');
+
+      // Refresh NWC connection status after clearing wallet URL
+      try {
+        await refreshNwcConnectionStatus();
+      } catch (error) {
+        console.error('Error refreshing NWC connection status after clear:', error);
+      }
     } catch (error) {
       console.error('Error clearing wallet URL:', error);
       Alert.alert('Error', 'Failed to clear wallet URL. Please try again.');
     }
   };
 
-  const handleSaveWalletUrl = async (urlToSave = inputValue) => {
+  const validateAndSaveWalletUrl = async (urlToSave = inputValue) => {
+    // Validate URL format first
+    const validation = validateNwcUrl(urlToSave);
+    if (!validation.isValid) {
+      setConnectionState('error');
+      setConnectionError(validation.error || 'Invalid URL format');
+      Alert.alert('Invalid URL', validation.error || 'Invalid URL format');
+      return false;
+    }
+
     try {
+      setIsValidating(true);
+      setConnectionState('connecting');
+      setConnectionError('');
+
       await saveWalletUrl(urlToSave);
       setWalletUrlState(urlToSave);
       setIsConnected(Boolean(urlToSave.trim()));
@@ -127,29 +254,34 @@ export default function WalletManagementScreen() {
       // Reset the handled URL reference to prevent duplicate processing
       handledUrlRef.current = null;
 
-      // Get source and return parameters
-      const sourceParam = params.source as string | undefined;
-      const returnToWalletParam = params.returnToWallet as string | undefined;
-
-      // Clear all params first to prevent infinite loops
+      // Clear params to prevent re-processing
       router.setParams({});
 
-      // Check if we should return to wallet management (from QR scan inside wallet management)
-      if (returnToWalletParam === 'true') {
-        // Already cleared params, so no need to navigate
-        return;
-      }
+      // Set a timeout to ensure we don't stay in connecting forever
+      setTimeout(() => {
+        if (isValidating) {
+          console.log('Wallet connection validation timeout - setting to disconnected');
+          setIsValidating(false);
+          setConnectionState('disconnected');
+          setConnectionError('Connection timeout - unable to verify wallet');
+        }
+      }, 15000); // 15 second timeout
 
-      // Otherwise, navigate back to the source screen if specified
-      if (sourceParam === 'settings') {
-        setTimeout(() => {
-          router.replace('/settings');
-        }, 100);
-      }
+      return true;
     } catch (error) {
       console.error('Error saving wallet URL:', error);
+      setConnectionState('error');
+      setConnectionError('Failed to save wallet configuration');
       Alert.alert('Error', 'Failed to save wallet URL. Please try again.');
+      return false;
+    } finally {
+      setIsValidating(false);
     }
+  };
+
+  // Legacy function for QR code flow compatibility
+  const handleSaveWalletUrl = async (urlToSave = inputValue) => {
+    return await validateAndSaveWalletUrl(urlToSave);
   };
 
   const handleIconPress = () => {
@@ -160,8 +292,8 @@ export default function WalletManagementScreen() {
     }
 
     if (hasChanged) {
-      // If value has changed, save it
-      handleSaveWalletUrl();
+      // If value has changed, validate and save it
+      validateAndSaveWalletUrl();
     } else {
       // If value is the same and we're editing, clear it
       handleClearInput();
@@ -281,12 +413,50 @@ export default function WalletManagementScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Connection status */}
-          <ThemedView style={styles.statusContainer}>
-            <ThemedText style={styles.statusText}>
-              Status: {isConnected ? 'Connected' : 'Not connected'}
-            </ThemedText>
-          </ThemedView>
+          {/* Connection Status Display */}
+          <View style={styles.connectionStatusContainer}>
+            <View style={styles.connectionStatusRow}>
+              <View style={styles.connectionStatusIcon}>
+                {connectionState === 'connected' && <CheckCircle size={20} color={Colors.green} />}
+                {connectionState === 'connecting' && (
+                  <View style={styles.loadingSpinner}>
+                    <CheckCircle size={20} color="#FFA500" />
+                  </View>
+                )}
+                {connectionState === 'disconnected' && <XCircle size={20} color="#FF4444" />}
+                {connectionState === 'error' && <AlertTriangle size={20} color="#FF4444" />}
+                {connectionState === 'none' && <AlertTriangle size={20} color={Colors.gray} />}
+              </View>
+              <View style={styles.connectionStatusContent}>
+                <ThemedText style={styles.connectionStatusLabel}>Wallet Connection</ThemedText>
+                <ThemedText
+                  style={[
+                    styles.connectionStatusValue,
+                    connectionState === 'connected' && { color: Colors.green },
+                    connectionState === 'connecting' && { color: '#FFA500' },
+                    (connectionState === 'disconnected' || connectionState === 'error') && {
+                      color: '#FF4444',
+                    },
+                    connectionState === 'none' && { color: Colors.gray },
+                  ]}
+                >
+                  {connectionState === 'connected' && 'Connected'}
+                  {connectionState === 'connecting' && 'Connecting...'}
+                  {connectionState === 'disconnected' && 'Disconnected'}
+                  {connectionState === 'error' && 'Connection Error'}
+                  {connectionState === 'none' && 'No Wallet Configured'}
+                </ThemedText>
+                {connectionError && (
+                  <ThemedText style={styles.connectionStatusError}>{connectionError}</ThemedText>
+                )}
+                {connectionState === 'none' && (
+                  <ThemedText style={styles.connectionStatusDescription}>
+                    Enter a wallet URL above to connect your wallet
+                  </ThemedText>
+                )}
+              </View>
+            </View>
+          </View>
         </ThemedView>
 
         {/* Confirmation Modal for scanned URL */}
@@ -400,6 +570,45 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 16,
     color: Colors.almostWhite,
+  },
+  connectionStatusContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    padding: 16,
+    marginTop: 16,
+  },
+  connectionStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  connectionStatusIcon: {
+    marginRight: 12,
+  },
+  loadingSpinner: {
+    // Could add rotation animation here if needed
+  },
+  connectionStatusContent: {
+    flex: 1,
+  },
+  connectionStatusLabel: {
+    fontSize: 14,
+    color: Colors.dirtyWhite,
+    marginBottom: 4,
+  },
+  connectionStatusValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  connectionStatusError: {
+    fontSize: 13,
+    color: '#FF4444',
+    fontStyle: 'italic',
+  },
+  connectionStatusDescription: {
+    fontSize: 13,
+    color: Colors.gray,
+    fontStyle: 'italic',
   },
   modalOverlay: {
     flex: 1,

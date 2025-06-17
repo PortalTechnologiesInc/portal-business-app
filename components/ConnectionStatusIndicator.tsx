@@ -9,6 +9,7 @@ import {
   Animated,
 } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
+import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
@@ -17,7 +18,7 @@ import {
   type RelayInfo,
   type ConnectionSummary,
 } from '@/context/NostrServiceContext';
-import { isWalletConnected } from '@/services/SecureStorageService';
+import { isWalletConnected, walletUrlEvents } from '@/services/SecureStorageService';
 import { Wifi, WifiOff, Wallet, X, CheckCircle, AlertCircle, XCircle } from 'lucide-react-native';
 
 type ConnectionStatus = 'connected' | 'partial' | 'disconnected';
@@ -29,6 +30,7 @@ interface ConnectionStatusIndicatorProps {
 export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
   size = 12,
 }) => {
+  const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
   const [scaleValue] = useState(new Animated.Value(1));
   const [opacityValue] = useState(new Animated.Value(1));
@@ -41,6 +43,9 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
     isWalletConnected: isWalletConnectedState,
     nwcWallet,
     getConnectionSummary,
+    nwcConnectionStatus,
+    refreshNwcConnectionStatus,
+    nwcConnectionError,
   } = useNostrService();
 
   // Network connectivity detection
@@ -65,6 +70,13 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
     };
 
     checkWalletConfiguration();
+
+    // Subscribe to wallet URL changes to update configuration status immediately
+    const subscription = walletUrlEvents.addListener('walletUrlChanged', async newUrl => {
+      setIsWalletConfigured(Boolean(newUrl?.trim()));
+    });
+
+    return () => subscription.remove();
   }, []);
 
   // Get relay details from context
@@ -85,7 +97,10 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
 
     // Only include wallet status if a wallet is actually configured
     if (isWalletConfigured) {
-      statusChecks.push(isWalletConnectedState);
+      // Use real NWC connection status if available, otherwise fall back to wallet connected state
+      const realWalletStatus =
+        nwcConnectionStatus !== null ? nwcConnectionStatus : isWalletConnectedState;
+      statusChecks.push(realWalletStatus);
     }
 
     const connectedCount = statusChecks.filter(Boolean).length;
@@ -97,7 +112,13 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
     // Orange for any partial connection (some relays have issues OR wallet issues)
     // This means if even 1 relay is not "Connected", we show orange
     return 'partial';
-  }, [isOnline, relayDetails.allRelaysConnected, isWalletConnectedState, isWalletConfigured]);
+  }, [
+    isOnline,
+    relayDetails.allRelaysConnected,
+    isWalletConnectedState,
+    isWalletConfigured,
+    nwcConnectionStatus,
+  ]);
 
   // Get status color
   const getStatusColor = (status: ConnectionStatus) => {
@@ -165,6 +186,22 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
 
   const getStatusText = (isConnected: boolean) => {
     return isConnected ? 'Connected' : 'Disconnected';
+  };
+
+  // Navigation handlers
+  const handleWalletNavigation = () => {
+    setModalVisible(false);
+    router.push({
+      pathname: '/wallet',
+      params: {
+        source: 'modal',
+      },
+    });
+  };
+
+  const handleRelayNavigation = () => {
+    setModalVisible(false);
+    router.push('/relays');
   };
 
   return (
@@ -242,7 +279,11 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
               {isOnline && (
                 <View style={styles.detailCard}>
                   {/* Relay Status */}
-                  <View style={styles.detailRow}>
+                  <TouchableOpacity
+                    style={styles.detailRow}
+                    onPress={handleRelayNavigation}
+                    activeOpacity={0.7}
+                  >
                     <View style={styles.detailIcon}>
                       <Wifi
                         size={20}
@@ -268,7 +309,10 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
                       {relayDetails.relays.length > 0 && (
                         <TouchableOpacity
                           style={styles.moreInfoButton}
-                          onPress={() => setShowRelayDetails(!showRelayDetails)}
+                          onPress={e => {
+                            e.stopPropagation(); // Prevent parent row navigation
+                            setShowRelayDetails(!showRelayDetails);
+                          }}
                         >
                           <ThemedText style={styles.moreInfoText}>
                             {showRelayDetails ? 'Less info' : 'More info'}
@@ -287,7 +331,7 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
                     <View style={styles.detailRight}>
                       {getConnectionIcon(relayDetails.allRelaysConnected)}
                     </View>
-                  </View>
+                  </TouchableOpacity>
 
                   {/* Expandable Relay Details */}
                   {showRelayDetails && relayDetails.relays.length > 0 && (
@@ -351,15 +395,23 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
                   <View style={styles.separator} />
 
                   {/* Wallet */}
-                  <View style={styles.detailRow}>
+                  <TouchableOpacity
+                    style={styles.detailRow}
+                    onPress={handleWalletNavigation}
+                    activeOpacity={0.7}
+                  >
                     <View style={styles.detailIcon}>
                       <Wallet
                         size={20}
                         color={
                           isWalletConfigured
-                            ? isWalletConnectedState
-                              ? Colors.green
-                              : '#FF4444'
+                            ? nwcConnectionStatus !== null
+                              ? nwcConnectionStatus
+                                ? Colors.green
+                                : '#FF4444'
+                              : isWalletConnectedState
+                                ? Colors.green
+                                : '#FF4444'
                             : Colors.gray
                         }
                       />
@@ -368,23 +420,29 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
                       <ThemedText style={styles.detailLabel}>Wallet Connection</ThemedText>
                       <ThemedText style={styles.detailValue}>
                         {isWalletConfigured
-                          ? getStatusText(isWalletConnectedState)
+                          ? nwcConnectionStatus !== null
+                            ? getStatusText(nwcConnectionStatus)
+                            : getStatusText(isWalletConnectedState)
                           : 'Not configured'}
                       </ThemedText>
                       <ThemedText style={styles.detailDescription}>
                         {isWalletConfigured
-                          ? 'NWC wallet configured'
+                          ? nwcConnectionError || 'NWC wallet configured'
                           : 'No wallet configured in settings'}
                       </ThemedText>
                     </View>
                     <View style={styles.detailRight}>
                       {isWalletConfigured ? (
-                        getConnectionIcon(isWalletConnectedState)
+                        nwcConnectionStatus !== null ? (
+                          getConnectionIcon(nwcConnectionStatus)
+                        ) : (
+                          getConnectionIcon(isWalletConnectedState)
+                        )
                       ) : (
                         <AlertCircle size={20} color={Colors.gray} />
                       )}
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 </View>
               )}
             </ScrollView>
