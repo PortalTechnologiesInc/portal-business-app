@@ -43,6 +43,12 @@ export default function Home() {
   const primaryTextColor = useThemeColor({}, 'textPrimary');
   const secondaryTextColor = useThemeColor({}, 'textSecondary');
   const iconColor = useThemeColor({}, 'icon');
+  const statusConnectedColor = useThemeColor({}, 'statusConnected');
+  const surfaceSecondaryColor = useThemeColor({}, 'surfaceSecondary');
+  const buttonPrimaryColor = useThemeColor({}, 'buttonPrimary');
+  const buttonPrimaryTextColor = useThemeColor({}, 'buttonPrimaryText');
+  const buttonSuccessColor = useThemeColor({}, 'buttonSuccess');
+  const buttonSuccessTextColor = useThemeColor({}, 'buttonSuccessText');
 
   // This would come from a real user context in the future
   const [userPublicKey, setUserPublicKey] = useState('unknown pubkey');
@@ -397,7 +403,7 @@ export default function Home() {
   if (isLoading || isFirstLaunch === null) {
     return (
       <View style={[styles.loaderContainer, { backgroundColor }]}>
-        <ActivityIndicator size="large" color={useThemeColor({}, 'statusConnected')} />
+        <ActivityIndicator size="large" color={statusConnectedColor} />
       </View>
     );
   }
@@ -411,8 +417,8 @@ export default function Home() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[useThemeColor({}, 'statusConnected')]}
-              tintColor={useThemeColor({}, 'statusConnected')}
+              colors={[statusConnectedColor]}
+              tintColor={statusConnectedColor}
               title="Pull to refresh profile"
               titleColor={secondaryTextColor}
             />
@@ -434,21 +440,15 @@ export default function Home() {
                 <View style={styles.userInfoContainer}>
                   {/* Profile Avatar */}
                   <View
-                    style={[
-                      styles.avatarContainer,
-                      { backgroundColor: useThemeColor({}, 'surfaceSecondary') },
-                    ]}
+                    style={[styles.avatarContainer, { backgroundColor: surfaceSecondaryColor }]}
                   >
                     {avatarUri ? (
                       <Image source={{ uri: avatarUri }} style={styles.avatar} />
                     ) : (
                       <View
-                        style={[
-                          styles.avatarPlaceholder,
-                          { backgroundColor: useThemeColor({}, 'buttonPrimary') },
-                        ]}
+                        style={[styles.avatarPlaceholder, { backgroundColor: buttonPrimaryColor }]}
                       >
-                        <User size={18} color={useThemeColor({}, 'buttonPrimaryText')} />
+                        <User size={18} color={buttonPrimaryTextColor} />
                       </View>
                     )}
                   </View>
@@ -479,13 +479,10 @@ export default function Home() {
                     </ThemedText>
                   </View>
                   <TouchableOpacity
-                    style={[
-                      styles.qrButton,
-                      { backgroundColor: useThemeColor({}, 'buttonPrimary') },
-                    ]}
+                    style={[styles.qrButton, { backgroundColor: buttonPrimaryColor }]}
                     onPress={handleQrScan}
                   >
-                    <QrCode size={40} color={useThemeColor({}, 'buttonPrimaryText')} />
+                    <QrCode size={40} color={buttonPrimaryTextColor} />
                   </TouchableOpacity>
                 </View>
               </TouchableOpacity>
@@ -513,11 +510,7 @@ export default function Home() {
                 </ThemedText>
 
                 <View style={styles.illustrationContainer}>
-                  <QrCode
-                    size={80}
-                    color={useThemeColor({}, 'statusConnected')}
-                    style={styles.illustration}
-                  />
+                  <QrCode size={80} color={statusConnectedColor} style={styles.illustration} />
                 </View>
 
                 <ThemedText
@@ -530,23 +523,14 @@ export default function Home() {
 
                 <View style={styles.scanQrContainer}>
                   <TouchableOpacity
-                    style={[
-                      styles.scanQrButton,
-                      { backgroundColor: useThemeColor({}, 'buttonSuccess') },
-                    ]}
+                    style={[styles.scanQrButton, { backgroundColor: buttonSuccessColor }]}
                     onPress={handleQrScan}
                   >
-                    <QrCode
-                      size={24}
-                      color={useThemeColor({}, 'buttonSuccessText')}
-                      style={styles.qrIcon}
-                    />
-                    <ThemedText
-                      style={[styles.scanQrText, { color: useThemeColor({}, 'buttonSuccessText') }]}
-                    >
+                    <QrCode size={24} color={buttonSuccessTextColor} style={styles.qrIcon} />
+                    <ThemedText style={[styles.scanQrText, { color: buttonSuccessTextColor }]}>
                       Scan QR Code
                     </ThemedText>
-                    <ArrowRight size={18} color={useThemeColor({}, 'buttonSuccessText')} />
+                    <ArrowRight size={18} color={buttonSuccessTextColor} />
                   </TouchableOpacity>
                 </View>
 

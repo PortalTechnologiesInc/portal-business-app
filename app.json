@@ -29,17 +29,6 @@
       },
       "package": "com.twentytwo.portal",
       "userInterfaceStyle": "dark",
-      "navigationBarColor": "#000000",
-      "softwareNavBarColor": "#000000",
-      "statusBar": {
-        "backgroundColor": "#000000",
-        "barStyle": "light-content",
-        "translucent": false
-      },
-      "colors": {
-        "navigationBar": "#000000",
-        "statusBar": "#000000"
-      },
       "intentFilters": [
         {
           "action": "VIEW",
