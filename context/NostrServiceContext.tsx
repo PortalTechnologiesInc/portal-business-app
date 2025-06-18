@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import { AppState } from 'react-native';
 import {
   AuthChallengeEvent,
@@ -219,7 +227,7 @@ const categorizeNwcError = (error: unknown): string => {
 const createTimeoutPromise = (
   timeoutMs: number
 ): { promise: Promise<never>; cleanup: () => void } => {
-  let timeoutId: NodeJS.Timeout;
+  let timeoutId: number;
 
   const promise = new Promise<never>((_, reject) => {
     timeoutId = setTimeout(() => reject(new Error('Connection timeout')), timeoutMs);
@@ -248,6 +256,10 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   const [lastConnectionUpdate, setLastConnectionUpdate] = useState<Date | null>(null);
   const [nwcConnectionStatus, setNwcConnectionStatus] = useState<boolean | null>(null);
   const [nwcConnectionError, setNwcConnectionError] = useState<string | null>(null);
+
+  // Simple NWC timeout handling: wait 60 seconds after timeout
+  const [nwcTimeoutUntil, setNwcTimeoutUntil] = useState<number | null>(null);
+  const [nwcCheckInProgress, setNwcCheckInProgress] = useState(false);
 
   const sqliteContext = useSQLiteContext();
   const DB = new DatabaseService(sqliteContext);
@@ -418,13 +430,17 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     setNwcConnectionStatus(null);
     setNwcConnectionError(null);
 
+    // Clear any timeout state
+    setNwcTimeoutUntil(null);
+    setNwcCheckInProgress(false);
+
     if (!walletUrl) {
       console.log('Wallet URL cleared, disconnecting wallet');
       setNwcWallet(null);
       return;
     }
 
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: number;
     let isCancelled = false;
 
     const connectWallet = async () => {
@@ -456,9 +472,23 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
             console.log('Initial NWC wallet connection status:', isConnected);
           } catch (error) {
             if (isCancelled) return;
-            console.error('Error checking initial NWC connection status:', error);
-            setNwcConnectionStatus(false);
-            setNwcConnectionError('Failed to verify wallet connection');
+
+            const errorMessage = error instanceof Error ? error.message : String(error);
+
+            // Handle specific NWC errors more gracefully
+            if (errorMessage.includes('AppError.Nwc')) {
+              console.log('NWC wallet not ready or unavailable during initial check');
+              setNwcConnectionStatus(false);
+              setNwcConnectionError('Wallet not available - will retry automatically');
+            } else if (errorMessage.includes('timeout')) {
+              console.log('NWC initial connection timeout - will retry automatically');
+              setNwcConnectionStatus(false);
+              setNwcConnectionError('Connection timeout - will retry automatically');
+            } else {
+              console.error('Error checking initial NWC connection status:', error);
+              setNwcConnectionStatus(false);
+              setNwcConnectionError('Failed to verify wallet connection');
+            }
           }
         }, 1000);
       } catch (error) {
@@ -642,15 +672,30 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     console.warn('stopPeriodicMonitoring is deprecated. Use navigation-based monitoring instead.');
   }, []);
 
-  // Optimized NWC connection status refresh with better error handling and cleanup
+  // Simple NWC connection status refresh - prevent concurrent calls
   const refreshNwcConnectionStatus = useCallback(async () => {
-    const currentWallet = nwcWallet; // Capture current wallet instance to prevent race conditions
+    const currentWallet = nwcWallet;
 
     if (!currentWallet) {
       setNwcConnectionStatus(null);
       setNwcConnectionError(null);
       return;
     }
+
+    // Skip if another check is already in progress
+    if (nwcCheckInProgress) {
+      console.log('⏸️ Skipping NWC check - already in progress');
+      return;
+    }
+
+    // Skip if we're in timeout period (60 seconds after last timeout)
+    const now = Date.now();
+    if (nwcTimeoutUntil && now < nwcTimeoutUntil) {
+      return;
+    }
+
+    // Set in-progress flag to prevent concurrent calls
+    setNwcCheckInProgress(true);
 
     try {
       console.log('Checking NWC wallet connection status...');
@@ -664,65 +709,53 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
         console.log('Calling getInfo to establish relay connections...');
         await Promise.race([currentWallet.getInfo(), timeoutPromise]);
 
-        // Check if wallet instance is still current (prevent race conditions)
-        if (currentWallet !== nwcWallet) {
-          console.log('Wallet instance changed during getInfo, aborting status check');
-          cleanup();
-          return;
-        }
-
         console.log('getInfo completed, now checking connection status...');
         const status: any = await Promise.race([currentWallet.connectionStatus(), timeoutPromise]);
 
-        // Check again if wallet instance is still current
-        if (currentWallet !== nwcWallet) {
-          console.log('Wallet instance changed during connectionStatus, aborting status update');
-          cleanup();
-          return;
-        }
-
-        // Clean up timeout since we got a result
         cleanup();
-
-        console.log('NWC wallet raw status response:', status);
-        console.log('NWC wallet status type:', typeof status);
-        console.log('NWC wallet status instanceof Map:', status instanceof Map);
-
-        if (status instanceof Map) {
-          console.log('NWC status Map size:', status.size);
-          console.log('NWC status Map entries:', Array.from(status.entries()));
-        }
 
         // Use pure function for status interpretation
         const isConnected = interpretNwcStatus(status);
 
         setNwcConnectionStatus(isConnected);
         setNwcConnectionError(isConnected ? null : 'Unable to connect to wallet service');
-        console.log(
-          'NWC wallet connection status determined as:',
-          isConnected ? 'Connected' : 'Disconnected'
-        );
+
+        // Clear timeout on successful connection
+        if (isConnected) {
+          setNwcTimeoutUntil(null);
+        }
+
+        console.log('NWC wallet connection status:', isConnected ? 'Connected' : 'Disconnected');
+
+        // Always clear in-progress flag on successful completion
+        setNwcCheckInProgress(false);
       } catch (raceError) {
-        // Ensure cleanup happens even on error
         cleanup();
         throw raceError;
       }
     } catch (error) {
-      console.error('NostrService: Error fetching NWC connection status:', error);
+      // Always clear in-progress flag on error
+      setNwcCheckInProgress(false);
 
-      // Only update error state if wallet instance hasn't changed
       if (currentWallet === nwcWallet) {
-        // Use pure function for error categorization
+        const errorMessage = error instanceof Error ? error.message : String(error);
         const userFriendlyError = categorizeNwcError(error);
-        console.log('NWC connection error message:', userFriendlyError);
 
         setNwcConnectionStatus(false);
         setNwcConnectionError(userFriendlyError);
-      } else {
-        console.log('Wallet instance changed during error handling, skipping error state update');
+
+        // If timeout error, just log as info since it's expected
+        if (errorMessage.includes('timeout')) {
+          console.log('NWC connection timeout - will retry in 60 seconds');
+          const timeoutUntil = Date.now() + 60000; // 60 seconds from now
+          setNwcTimeoutUntil(timeoutUntil);
+        } else {
+          // Log other errors normally
+          console.error('NostrService: Error fetching NWC connection status:', error);
+        }
       }
     }
-  }, [nwcWallet]);
+  }, [nwcWallet, nwcTimeoutUntil, nwcCheckInProgress]);
 
   // Force reconnect function to trigger immediate reconnection
   const forceReconnect = useCallback(async () => {
