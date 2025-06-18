@@ -27,6 +27,7 @@ modules
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+.cursorrules
 
 # macOS
 .DS_Store

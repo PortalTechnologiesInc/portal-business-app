@@ -1,7 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, View, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { StyleSheet, View, TouchableOpacity, Image, ActivityIndicator, Text } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { Shield, Fingerprint } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,7 +27,7 @@ export const AppLockScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ThemedView style={styles.content}>
+      <View style={styles.content}>
         <View style={styles.logoContainer}>
           <Image source={appLogo} style={styles.logo} />
         </View>
@@ -38,11 +36,11 @@ export const AppLockScreen: React.FC = () => {
           <Shield size={60} color={Colors.almostWhite} />
         </View>
 
-        <ThemedText style={styles.title}>App Locked</ThemedText>
+        <Text style={styles.title}>App Locked</Text>
 
-        <ThemedText style={styles.subtitle}>
+        <Text style={styles.subtitle}>
           {isAuthenticating ? 'Authenticating...' : 'Please authenticate to access Portal App'}
-        </ThemedText>
+        </Text>
 
         <TouchableOpacity
           style={[styles.unlockButton, isAuthenticating && styles.unlockButtonDisabled]}
@@ -54,11 +52,11 @@ export const AppLockScreen: React.FC = () => {
           ) : (
             <Fingerprint size={24} color={Colors.almostWhite} />
           )}
-          <ThemedText style={styles.unlockButtonText}>
+          <Text style={styles.unlockButtonText}>
             {isAuthenticating ? 'Authenticating...' : 'Unlock'}
-          </ThemedText>
+          </Text>
         </TouchableOpacity>
-      </ThemedView>
+      </View>
     </SafeAreaView>
   );
 };
