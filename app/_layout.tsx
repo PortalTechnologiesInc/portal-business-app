@@ -96,11 +96,11 @@ const AuthenticatedAppContent = () => {
                   ) : (
                     <>
                       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                      <Stack.Screen name="index" />
                       <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
                       <Stack.Screen name="wallet" options={{ presentation: 'modal' }} />
                       <Stack.Screen name="qr" options={{ presentation: 'fullScreenModal' }} />
                       <Stack.Screen name="subscription" />
+                      <Stack.Screen name="activity" />
                     </>
                   )}
                 </Stack>

@@ -252,6 +252,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   // Simple NWC timeout handling: wait 60 seconds after timeout
   const [nwcTimeoutUntil, setNwcTimeoutUntil] = useState<number | null>(null);
   const [nwcCheckInProgress, setNwcCheckInProgress] = useState(false);
+  const [lastNwcCheck, setLastNwcCheck] = useState<number>(0);
 
   const sqliteContext = useSQLiteContext();
   const DB = new DatabaseService(sqliteContext);
@@ -686,8 +687,15 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       return;
     }
 
+    // Add debounce: Skip if we've checked within the last 3 seconds
+    if (now - lastNwcCheck < 3000) {
+      console.log('⏸️ Skipping NWC check - too frequent (debounced)');
+      return;
+    }
+
     // Set in-progress flag to prevent concurrent calls
     setNwcCheckInProgress(true);
+    setLastNwcCheck(now);
 
     try {
       console.log('Checking NWC wallet connection status...');
@@ -747,7 +755,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
         }
       }
     }
-  }, [nwcWallet, nwcTimeoutUntil, nwcCheckInProgress]);
+  }, [nwcWallet, nwcTimeoutUntil, nwcCheckInProgress, lastNwcCheck]);
 
   // Force reconnect function to trigger immediate reconnection
   const forceReconnect = useCallback(async () => {
@@ -759,20 +767,14 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     console.log('🔄 Force reconnecting to relays...');
 
     try {
-      // Note: The portal-app-lib might not have a direct "reconnect" method,
-      // but we can trigger multiple rapid status checks to encourage reconnection
-      await Promise.all([refreshConnectionStatus(), refreshNwcConnectionStatus()]);
-
-      // Trigger another check after a short delay
-      setTimeout(async () => {
-        await refreshConnectionStatus();
-      }, 1000);
+      // Only refresh connection status, don't trigger recursive calls
+      await refreshConnectionStatus();
 
       console.log('✅ Force reconnect initiated');
     } catch (error) {
       console.error('❌ Error during force reconnect:', error);
     }
-  }, [portalApp, refreshConnectionStatus, refreshNwcConnectionStatus]);
+  }, [portalApp, refreshConnectionStatus]);
 
   // Initial connection status fetch (but no periodic refresh here)
   useEffect(() => {
@@ -787,15 +789,11 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       console.log('🔄 AppState changed to:', nextAppState);
 
       if (nextAppState === 'active' && portalApp) {
-        console.log('📱 App became active - refreshing connection status immediately');
-        // Trigger immediate connection status refresh when app becomes active
+        console.log('📱 App became active - refreshing connection status');
+        // Only trigger connection status refresh when app becomes active
+        // Remove the recursive forceReconnect call to prevent loops
         refreshConnectionStatus();
         refreshNwcConnectionStatus();
-
-        // Also trigger force reconnect for more aggressive reconnection
-        setTimeout(() => {
-          forceReconnect();
-        }, 100);
       }
     };
 
@@ -805,7 +803,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     return () => {
       subscription?.remove();
     };
-  }, [portalApp, refreshConnectionStatus, refreshNwcConnectionStatus, forceReconnect]);
+  }, [portalApp, refreshConnectionStatus, refreshNwcConnectionStatus]);
 
   // Context value
   const contextValue: NostrServiceContextType = {

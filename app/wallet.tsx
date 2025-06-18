@@ -8,6 +8,7 @@ import {
   Modal,
   BackHandler,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
@@ -155,6 +156,34 @@ export default function WalletManagementScreen() {
     loadWalletData();
   }, [loadWalletData]);
 
+  // Monitor NWC connection status when wallet page is focused
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔐 Entered Wallet Page: Starting NWC connection monitoring');
+
+      // Only refresh NWC status if we have a wallet configured
+      if (walletUrl && walletUrl.trim()) {
+        // Initial check when entering the page
+        refreshNwcConnectionStatus();
+
+        // Set up periodic refresh for NWC connection status
+        const interval = setInterval(() => {
+          if (walletUrl && walletUrl.trim()) {
+            refreshNwcConnectionStatus();
+          }
+        }, 8000); // Check every 8 seconds (less frequent than homepage to reduce load)
+
+        return () => {
+          console.log('🔐 Left Wallet Page: Stopping NWC connection monitoring');
+          clearInterval(interval);
+        };
+      } else {
+        console.log('🔐 No wallet configured, skipping NWC monitoring');
+        return () => {}; // No cleanup needed if no wallet
+      }
+    }, [walletUrl]) // Only depend on walletUrl to avoid unnecessary re-runs
+  );
+
   // Optimized wallet URL change subscription with proper cleanup
   useEffect(() => {
     const subscription = walletUrlEvents.addListener('walletUrlChanged', async newUrl => {
@@ -289,6 +318,14 @@ export default function WalletManagementScreen() {
   const handleSaveWalletUrl = async (urlToSave = inputValue) => {
     return await validateAndSaveWalletUrl(urlToSave);
   };
+
+  // Manual refresh function for connection status
+  const handleRefreshConnection = useCallback(async () => {
+    if (walletUrl && walletUrl.trim()) {
+      console.log('🔄 Manual NWC connection refresh triggered');
+      await refreshNwcConnectionStatus();
+    }
+  }, [walletUrl, refreshNwcConnectionStatus]);
 
   const handleCloseModal = () => {
     setShowConfirmModal(false);
@@ -450,6 +487,17 @@ export default function WalletManagementScreen() {
                   </ThemedText>
                 )}
               </View>
+              {/* Refresh button for manual connection check */}
+              {walletUrl && walletUrl.trim() && connectionState.state !== 'connecting' && (
+                <TouchableOpacity
+                  style={[styles.refreshButton, { backgroundColor: surfaceSecondaryColor }]}
+                  onPress={handleRefreshConnection}
+                >
+                  <ThemedText style={[styles.refreshButtonText, { color: primaryTextColor }]}>
+                    ↻
+                  </ThemedText>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </ThemedView>
@@ -611,6 +659,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: Colors.gray,
     fontStyle: 'italic',
+  },
+  refreshButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  refreshButtonText: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   modalOverlay: {
     flex: 1,

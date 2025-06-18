@@ -77,32 +77,31 @@ export default function Home() {
     useCallback(() => {
       console.log('🏠 Entered Homepage: Starting connection monitoring');
 
+      // Stable reference to the service
+      const { refreshConnectionStatus, refreshNwcConnectionStatus } = nostrService;
+
       // Initial fetch when entering homepage - trigger immediately with shorter delay
       const initialCheck = () => {
-        nostrService.refreshConnectionStatus();
-        nostrService.refreshNwcConnectionStatus();
+        refreshConnectionStatus();
+        refreshNwcConnectionStatus();
       };
 
       // Immediate check
       initialCheck();
 
-      // Also check again after a brief delay to catch any quick state changes
-      const quickRecheck = setTimeout(initialCheck, 500);
-
-      // Set up periodic refresh for connection status with shorter interval
+      // Set up periodic refresh for connection status with longer interval to reduce load
       const interval = setInterval(() => {
         if (isMounted.current) {
-          nostrService.refreshConnectionStatus();
-          nostrService.refreshNwcConnectionStatus();
+          refreshConnectionStatus();
+          refreshNwcConnectionStatus();
         }
-      }, 2000); // Check every 2 seconds (reduced from 5 seconds)
+      }, 5000); // Increased to 5 seconds to reduce frequency
 
       return () => {
         console.log('🏠 Leaved Homepage: Stopping connection monitoring');
-        clearTimeout(quickRecheck);
         clearInterval(interval);
       };
-    }, [nostrService.refreshConnectionStatus, nostrService.refreshNwcConnectionStatus])
+    }, []) // Empty dependency array - only run on focus/blur
   );
 
   useEffect(() => {
