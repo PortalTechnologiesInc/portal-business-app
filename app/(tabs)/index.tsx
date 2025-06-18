@@ -339,43 +339,39 @@ export default function Home() {
     const screenWidth = Dimensions.get('window').width;
 
     // Adjust number of characters based on screen width
-    let charsToShow = 15;
+    let charsToShow = 22;
     if (screenWidth < 375) {
       charsToShow = 8;
     } else if (screenWidth < 414) {
-      charsToShow = 12;
+      charsToShow = 14;
     }
 
     return `${userPublicKey.substring(0, charsToShow)}...${userPublicKey.substring(userPublicKey.length - charsToShow)}`;
   }, [userPublicKey]);
 
-  // Calculate if we need to truncate the username based on screen width
-  const screenWidth = Dimensions.get('window').width;
-  const maxUsernameWidth = screenWidth * 0.8; // 80% of screen width
-
-  // Approximate the character count based on average character width
-  // This is an estimation since actual rendering width depends on font and character types
-  const getEstimatedTextWidth = (text: string) => {
-    // Estimate avg char width (varies by font, this is a rough approximation)
-    const avgCharWidth = 10; // pixels per character
-    return text.length * avgCharWidth;
-  };
-
-  // Memoize the username display logic - use username directly with @getportal.cc suffix
+  // Memoize the username display logic - same responsive logic as npub
+  // Truncate username only, then always append "@getportal.cc"
   const truncatedUsername = useMemo(() => {
     if (!username) return '';
 
-    const fullUsername = `${username}@getportal.cc`;
+    // Get screen width to determine how many characters to show (same logic as npub)
+    const screenWidth = Dimensions.get('window').width;
 
-    // Check if username is likely to exceed 80% of screen width
-    if (getEstimatedTextWidth(fullUsername) > maxUsernameWidth) {
-      const maxChars = Math.floor(maxUsernameWidth / 10);
-      const charsPerSide = Math.floor((maxChars - 3) / 2);
-      return `${fullUsername.substring(0, charsPerSide)}...${fullUsername.substring(fullUsername.length - charsPerSide)}`;
+    let charsToShow = 22;
+    if (screenWidth < 375) {
+      charsToShow = 8;
+    } else if (screenWidth < 414) {
+      charsToShow = 17;
     }
 
-    return fullUsername;
-  }, [username, maxUsernameWidth]);
+    // Use the same character limit as npub for the username part
+    // This gives us responsive truncation that matches npub behavior
+    if (username.length > charsToShow) {
+      return `${username.substring(0, charsToShow - 3)}...`;
+    }
+
+    return username;
+  }, [username]);
 
   // Memoize handlers to prevent recreation on every render
   const handleQrScan = useCallback(() => {
@@ -447,7 +443,7 @@ export default function Home() {
                       <View
                         style={[styles.avatarPlaceholder, { backgroundColor: buttonPrimaryColor }]}
                       >
-                        <User size={30} color={buttonPrimaryTextColor} />
+                        <User size={24} color={buttonPrimaryTextColor} />
                       </View>
                     )}
                   </View>
@@ -455,17 +451,13 @@ export default function Home() {
                   <View style={styles.userTextContainer}>
                     {username ? (
                       <ThemedText
-                        style={[
-                          styles.username,
-                          username.length > 15 && { fontSize: 18 },
-                          username.length > 20 && { fontSize: 16 },
-                        ]}
+                        style={styles.username}
                         numberOfLines={1}
-                        ellipsizeMode="middle"
+                        ellipsizeMode="clip"
                         lightColor={Colors.gray900}
                         darkColor={Colors.almostWhite}
                       >
-                        <ThemedText>{username}</ThemedText>
+                        <ThemedText>{truncatedUsername}</ThemedText>
                         <ThemedText>@getportal.cc</ThemedText>
                       </ThemedText>
                     ) : null}
@@ -598,24 +590,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   avatarContainer: {
-    width: 65,
-    height: 65,
-    borderRadius: 32.5,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     // backgroundColor handled by theme
-    marginRight: 10,
+    marginRight: 12,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
   },
   avatar: {
-    width: 65,
-    height: 65,
-    borderRadius: 32.5,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
   },
   avatarPlaceholder: {
-    width: 65,
-    height: 65,
-    borderRadius: 32.5,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     // backgroundColor handled by theme (buttonPrimary)
     justifyContent: 'center',
     alignItems: 'center',
