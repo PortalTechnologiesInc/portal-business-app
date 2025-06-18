@@ -16,9 +16,8 @@ import type {
   RecurringPaymentRequest,
   RecurringPaymentResponseContent,
   SinglePaymentRequest,
-  AuthResponseStatus,
 } from 'portal-app-lib';
-import { PaymentStatus, RecurringPaymentStatus } from 'portal-app-lib';
+import { PaymentStatus, RecurringPaymentStatus, AuthResponseStatus } from 'portal-app-lib';
 import { useSQLiteContext } from 'expo-sqlite';
 import { DatabaseService, fromUnixSeconds } from '@/services/database';
 import type { ActivityWithDates, SubscriptionWithDates } from '@/services/database';
@@ -50,7 +49,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
   const [isLoadingRequest, setIsLoadingRequest] = useState(false);
   const [pendingUrl, setPendingUrl] = useState<AuthInitUrl | undefined>(undefined);
   const [requestFailed, setRequestFailed] = useState(false);
-  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [timeoutId, setTimeoutId] = useState<number | null>(null);
   const [resolvers, setResolvers] = useState<
     Map<string, (value: boolean | PaymentResponseContent | RecurringPaymentResponseContent) => void>
   >(new Map());
@@ -296,13 +295,10 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
       switch (request.type) {
         case 'login':
           // Create AuthResponseStatus for approved login using type assertion
-          const approvedAuthResponse = {
-            tag: 'Approved',
-            inner: {
-              grantedPermissions: [],
-              sessionToken: '',
-            },
-          } as unknown as AuthResponseStatus;
+          const approvedAuthResponse = new AuthResponseStatus.Approved({
+            grantedPermissions: [],
+            sessionToken: 'randomsessiontoken', // TODO: generate a real session token
+          });
           request.result(approvedAuthResponse);
 
           // Add an activity record directly via the database service
@@ -434,12 +430,9 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
       switch (request?.type) {
         case 'login':
           // Create AuthResponseStatus for denied login using type assertion
-          const deniedAuthResponse = {
-            tag: 'Rejected',
-            inner: {
-              reason: 'User denied login',
-            },
-          } as unknown as AuthResponseStatus;
+          const deniedAuthResponse = new AuthResponseStatus.Declined({
+            reason: 'Not approved by user',
+          });
           request.result(deniedAuthResponse);
 
           // Add denied login activity to database

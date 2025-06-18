@@ -448,7 +448,7 @@ export default function Home() {
                       <View
                         style={[styles.avatarPlaceholder, { backgroundColor: buttonPrimaryColor }]}
                       >
-                        <User size={18} color={buttonPrimaryTextColor} />
+                        <User size={30} color={buttonPrimaryTextColor} />
                       </View>
                     )}
                   </View>
@@ -599,9 +599,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   avatarContainer: {
-    width: 55,
-    height: 55,
-    borderRadius: 32,
+    width: 65,
+    height: 65,
+    borderRadius: 32.5,
     // backgroundColor handled by theme
     marginRight: 10,
     justifyContent: 'center',
@@ -609,14 +609,14 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   avatar: {
-    width: 55,
-    height: 55,
-    borderRadius: 32,
+    width: 65,
+    height: 65,
+    borderRadius: 32.5,
   },
   avatarPlaceholder: {
-    width: 55,
-    height: 55,
-    borderRadius: 32,
+    width: 65,
+    height: 65,
+    borderRadius: 32.5,
     // backgroundColor handled by theme (buttonPrimary)
     justifyContent: 'center',
     alignItems: 'center',

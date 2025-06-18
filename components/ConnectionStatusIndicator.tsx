@@ -246,14 +246,9 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
 
             <ScrollView showsVerticalScrollIndicator={true}>
               {/* Overall Status */}
-              <View style={[styles.detailCard, { backgroundColor: cardBackgroundColor }]}>
+              <View style={[styles.detailCard, { backgroundColor: surfaceSecondaryColor }]}>
                 <View style={styles.detailRow}>
-                  <View
-                    style={[
-                      styles.detailIcon,
-                      { backgroundColor: useThemeColor({}, 'skeletonHighlight') },
-                    ]}
-                  >
+                  <View style={[styles.detailIcon, { backgroundColor: surfaceTertiaryColor }]}>
                     <View
                       style={[
                         styles.overallStatusDot,
