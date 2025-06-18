@@ -169,7 +169,7 @@ export default function SettingsScreen() {
       if (nostrService.publicKey) {
         console.log('Public key:', nostrService.publicKey);
         await fetchProfile(nostrService.publicKey);
-        showToast('Profile refreshed successfully', 'success');
+        showToast('updated profile', 'success');
       } else {
         showToast('Unable to refresh profile', 'error');
       }
@@ -195,23 +195,28 @@ export default function SettingsScreen() {
       return;
     }
 
+    const newUsername = usernameInput.trim();
+    const currentAvatarUri = avatarUri || '';
+
+    // Check if anything has actually changed
+    if (newUsername === username) {
+      showToast('No changes to save', 'success');
+      return;
+    }
+
     try {
       setProfileIsLoading(true);
 
-      const username = usernameInput.trim();
-
-      await setUsername(username);
+      await setUsername(newUsername);
 
       await nostrService.setUserProfile({
-        nip05: `${username}@getportal.cc`,
-        name: username,
-        picture: avatarUri || '',
-        displayName: username,
+        nip05: `${newUsername}@getportal.cc`,
+        name: newUsername,
+        picture: currentAvatarUri,
+        displayName: newUsername,
       });
 
       handleRefreshProfile();
-
-      Alert.alert('Success', 'Profile updated successfully');
     } catch (error) {
       console.error('Error saving profile:', error);
       Alert.alert('Error', 'Failed to save profile. Please try again.');
