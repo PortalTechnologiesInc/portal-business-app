@@ -624,16 +624,23 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
 
   // Add preloadServiceNames to the useEffect that depends on pendingRequests
   useEffect(() => {
-    // Preload service names whenever the pending requests change
-    preloadServiceNames();
+    // Only preload service names if we have pending requests and NostrService is ready
+    if (Object.keys(nostrService.pendingRequests).length > 0 && nostrService.isInitialized) {
+      preloadServiceNames();
+    }
 
     // Existing code for removing skeleton when we get the expected request
     for (const request of Object.values(nostrService.pendingRequests)) {
       if (request.metadata.serviceKey === pendingUrl?.mainKey) {
-        cancelSkeletonLoader();
+        // Clear timeout and reset loading states directly to avoid dependency issues
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+        setIsLoadingRequest(false);
+        setRequestFailed(false);
       }
     }
-  }, [nostrService.pendingRequests, pendingUrl, preloadServiceNames]);
+  }, [nostrService.pendingRequests, pendingUrl, timeoutId]); // Added timeoutId back for the clearTimeout logic
 
   // Memoize the context value to prevent recreation on every render
   // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>

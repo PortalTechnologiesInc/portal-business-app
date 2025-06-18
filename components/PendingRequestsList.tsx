@@ -71,7 +71,7 @@ export const PendingRequestsList: React.FC = () => {
     };
 
     loadData();
-  }, [nostrService.pendingRequests, isLoadingRequest, requestFailed, preloadServiceNames]);
+  }, [nostrService.pendingRequests, isLoadingRequest, requestFailed]);
 
   // Function to process and deduplicate requests
   const processRequests = () => {

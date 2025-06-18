@@ -87,7 +87,7 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({ request }) => 
     return () => {
       isMounted.current = false;
     };
-  }, [metadata.serviceKey, preloadServiceNames]);
+  }, [metadata.serviceKey]);
 
   const recipientPubkey = metadata.recipient;
 
