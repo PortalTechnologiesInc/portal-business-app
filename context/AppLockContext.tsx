@@ -41,6 +41,8 @@ export const AppLockProvider: React.FC<AppLockProviderProps> = ({ children }) =>
         hasInitialized.current = true;
       } catch (error) {
         console.error('Error checking app lock on init:', error);
+        // Default to unlocked on error to prevent app from being unusable
+        setIsLocked(false);
         hasInitialized.current = true;
       }
     };
@@ -86,9 +88,13 @@ export const AppLockProvider: React.FC<AppLockProviderProps> = ({ children }) =>
 
       if (result.success) {
         setIsLocked(false);
+      } else {
+        // If authentication fails, keep the app locked
+        console.warn('Authentication failed:', result.error);
       }
     } catch (error) {
       console.error('Authentication error:', error);
+      // On error, keep the app locked for security
     } finally {
       setIsAuthenticating(false);
     }

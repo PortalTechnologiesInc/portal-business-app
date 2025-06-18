@@ -38,17 +38,6 @@ const preloadImages = async () => {
   }
 };
 
-// App content wrapper that handles app lock
-const AppContentWrapper = () => {
-  const { isLocked } = useAppLock();
-
-  if (isLocked) {
-    return <AppLockScreen />;
-  }
-
-  return <AppContent />;
-};
-
 // Status bar wrapper that respects theme
 const ThemedStatusBar = () => {
   const { currentTheme } = useTheme();
@@ -75,30 +64,12 @@ const LoadingScreenContent = () => {
   );
 };
 
-// Themed root view wrapper
-const ThemedRootView = () => {
-  const backgroundColor = useThemeColor({}, 'background');
-
-  return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor }}>
-      <ThemedStatusBar />
-      <MnemonicProvider>
-        <OnboardingProvider>
-          <AppLockProvider>
-            <AppContentWrapper />
-          </AppLockProvider>
-        </OnboardingProvider>
-      </MnemonicProvider>
-    </GestureHandlerRootView>
-  );
-};
-
-// Main app structure with NostrService initialization
-const AppContent = () => {
+// App content with all data providers - only rendered after successful authentication
+const AuthenticatedAppContent = () => {
   const { isOnboardingComplete } = useOnboarding();
   const { mnemonic, walletUrl } = useMnemonic();
+  const backgroundColor = useThemeColor({}, 'background');
 
-  // Wrap everything in providers first, then conditionally render Stack screens
   return (
     <DatabaseProvider>
       <NostrServiceProvider mnemonic={mnemonic || ''} walletUrl={walletUrl}>
@@ -110,7 +81,7 @@ const AppContent = () => {
                   screenOptions={{
                     headerShown: false,
                     contentStyle: {
-                      backgroundColor: '#000000',
+                      backgroundColor,
                     },
                   }}
                 >
@@ -139,6 +110,38 @@ const AppContent = () => {
         </UserProfileProvider>
       </NostrServiceProvider>
     </DatabaseProvider>
+  );
+};
+
+// App content wrapper that handles app lock - only initializes data providers after authentication
+const AppContentWrapper = () => {
+  const { isLocked } = useAppLock();
+
+  if (isLocked) {
+    return <AppLockScreen />;
+  }
+
+  // Only initialize data providers after successful authentication
+  return (
+    <MnemonicProvider>
+      <OnboardingProvider>
+        <AuthenticatedAppContent />
+      </OnboardingProvider>
+    </MnemonicProvider>
+  );
+};
+
+// Themed root view wrapper - only contains minimal providers needed before authentication
+const ThemedRootView = () => {
+  const backgroundColor = useThemeColor({}, 'background');
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor }}>
+      <ThemedStatusBar />
+      <AppLockProvider>
+        <AppContentWrapper />
+      </AppLockProvider>
+    </GestureHandlerRootView>
   );
 };
 

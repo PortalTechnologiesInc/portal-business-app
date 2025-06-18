@@ -1,6 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { StyleSheet, View, TouchableOpacity, Image, ActivityIndicator, Text } from 'react-native';
-import { Colors } from '@/constants/Colors';
 import { Shield, Fingerprint } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppLock } from '@/context/AppLockContext';
@@ -20,16 +19,18 @@ export const AppLockScreen: React.FC = () => {
   const buttonPrimaryText = useThemeColor({}, 'buttonPrimaryText');
   const buttonSecondary = useThemeColor({}, 'buttonSecondary');
 
+  // Memoize the unlock function to prevent unnecessary re-renders
+  const handleAutoUnlock = useCallback(async () => {
+    if (!isAuthenticating) {
+      await unlock();
+    }
+  }, [unlock, isAuthenticating]);
+
   // Automatically trigger biometric authentication when the component mounts
   useEffect(() => {
-    const autoUnlock = async () => {
-      if (!isAuthenticating) {
-        await unlock();
-      }
-    };
-
-    autoUnlock();
-  }, []);
+    // Only trigger automatically once when component first mounts
+    handleAutoUnlock();
+  }, []); // Empty dependency array to run only once
 
   const handleUnlock = async () => {
     await unlock();
