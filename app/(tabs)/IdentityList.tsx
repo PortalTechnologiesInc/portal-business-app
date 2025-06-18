@@ -7,6 +7,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import { Plus, Edit } from 'lucide-react-native';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 export type IdentityListProps = {
   onManageIdentity: (identity: Identity) => void;
@@ -18,46 +19,49 @@ export default function IdentityList({ onManageIdentity }: IdentityListProps) {
 
   const router = useRouter();
 
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const cardBackground = useThemeColor({}, 'cardBackground');
+  const textPrimary = useThemeColor({}, 'textPrimary');
+  const textSecondary = useThemeColor({}, 'textSecondary');
+  const borderPrimary = useThemeColor({}, 'borderPrimary');
+  const buttonPrimary = useThemeColor({}, 'buttonPrimary');
+  const buttonPrimaryText = useThemeColor({}, 'buttonPrimaryText');
+  const shadowColor = useThemeColor({}, 'shadowColor');
 
   const renderItem = ({ item }: { item: Identity }) => (
-    <TouchableOpacity style={styles.listItem} onPress={() => onManageIdentity(item)}>
-      <View>
-        <ThemedText
-          type="defaultSemiBold"
-          lightColor={Colors.almostWhite}
-          darkColor={Colors.almostWhite}
-        >
-          {item.name}
-        </ThemedText>
-        <ThemedText lightColor={Colors.dirtyWhite} darkColor={Colors.dirtyWhite}>
-          {item.publicKey}
-        </ThemedText>
+    <TouchableOpacity style={[styles.listItem, { borderBottomColor: borderPrimary }]}>
+      <View style={{ flex: 1 }}>
+        <ThemedText style={{ color: textPrimary }}>{item.name}</ThemedText>
+        <ThemedText style={{ color: textSecondary, fontSize: 12 }}>{item.publicKey}</ThemedText>
       </View>
       <View style={styles.buttonsContainer}>
-        <Edit size={16} color={Colors.almostWhite} onPress={() => onManageIdentity(item)} />
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: buttonPrimary }]}
+          onPress={() => onManageIdentity(item)}
+        >
+          <ThemedText style={[styles.buttonText, { color: buttonPrimaryText }]}>Edit</ThemedText>
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
       <ThemedView style={styles.container}>
-        <ThemedView style={styles.header}>
-          <ThemedText type="title" darkColor={Colors.almostWhite} lightColor={Colors.almostWhite}>
-            Master Key
+        <View style={[styles.header, { backgroundColor: cardBackground }]}>
+          <ThemedText style={[styles.masterKeyDisplay, { color: textSecondary }]}>
+            Master Key: ax87DJe9IjdDJi40PoaW55tR...
           </ThemedText>
-          <ThemedText
-            type="subtitle"
-            style={styles.masterKeyDisplay}
-            darkColor={Colors.dirtyWhite}
-            lightColor={Colors.dirtyWhite}
+          <TouchableOpacity
+            style={[styles.createButton, { backgroundColor: buttonPrimary }]}
+            onPress={() => router.navigate('/')}
           >
-            ax87DJe9IjdDJi40PoaW55tR...
-          </ThemedText>
-        </ThemedView>
-        <TouchableOpacity style={styles.fab} onPress={() => router.navigate('/')}>
-          <Plus size={24} color={Colors.darkerGray} />
-        </TouchableOpacity>
+            <ThemedText style={[styles.createButtonText, { color: buttonPrimaryText }]}>
+              Create New Identity
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
 
         <FlatList
           ListHeaderComponent={<ThemedText type="subtitle">Your subkeys:</ThemedText>}
@@ -67,6 +71,19 @@ export default function IdentityList({ onManageIdentity }: IdentityListProps) {
           style={styles.list}
           contentContainerStyle={styles.listContent}
         />
+
+        <TouchableOpacity
+          style={[
+            styles.fab,
+            {
+              backgroundColor: buttonPrimary,
+              shadowColor: shadowColor,
+            },
+          ]}
+          onPress={() => router.navigate('/')}
+        >
+          <ThemedText style={[styles.fabIcon, { color: buttonPrimaryText }]}>+</ThemedText>
+        </TouchableOpacity>
       </ThemedView>
     </SafeAreaView>
   );
@@ -75,32 +92,33 @@ export default function IdentityList({ onManageIdentity }: IdentityListProps) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#000000',
+    // backgroundColor handled by theme
   },
   container: {
     flex: 1,
-    backgroundColor: Colors.darkerGray, // Example background color
+    // backgroundColor handled by theme
   },
   header: {
     padding: 50,
-    backgroundColor: '#222',
+    // backgroundColor handled by theme
     borderBottomWidth: 1,
-    borderBottomColor: '#333', // Example border color
+    // borderBottomColor handled by theme (will need to be applied inline)
     alignItems: 'center', // Center content horizontally
   },
   masterKeyDisplay: {
     marginTop: 10,
     fontSize: 16,
-    color: 'grey', // Example color
+    // color handled by theme
   },
   createButton: {
     marginTop: 20,
-    backgroundColor: 'white', // Example button color
+    // backgroundColor handled by theme
     padding: 10,
     borderRadius: 5,
   },
   createButtonText: {
     textAlign: 'center',
+    // color handled by theme
   },
   fab: {
     position: 'absolute',
@@ -109,19 +127,18 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: Colors.almostWhite, // Customize color
+    // backgroundColor handled by theme
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 5, // For Android shadow
-    shadowColor: Colors.darkerGray, // For iOS shadow
+    // shadowColor handled by theme
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 2,
   },
-
   fabIcon: {
     fontSize: 24,
-    color: Colors.darkGray,
+    // color handled by theme
   },
   list: {
     flex: 1,
@@ -140,9 +157,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12, // Adjust vertical padding
     borderBottomWidth: 1,
-    borderBottomColor: Colors.darkGray, // Use a lighter border color
+    // borderBottomColor handled by theme
   },
   buttonsContainer: {
     flexDirection: 'row',
+  },
+  button: {
+    // backgroundColor handled by theme
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  buttonText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    // color handled by theme
   },
 });

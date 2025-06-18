@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { usePendingRequests } from '@/context/PendingRequestsContext';
 import { parseAuthInitUrl } from 'portal-app-lib';
 import { useNostrService } from '@/context/NostrServiceContext';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 // Define the type for the barcode scanner result
 type BarcodeResult = {
@@ -20,6 +21,13 @@ export default function QRScannerScreen() {
   const [enableTorch, setEnableTorch] = useState(false);
   const { showSkeletonLoader } = usePendingRequests();
   const nostrService = useNostrService();
+
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const textPrimary = useThemeColor({}, 'textPrimary');
+  const tintColor = useThemeColor({}, 'tint');
+  const buttonPrimary = useThemeColor({}, 'buttonPrimary');
+  const buttonPrimaryText = useThemeColor({}, 'buttonPrimaryText');
 
   // Handle hardware back button
   useEffect(() => {
@@ -67,8 +75,10 @@ export default function QRScannerScreen() {
   if (!permission) {
     // Camera permissions are still loading
     return (
-      <View style={styles.container}>
-        <Text>Requesting camera permission...</Text>
+      <View style={[styles.container, { backgroundColor }]}>
+        <Text style={[styles.instructions, { color: textPrimary }]}>
+          Requesting camera permission...
+        </Text>
       </View>
     );
   }
@@ -76,10 +86,17 @@ export default function QRScannerScreen() {
   if (!permission.granted) {
     // Camera permissions are not granted yet
     return (
-      <View style={styles.container}>
-        <Text style={styles.instructions}>We need your permission to use the camera</Text>
-        <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-          <Text style={styles.permissionButtonText}>Grant Permission</Text>
+      <View style={[styles.container, { backgroundColor }]}>
+        <Text style={[styles.instructions, { color: textPrimary }]}>
+          We need your permission to use the camera
+        </Text>
+        <TouchableOpacity
+          style={[styles.permissionButton, { backgroundColor: buttonPrimary }]}
+          onPress={requestPermission}
+        >
+          <Text style={[styles.permissionButtonText, { color: buttonPrimaryText }]}>
+            Grant Permission
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -104,10 +121,12 @@ export default function QRScannerScreen() {
           <View style={styles.middleSection}>
             <View style={styles.leftSection} />
             <View style={styles.scanner}>
-              <View style={styles.scannerCorner} />
-              <View style={[styles.scannerCorner, styles.topRight]} />
-              <View style={[styles.scannerCorner, styles.bottomRight]} />
-              <View style={[styles.scannerCorner, styles.bottomLeft]} />
+              <View style={[styles.scannerCorner, { borderColor: tintColor }]} />
+              <View style={[styles.scannerCorner, styles.topRight, { borderColor: tintColor }]} />
+              <View
+                style={[styles.scannerCorner, styles.bottomRight, { borderColor: tintColor }]}
+              />
+              <View style={[styles.scannerCorner, styles.bottomLeft, { borderColor: tintColor }]} />
             </View>
             <View style={styles.rightSection} />
           </View>
@@ -122,7 +141,7 @@ export default function QRScannerScreen() {
 
       {scanned && (
         <View style={styles.scannedOverlay}>
-          <Text style={styles.scannedText}>QR Code Scanned!</Text>
+          <Text style={[styles.scannedText, { color: tintColor }]}>QR Code Scanned!</Text>
         </View>
       )}
     </View>
@@ -167,7 +186,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 20,
     height: 20,
-    borderColor: Colors.light.tint,
+    // borderColor handled by theme
     borderWidth: 3,
     top: 0,
     left: 0,
@@ -230,18 +249,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scannedText: {
-    color: Colors.light.tint,
+    // color handled by theme
     fontSize: 22,
     fontWeight: 'bold',
   },
   permissionButton: {
     marginTop: 20,
     padding: 12,
-    backgroundColor: Colors.light.tint,
+    // backgroundColor handled by theme
     borderRadius: 8,
   },
   permissionButtonText: {
-    color: 'white',
+    // color handled by theme
     fontWeight: 'bold',
     fontSize: 16,
   },

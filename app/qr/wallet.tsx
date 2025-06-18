@@ -5,6 +5,7 @@ import { Colors } from '@/constants/Colors';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Flashlight, FlashlightOff } from 'lucide-react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 // Define the type for the barcode scanner result
 type BarcodeResult = {
@@ -17,6 +18,13 @@ export default function WalletQRScannerScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [enableTorch, setEnableTorch] = useState(false);
   const params = useLocalSearchParams();
+
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const textPrimary = useThemeColor({}, 'textPrimary');
+  const tintColor = useThemeColor({}, 'tint');
+  const buttonPrimary = useThemeColor({}, 'buttonPrimary');
+  const buttonPrimaryText = useThemeColor({}, 'buttonPrimaryText');
 
   const toggleTorch = () => {
     setEnableTorch(!enableTorch);
@@ -48,8 +56,10 @@ export default function WalletQRScannerScreen() {
   if (!permission) {
     // Camera permissions are still loading
     return (
-      <View style={styles.container}>
-        <Text>Requesting camera permission...</Text>
+      <View style={[styles.container, { backgroundColor }]}>
+        <Text style={[styles.instructions, { color: textPrimary }]}>
+          Requesting camera permission...
+        </Text>
       </View>
     );
   }
@@ -57,10 +67,17 @@ export default function WalletQRScannerScreen() {
   if (!permission.granted) {
     // Camera permissions are not granted yet
     return (
-      <View style={styles.container}>
-        <Text style={styles.instructions}>We need your permission to use the camera</Text>
-        <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-          <Text style={styles.permissionButtonText}>Grant Permission</Text>
+      <View style={[styles.container, { backgroundColor }]}>
+        <Text style={[styles.instructions, { color: textPrimary }]}>
+          We need your permission to use the camera
+        </Text>
+        <TouchableOpacity
+          style={[styles.permissionButton, { backgroundColor: buttonPrimary }]}
+          onPress={requestPermission}
+        >
+          <Text style={[styles.permissionButtonText, { color: buttonPrimaryText }]}>
+            Grant Permission
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -98,10 +115,12 @@ export default function WalletQRScannerScreen() {
           <View style={styles.middleSection}>
             <View style={styles.leftSection} />
             <View style={styles.scanner}>
-              <View style={styles.scannerCorner} />
-              <View style={[styles.scannerCorner, styles.topRight]} />
-              <View style={[styles.scannerCorner, styles.bottomRight]} />
-              <View style={[styles.scannerCorner, styles.bottomLeft]} />
+              <View style={[styles.scannerCorner, { borderColor: tintColor }]} />
+              <View style={[styles.scannerCorner, styles.topRight, { borderColor: tintColor }]} />
+              <View
+                style={[styles.scannerCorner, styles.bottomRight, { borderColor: tintColor }]}
+              />
+              <View style={[styles.scannerCorner, styles.bottomLeft, { borderColor: tintColor }]} />
             </View>
             <View style={styles.rightSection} />
           </View>
@@ -120,7 +139,7 @@ export default function WalletQRScannerScreen() {
 
       {scanned && (
         <View style={styles.scannedOverlay}>
-          <Text style={styles.scannedText}>Wallet URL Scanned!</Text>
+          <Text style={[styles.scannedText, { color: tintColor }]}>Wallet URL Scanned!</Text>
         </View>
       )}
     </View>
@@ -165,7 +184,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 20,
     height: 20,
-    borderColor: Colors.light.tint,
+    // borderColor handled by theme
     borderWidth: 3,
     top: 0,
     left: 0,
@@ -227,13 +246,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(50, 50, 50, 0.8)',
   },
   permissionButton: {
-    backgroundColor: Colors.light.tint,
+    // backgroundColor handled by theme
     padding: 15,
     borderRadius: 8,
     marginTop: 20,
   },
   permissionButtonText: {
-    color: 'white',
+    // color handled by theme
     fontSize: 16,
     fontWeight: 'bold',
   },
@@ -248,7 +267,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scannedText: {
-    color: Colors.light.tint,
+    // color handled by theme
     fontSize: 22,
     fontWeight: 'bold',
   },

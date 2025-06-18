@@ -8,9 +8,7 @@ import type { PendingRequest, PendingRequestType } from '../models/PendingReques
 import type { AuthChallengeEvent, SinglePaymentRequest } from 'portal-app-lib';
 import { useNostrService } from '@/context/NostrServiceContext';
 import { ThemedText } from './ThemedText';
-import { Colors } from '@/constants/Colors';
 import { useEffect, useState } from 'react';
-import { serviceNameCache } from '@/utils/serviceNameCache';
 import { useThemeColor } from '@/hooks/useThemeColor';
 
 const { width } = Dimensions.get('window');

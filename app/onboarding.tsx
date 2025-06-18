@@ -13,6 +13,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useOnboarding } from '@/context/OnboardingContext';
 import { useMnemonic } from '@/context/MnemonicContext';
+import { useThemeColor } from '@/hooks/useThemeColor';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { generateMnemonic, Mnemonic } from 'portal-app-lib';
@@ -32,6 +33,17 @@ export default function Onboarding() {
   );
 
   const [seedPhrase, setSeedPhrase] = useState('');
+
+  // Theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const cardBackgroundColor = useThemeColor({}, 'cardBackground');
+  const surfaceSecondary = useThemeColor({}, 'surfaceSecondary');
+  const textPrimary = useThemeColor({}, 'textPrimary');
+  const textSecondary = useThemeColor({}, 'textSecondary');
+  const inputBackground = useThemeColor({}, 'inputBackground');
+  const inputPlaceholder = useThemeColor({}, 'inputPlaceholder');
+  const buttonPrimary = useThemeColor({}, 'buttonPrimary');
+  const buttonPrimaryText = useThemeColor({}, 'buttonPrimaryText');
 
   // Handle Android back button
   useEffect(() => {
@@ -153,7 +165,7 @@ export default function Onboarding() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
       <ThemedView style={styles.container}>
         <View style={styles.logoContainer}>
           <Image source={onboardingLogo} style={styles.logo} resizeMode="contain" />
@@ -166,12 +178,22 @@ export default function Onboarding() {
             </ThemedText>
 
             <View style={styles.buttonGroup}>
-              <TouchableOpacity style={styles.button} onPress={handleGenerate}>
-                <ThemedText style={styles.buttonText}>Generate your private key</ThemedText>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: buttonPrimary }]}
+                onPress={handleGenerate}
+              >
+                <ThemedText style={[styles.buttonText, { color: buttonPrimaryText }]}>
+                  Generate your private key
+                </ThemedText>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.button} onPress={handleImport}>
-                <ThemedText style={styles.buttonText}>Import existing seed</ThemedText>
+              <TouchableOpacity
+                style={[styles.button, { backgroundColor: buttonPrimary }]}
+                onPress={handleImport}
+              >
+                <ThemedText style={[styles.buttonText, { color: buttonPrimaryText }]}>
+                  Import existing seed
+                </ThemedText>
               </TouchableOpacity>
             </View>
           </View>
@@ -188,7 +210,10 @@ export default function Onboarding() {
 
             <View style={styles.seedContainer}>
               {seedPhrase.split(' ').map((word: string, index: number) => (
-                <View key={`word-${index}-${word}`} style={styles.wordContainer}>
+                <View
+                  key={`word-${index}-${word}`}
+                  style={[styles.wordContainer, { backgroundColor: surfaceSecondary }]}
+                >
                   <ThemedText style={styles.wordText}>
                     {index + 1}. {word}
                   </ThemedText>
@@ -197,10 +222,12 @@ export default function Onboarding() {
             </View>
 
             <TouchableOpacity
-              style={[styles.button, styles.finishButton]}
+              style={[styles.button, styles.finishButton, { backgroundColor: buttonPrimary }]}
               onPress={handleGenerateComplete}
             >
-              <ThemedText style={styles.buttonText}>Finish</ThemedText>
+              <ThemedText style={[styles.buttonText, { color: buttonPrimaryText }]}>
+                Finish
+              </ThemedText>
             </TouchableOpacity>
           </ScrollView>
         )}
@@ -214,9 +241,9 @@ export default function Onboarding() {
 
             <View style={styles.inputContainer}>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { backgroundColor: inputBackground, color: textPrimary }]}
                 placeholder="Enter your seed phrase separated by spaces"
-                placeholderTextColor="rgba(255,255,255,0.5)"
+                placeholderTextColor={inputPlaceholder}
                 value={seedPhrase}
                 onChangeText={setSeedPhrase}
                 multiline
@@ -227,10 +254,12 @@ export default function Onboarding() {
             </View>
 
             <TouchableOpacity
-              style={[styles.button, styles.finishButton]}
+              style={[styles.button, styles.finishButton, { backgroundColor: buttonPrimary }]}
               onPress={handleImportComplete}
             >
-              <ThemedText style={styles.buttonText}>Import</ThemedText>
+              <ThemedText style={[styles.buttonText, { color: buttonPrimaryText }]}>
+                Import
+              </ThemedText>
             </TouchableOpacity>
           </View>
         )}
@@ -242,11 +271,11 @@ export default function Onboarding() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#000000',
+    // backgroundColor handled by theme
   },
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    // backgroundColor handled by theme
     padding: 20,
   },
   loadingContainer: {
@@ -299,7 +328,7 @@ const styles = StyleSheet.create({
     gap: 15,
   },
   button: {
-    backgroundColor: 'white',
+    // backgroundColor handled by theme
     padding: 15,
     borderRadius: 8,
     width: '100%',
@@ -307,7 +336,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 16,
-    color: 'black',
+    // color handled by theme
     textAlign: 'center',
     fontWeight: 'bold',
   },
@@ -324,7 +353,7 @@ const styles = StyleSheet.create({
     width: '40%',
     padding: 10,
     margin: 5,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    // backgroundColor handled by theme
     borderRadius: 8,
   },
   wordText: {
@@ -336,10 +365,10 @@ const styles = StyleSheet.create({
   },
   input: {
     width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    // backgroundColor handled by theme
     borderRadius: 8,
     padding: 15,
-    color: 'white',
+    // color handled by theme
     minHeight: 120,
     textAlignVertical: 'top',
   },
