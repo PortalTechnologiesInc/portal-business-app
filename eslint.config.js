@@ -24,6 +24,16 @@ export default [
         ecmaVersion: 'latest',
         sourceType: 'module',
       },
+      globals: {
+        console: 'readonly',
+        setTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearTimeout: 'readonly',
+        clearInterval: 'readonly',
+        require: 'readonly',
+        URL: 'readonly',
+        BackHandler: 'readonly',
+      },
     },
     plugins: {
       '@typescript-eslint': typescript,
@@ -46,6 +56,9 @@ export default [
 
       // Custom rules from legacy config
       'react/react-in-jsx-scope': 'off',
+      
+      // Allow require() in React Native context
+      '@typescript-eslint/no-require-imports': 'off',
     },
     settings: {
       react: {
@@ -64,6 +77,15 @@ export default [
         ecmaFeatures: {
           jsx: true,
         },
+      },
+      globals: {
+        console: 'readonly',
+        setTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearTimeout: 'readonly',
+        clearInterval: 'readonly',
+        require: 'readonly',
+        URL: 'readonly',
       },
     },
     plugins: {
