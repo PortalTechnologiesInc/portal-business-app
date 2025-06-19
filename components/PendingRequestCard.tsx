@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import type { FC } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { PendingRequest } from '../models/PendingRequest';
 import { usePendingRequests } from '../context/PendingRequestsContext';
@@ -11,8 +11,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
 import { useThemeColor } from '@/hooks/useThemeColor';
-
-const { width } = Dimensions.get('window');
+import { Layout } from '@/constants/Layout';
 
 interface PendingRequestCardProps {
   request: PendingRequest;
@@ -171,6 +170,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
+    width: Layout.cardWidth, // Centralized card width
     elevation: 2,
     shadowOffset: {
       width: 0,
