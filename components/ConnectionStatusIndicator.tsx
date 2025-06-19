@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -27,6 +27,7 @@ type ConnectionStatus = 'connected' | 'partial' | 'disconnected';
 
 interface ConnectionStatusIndicatorProps {
   size?: number;
+  expandDuration?: number; // How long to show expanded state (ms)
 }
 
 // Pure function for wallet status derivation - better performance and testability
@@ -48,13 +49,23 @@ const deriveWalletStatus = (
 
 export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
   size = 12,
+  expandDuration = 3000, // 3 seconds default
 }) => {
+  const pillHeight = size + 14; // Make pill taller - increased height
   const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
   const [scaleValue] = useState(new Animated.Value(1));
   const [opacityValue] = useState(new Animated.Value(1));
+  const [pillWidthValue] = useState(new Animated.Value(size)); // For pill expansion - start with dot size for perfect fit
+  const [textOpacityValue] = useState(new Animated.Value(0)); // For text fade in/out
+  const [borderOpacityValue] = useState(new Animated.Value(0)); // For border and background fade in/out
   const [isOnline, setIsOnline] = useState(true);
   const [showRelayDetails, setShowRelayDetails] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Refs for managing timers and previous status
+  const expandTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevStatus = useRef<ConnectionStatus | null>(null);
 
   // Get screen dimensions for modal height constraint
   const screenHeight = Dimensions.get('window').height;
@@ -103,6 +114,20 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
     return 'partial';
   }, [isOnline, relayDetails.allRelaysConnected, walletStatus]);
 
+  // Get status text for pill expansion
+  const getStatusDisplayText = (status: ConnectionStatus): string => {
+    switch (status) {
+      case 'connected':
+        return 'Connected';
+      case 'partial':
+        return 'Partial Connection';
+      case 'disconnected':
+        return !isOnline ? 'Offline' : 'Disconnected';
+      default:
+        return 'Unknown';
+    }
+  };
+
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const cardBackgroundColor = useThemeColor({}, 'cardBackground');
@@ -132,20 +157,96 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
     }
   };
 
-  // Optimized animation effect with proper cleanup
+  // Get softer inner background color
+  const getSofterInnerColor = (status: ConnectionStatus): string => {
+    switch (status) {
+      case 'connected':
+        return statusConnectedColor + '20'; // Add 20% opacity
+      case 'partial':
+        return statusConnectingColor + '20';
+      case 'disconnected':
+        return statusDisconnectedColor + '20';
+      default:
+        return statusDisconnectedColor + '20';
+    }
+  };
+
+  // Handle pill expansion when status changes
   useEffect(() => {
-    if (overallConnectionStatus !== 'connected') {
+    // Check if status actually changed
+    if (prevStatus.current !== null && prevStatus.current !== overallConnectionStatus) {
+      // Clear any existing timer
+      if (expandTimer.current) {
+        clearTimeout(expandTimer.current);
+      }
+
+      // Expand the pill
+      setIsExpanded(true);
+      Animated.parallel([
+        Animated.timing(pillWidthValue, {
+          toValue: 100, // Expand to fit text - reduced width
+          duration: 300,
+          useNativeDriver: false,
+        }),
+        Animated.timing(textOpacityValue, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: false, // Changed to false to avoid conflicts
+        }),
+        // Border opacity animation removed - using transparent color instead
+      ]).start();
+
+      // Set timer to collapse back to dot
+      expandTimer.current = setTimeout(() => {
+        setIsExpanded(false);
+        Animated.parallel([
+          Animated.timing(pillWidthValue, {
+            toValue: size, // Collapse to dot size
+            duration: 300,
+            useNativeDriver: false,
+          }),
+          Animated.timing(textOpacityValue, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: false, // Changed to false to avoid conflicts
+          }),
+          // Border opacity animation removed - using transparent color instead
+        ]).start();
+      }, expandDuration);
+    }
+
+    // Update previous status
+    prevStatus.current = overallConnectionStatus;
+
+    // Cleanup timer on unmount
+    return () => {
+      if (expandTimer.current) {
+        clearTimeout(expandTimer.current);
+      }
+    };
+  }, [
+    overallConnectionStatus,
+    expandDuration,
+    pillWidthValue,
+    textOpacityValue,
+    borderOpacityValue,
+    pillHeight,
+  ]);
+
+  // Optimized animation effect with proper cleanup (for pulsing when not connected)
+  useEffect(() => {
+    if (overallConnectionStatus !== 'connected' && !isExpanded) {
       const pulse = Animated.loop(
         Animated.sequence([
           Animated.timing(opacityValue, {
             toValue: 0.3,
             duration: 800,
-            useNativeDriver: true,
+            useNativeDriver: false, // Changed to false to avoid conflicts
           }),
           Animated.timing(opacityValue, {
             toValue: 1,
             duration: 800,
-            useNativeDriver: true,
+            useNativeDriver: false, // Changed to false to avoid conflicts
           }),
         ])
       );
@@ -154,7 +255,7 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
     } else {
       opacityValue.setValue(1);
     }
-  }, [overallConnectionStatus, opacityValue]);
+  }, [overallConnectionStatus, opacityValue, isExpanded]);
 
   // Optimized press handler with better animation sequence
   const handlePress = () => {
@@ -162,12 +263,12 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
       Animated.timing(scaleValue, {
         toValue: 0.8,
         duration: 100,
-        useNativeDriver: true,
+        useNativeDriver: false, // Changed to false to avoid conflicts
       }),
       Animated.timing(scaleValue, {
         toValue: 1,
         duration: 100,
-        useNativeDriver: true,
+        useNativeDriver: false, // Changed to false to avoid conflicts
       }),
     ]).start();
 
@@ -203,20 +304,75 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
 
   return (
     <>
-      <TouchableOpacity onPress={handlePress} style={styles.container} activeOpacity={0.7}>
+      <TouchableOpacity
+        onPress={handlePress}
+        style={styles.consistentContainer}
+        activeOpacity={0.7}
+      >
         <Animated.View
           style={[
-            styles.statusDot,
+            styles.statusPillOuter,
             {
-              backgroundColor: getThemeStatusColor(overallConnectionStatus),
-              width: size,
-              height: size,
-              borderRadius: size / 2,
+              width: pillWidthValue,
+              height: pillHeight, // Always use pill height for consistent UI
+              borderRadius: pillHeight / 2,
               opacity: opacityValue,
               transform: [{ scale: scaleValue }],
             },
           ]}
-        />
+        >
+          {/* Animated inner background */}
+          <Animated.View
+            style={[
+              styles.animatedBackground,
+              {
+                backgroundColor: isExpanded
+                  ? getSofterInnerColor(overallConnectionStatus)
+                  : 'transparent',
+                width: '100%',
+                height: '100%',
+                borderRadius: pillHeight / 2,
+                opacity: 1,
+              },
+            ]}
+          />
+
+          {/* Content container - always visible */}
+          <View
+            style={[
+              styles.contentContainer,
+              {
+                paddingHorizontal: 8, // Consistent padding for text spacing
+              },
+            ]}
+          >
+            {/* Center dot - always visible */}
+            <View
+              style={[
+                styles.centerDot,
+                {
+                  backgroundColor: getThemeStatusColor(overallConnectionStatus),
+                  width: size,
+                  height: size,
+                  borderRadius: size / 2,
+                },
+              ]}
+            />
+
+            {/* Status text - only visible when expanded */}
+            <Animated.Text
+              style={[
+                styles.statusText,
+                {
+                  color: getThemeStatusColor(overallConnectionStatus),
+                  opacity: textOpacityValue,
+                },
+              ]}
+            >
+              {getStatusDisplayText(overallConnectionStatus)}
+            </Animated.Text>
+          </View>
+        </Animated.View>
       </TouchableOpacity>
 
       <Modal
@@ -485,6 +641,12 @@ const styles = StyleSheet.create({
   container: {
     padding: 8,
   },
+  containerIdle: {
+    // Absolutely no padding or margin in idle mode
+  },
+  consistentContainer: {
+    // No padding - all expansion handled internally
+  },
   statusDot: {
     shadowColor: '#000',
     shadowOffset: {
@@ -494,6 +656,50 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 2,
     elevation: 3,
+  },
+  statusPill: {
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+    elevation: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    overflow: 'hidden',
+  },
+  statusPillOuter: {
+    position: 'relative',
+    // Shadow removed to prevent visual shifts
+  },
+  statusPillInner: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'row',
+    paddingHorizontal: 8,
+    gap: 6,
+  },
+  animatedBorder: {
+    position: 'absolute',
+    // borderWidth handled dynamically
+  },
+  animatedBackground: {
+    position: 'absolute',
+  },
+  contentContainer: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+  },
+  centerDot: {
+    // Basic dot styling - colors handled dynamically
   },
   modalOverlay: {
     flex: 1,
@@ -507,7 +713,7 @@ const styles = StyleSheet.create({
     padding: 20,
     width: '90%',
     maxWidth: 380,
-    maxHeight: '60%',
+    maxHeight: '70%', // Increased to prevent unnecessary scrolling when dropdown is closed
     display: 'flex',
     flexDirection: 'column',
   },
@@ -652,5 +858,10 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '600',
+    textAlign: 'center',
   },
 });
