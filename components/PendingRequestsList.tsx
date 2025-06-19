@@ -111,20 +111,17 @@ export const PendingRequestsList: React.FC = () => {
             item.id === 'skeleton' ? 'skeleton' : `${item.metadata.serviceKey}-${item.id}`
           }
           renderItem={({ item, index }) => (
-            <View
-              style={[
-                styles.cardWrapper,
-                index === 0 && styles.firstCard,
-                index === data.length - 1 && styles.lastCard,
-              ]}
-            >
-              {renderCard(item)}
-            </View>
+            <View style={styles.cardWrapper}>{renderCard(item)}</View>
           )}
-          snapToInterval={Layout.cardWidth + 12}
-          snapToAlignment="center"
+          snapToOffsets={data.map((_, index) => index * (Layout.cardWidth + 12))}
           decelerationRate="fast"
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingLeft: (Layout.screenWidth - Layout.cardWidth) / 2 - 6,
+              paddingRight: (Layout.screenWidth - Layout.cardWidth) / 2 - 6,
+            },
+          ]}
         />
       )}
     </View>
