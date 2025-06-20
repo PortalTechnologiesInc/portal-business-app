@@ -1,19 +1,10 @@
 import type React from 'react';
 import { useEffect, useRef } from 'react';
-import {
-  View,
-  StyleSheet,
-  Dimensions,
-  Animated,
-  type ViewStyle,
-  type StyleProp,
-} from 'react-native';
+import { View, StyleSheet, Animated, type ViewStyle, type StyleProp } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { Colors } from '@/constants/Colors';
 import { useThemeColor } from '@/hooks/useThemeColor';
-
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = width - 50; // Full width minus padding
+import { Layout } from '@/constants/Layout';
 
 // Animated pulse component for skeleton loading effect
 const SkeletonPulse = ({ style }: { style: StyleProp<ViewStyle> }) => {
@@ -23,7 +14,7 @@ const SkeletonPulse = ({ style }: { style: StyleProp<ViewStyle> }) => {
   useEffect(() => {
     const animation = Animated.loop(
       Animated.timing(translateX, {
-        toValue: CARD_WIDTH,
+        toValue: Layout.cardWidth,
         duration: 1500,
         useNativeDriver: true,
       })
@@ -63,7 +54,7 @@ export const PendingRequestSkeletonCard: React.FC = () => {
     <View
       style={[
         styles.card,
-        { backgroundColor: cardBackgroundColor, shadowColor, width: CARD_WIDTH },
+        { backgroundColor: cardBackgroundColor, shadowColor, width: Layout.cardWidth },
       ]}
     >
       <SkeletonPulse

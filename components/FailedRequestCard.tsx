@@ -1,12 +1,10 @@
 import type React from 'react';
-import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { Colors } from '@/constants/Colors';
 import { AlertTriangle, RefreshCw } from 'lucide-react-native';
 import { useThemeColor } from '@/hooks/useThemeColor';
-
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = width - 50; // Full width minus padding
+import { Layout } from '@/constants/Layout';
 
 interface FailedRequestCardProps {
   onRetry: () => void;
@@ -72,7 +70,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 20,
     padding: 14,
-    width: CARD_WIDTH,
+    width: Layout.cardWidth,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
