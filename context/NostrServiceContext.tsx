@@ -26,13 +26,12 @@ import { useSQLiteContext } from 'expo-sqlite';
 
 // Constants and helper classes from original NostrService
 const DEFAULT_RELAYS = [
+  'relay.getportal.cc',
   'wss://relay.damus.io',
   'wss://nostr.wine',
-  // Add more reliable and diverse relays
   'wss://nostr-pub.wellorder.net',
   'wss://relay.nostr.band',
   'wss://nos.lol',
-  'wss://relay.snort.social',
   'wss://offchain.pub',
 ];
 
@@ -951,7 +950,6 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     forceReconnect,
     submitNip05,
     submitImage,
-    // Wallet info from getinfo method
     walletInfo,
     refreshWalletInfo,
     getWalletInfo,

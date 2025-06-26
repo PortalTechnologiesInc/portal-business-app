@@ -260,6 +260,9 @@ export default function SettingsScreen() {
       console.error('Error saving profile:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to save profile';
       showToast(errorMessage, 'error');
+      
+      // Reset username input to original network username when save fails
+      setUsernameInput(networkUsername);
     } finally {
       setProfileIsLoading(false);
     }
