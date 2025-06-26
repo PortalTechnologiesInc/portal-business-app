@@ -126,7 +126,7 @@ export default function SettingsScreen() {
   useEffect(() => {
     if (username) {
       setUsernameInput(username);
-      setNetworkUsername(username);
+      // Don't set networkUsername here - only set it when profile is actually loaded from network
     }
   }, [username]);
 

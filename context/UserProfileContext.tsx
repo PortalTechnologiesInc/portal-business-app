@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import * as FileSystem from 'expo-file-system';
 import { useNostrService } from './NostrServiceContext';
-import { formatAvatarUri } from '@/utils';
+import { formatAvatarUri, generateRandomGamertag } from '@/utils';
 import { keyToHex } from 'portal-app-lib';
 
 // Helper function to validate image
@@ -144,6 +144,32 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
           console.log('✅ Auto-fetch successful - profile found and loaded');
         } else {
           console.log('ℹ️ Auto-fetch completed - no profile found on network');
+          
+          // Check if this is a newly generated seed (new user)
+          try {
+            const seedOrigin = await SecureStore.getItemAsync('portal_seed_origin');
+            if (seedOrigin === 'generated') {
+              console.log('🎯 New user detected - auto-generating profile');
+              
+              // Generate a random username for new users
+              const randomUsername = generateRandomGamertag();
+              console.log('🎲 Generated random username:', randomUsername);
+              
+              // Set the username locally and update state
+              await setUsername(randomUsername);
+              setNetworkUsername(''); // Keep network state empty since nothing is saved yet
+              
+              // Clear the seed origin flag so this only happens once
+              await SecureStore.deleteItemAsync('portal_seed_origin');
+              
+              console.log('✅ Auto-generated profile setup completed');
+              console.log('💡 User can now edit and save their profile in settings');
+            } else {
+              console.log('📥 Imported seed - no auto-generation, waiting for user to set profile');
+            }
+          } catch (error) {
+            console.log('⚠️ Could not check seed origin, skipping auto-generation:', error);
+          }
         }
       } catch (error) {
         console.log('⚠️ Auto-fetch failed:', error);
@@ -299,6 +325,9 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
       }
 
       // Step 1: Handle username changes (submitNip05)
+      let nip05Error: string | null = null;
+      let actualUsernameToUse = networkUsername; // Default to current network username
+      
       if (usernameChanged) {
         console.log('🚀 STEP 1: Submitting NIP05 registration');
         console.log('📝 Registering username:', newUsername);
@@ -306,21 +335,23 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
         try {
           await nostrService.submitNip05(newUsername);
           console.log('✅ NIP05 registration successful');
+          actualUsernameToUse = newUsername; // Use new username if successful
         } catch (error) {
           console.error('❌ NIP05 registration failed:', error);
           
-          // Check if it's an "already taken" error
+          // Store the error but don't throw - continue with other updates
           const errorMessage = error instanceof Error ? error.message : String(error);
           if (errorMessage.toLowerCase().includes('already taken') || 
               errorMessage.toLowerCase().includes('exists') ||
               errorMessage.toLowerCase().includes('unavailable')) {
             
-            // If this was a random generated name, try generating a new one
-            // TODO: Implement auto-retry logic for random names
-            throw new Error(`Username "${newUsername}" is already taken. Please choose a different name.`);
+            nip05Error = `Username "${newUsername}" is already taken. Please choose a different name.`;
           } else {
-            throw new Error(`Failed to register username: ${errorMessage}`);
+            nip05Error = `Failed to register username: ${errorMessage}`;
           }
+          
+          console.log('⚠️ NIP05 failed, but continuing with other profile updates...');
+          // Keep actualUsernameToUse as networkUsername (previous valid username)
         }
       }
 
@@ -395,9 +426,9 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
       console.log('🚀 STEP 3: Setting complete profile');
       
       const profileUpdate = {
-        nip05: `${usernameChanged ? newUsername : networkUsername}@getportal.cc`,
-        name: usernameChanged ? newUsername : networkUsername,
-        displayName: usernameChanged ? newUsername : networkUsername,
+        nip05: `${actualUsernameToUse}@getportal.cc`,
+        name: actualUsernameToUse,
+        displayName: actualUsernameToUse,
         picture: imageUrl, // Use the portal image URL or empty string
       };
 
@@ -408,10 +439,8 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
       await nostrService.setUserProfile(profileUpdate);
       console.log('✅ Profile set successfully');
 
-      // Update local state
-      if (usernameChanged) {
-        await setUsername(newUsername);
-      }
+      // Update local state - use the actual username that worked
+      await setUsername(actualUsernameToUse);
       if (avatarChanged) {
         // Store the portal image URL, not the local file URI
         setAvatarUriState(imageUrl || null);
@@ -429,13 +458,20 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
         }
       }
 
-      // Update network state to reflect what was just saved
-      setNetworkUsername(usernameChanged ? newUsername : networkUsername);
+      // Update network state to reflect what was actually saved
+      setNetworkUsername(actualUsernameToUse);
       setNetworkAvatarUri(imageUrl || null);
       console.log('✅ Updated network state after save');
       
-      console.log('🎉🎉🎉 PROFILE UPDATE COMPLETED SUCCESSFULLY 🎉🎉🎉');
-      setSyncStatus('completed');
+      if (nip05Error) {
+        // Profile was partially updated but NIP05 failed
+        console.log('⚠️⚠️⚠️ PROFILE UPDATE COMPLETED WITH NIP05 ERROR ⚠️⚠️⚠️');
+        setSyncStatus('completed'); // Still mark as completed so user can edit again
+        throw new Error(nip05Error); // Throw the NIP05 error to show to user
+      } else {
+        console.log('🎉🎉🎉 PROFILE UPDATE COMPLETED SUCCESSFULLY 🎉🎉🎉');
+        setSyncStatus('completed');
+      }
     } catch (error) {
       setSyncStatus('failed');
       console.error('❌❌❌ PROFILE UPDATE FAILED ❌❌❌', error);

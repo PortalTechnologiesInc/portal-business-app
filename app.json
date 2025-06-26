@@ -19,7 +19,7 @@
     "ios": {
       "supportsTablet": true,
       "userInterfaceStyle": "dark",
-      "bundleIdentifier": "com.twentytwo.portal",
+      "bundleIdentifier": "com.portaltechnologiesinc.portal",
       "associatedDomains": [
         "applinks:portal.app"
       ]

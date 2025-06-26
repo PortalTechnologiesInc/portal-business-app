@@ -70,6 +70,29 @@ const AuthenticatedAppContent = () => {
   const { mnemonic, walletUrl } = useMnemonic();
   const backgroundColor = useThemeColor({}, 'background');
 
+  // Create screens array based on conditions
+  const screens = [
+    // Always include deeplink screen
+    <Stack.Screen key="deeplink" name="[...deeplink]" />,
+  ];
+
+  // Add screens based on app state
+  if (!isOnboardingComplete) {
+    screens.push(<Stack.Screen key="onboarding" name="onboarding" />);
+  } else if (!mnemonic) {
+    screens.push(<Stack.Screen key="settings-only" name="settings" options={{ presentation: 'modal' }} />);
+  } else {
+    // User is onboarded and has mnemonic - show all main screens
+    screens.push(
+      <Stack.Screen key="tabs" name="(tabs)" options={{ headerShown: false }} />,
+      <Stack.Screen key="settings" name="settings" options={{ presentation: 'modal' }} />,
+      <Stack.Screen key="wallet" name="wallet" options={{ presentation: 'modal' }} />,
+      <Stack.Screen key="qr" name="qr" options={{ presentation: 'fullScreenModal' }} />,
+      <Stack.Screen key="subscription" name="subscription" />,
+      <Stack.Screen key="activity" name="activity" />
+    );
+  }
+
   return (
     <DatabaseProvider>
       <NostrServiceProvider mnemonic={mnemonic || ''} walletUrl={walletUrl}>
@@ -85,24 +108,7 @@ const AuthenticatedAppContent = () => {
                     },
                   }}
                 >
-                  {/* Always include deeplink screen */}
-                  <Stack.Screen name="[...deeplink]" />
-
-                  {/* Conditional screens based on app state */}
-                  {!isOnboardingComplete ? (
-                    <Stack.Screen name="onboarding" />
-                  ) : !mnemonic ? (
-                    <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
-                  ) : (
-                    <>
-                      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                      <Stack.Screen name="settings" options={{ presentation: 'modal' }} />
-                      <Stack.Screen name="wallet" options={{ presentation: 'modal' }} />
-                      <Stack.Screen name="qr" options={{ presentation: 'fullScreenModal' }} />
-                      <Stack.Screen name="subscription" />
-                      <Stack.Screen name="activity" />
-                    </>
-                  )}
+                  {screens}
                 </Stack>
               </DeeplinkProvider>
             </PendingRequestsProvider>
