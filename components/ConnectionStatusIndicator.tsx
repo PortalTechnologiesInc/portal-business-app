@@ -641,7 +641,8 @@ const styles = StyleSheet.create({
     // Absolutely no padding or margin in idle mode
   },
   consistentContainer: {
-    // No padding - all expansion handled internally
+    // Add padding to increase touchable area
+    padding: 8,
   },
   statusDot: {
     shadowColor: '#000',

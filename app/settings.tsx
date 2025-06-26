@@ -194,7 +194,7 @@ export default function SettingsScreen() {
       if (nostrService.publicKey) {
         console.log('Public key:', nostrService.publicKey);
         await fetchProfile(nostrService.publicKey);
-        showToast('updated profile', 'success');
+        showToast('Profile updated', 'success');
       } else {
         showToast('Unable to refresh profile', 'error');
       }

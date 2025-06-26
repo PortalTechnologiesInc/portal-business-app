@@ -120,6 +120,19 @@ export class LocalPaymentRequestListener implements PaymentRequestListener {
   }
 }
 
+// Wallet Info types for getinfo data
+export interface WalletInfo {
+  alias?: string;
+  get_balance?: number;
+}
+
+export interface WalletInfoState {
+  data: WalletInfo | null;
+  isLoading: boolean;
+  error: string | null;
+  lastUpdated: Date | null;
+}
+
 // Context type definition
 interface NostrServiceContextType {
   isInitialized: boolean;
@@ -151,6 +164,11 @@ interface NostrServiceContextType {
   nwcConnectionStatus: boolean | null;
   nwcConnectionError: string | null;
   refreshNwcConnectionStatus: () => Promise<void>;
+
+  // Wallet info from getinfo method
+  walletInfo: WalletInfoState;
+  refreshWalletInfo: () => Promise<void>;
+  getWalletInfo: () => Promise<WalletInfo | null>;
 }
 
 // Create context with default values
@@ -256,6 +274,14 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   const [nwcCheckInProgress, setNwcCheckInProgress] = useState(false);
   const [lastNwcCheck, setLastNwcCheck] = useState<number>(0);
 
+  // Wallet info state from getinfo method
+  const [walletInfo, setWalletInfo] = useState<WalletInfoState>({
+    data: null,
+    isLoading: false,
+    error: null,
+    lastUpdated: null,
+  });
+
   const sqliteContext = useSQLiteContext();
   const DB = new DatabaseService(sqliteContext);
 
@@ -286,7 +312,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
           await DB.updateRelays(DEFAULT_RELAYS);
         }
         const app = await PortalApp.create(keypair, relays);
-        
+
         // Start listening and give it a moment to establish connections
         app.listen(); // Listen asynchronously
         console.log('PortalApp listening started...');
@@ -458,6 +484,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
             // Call getInfo first to establish relay connections before checking status
             console.log('Calling getInfo to establish relay connections...');
             await wallet.getInfo();
+            console.log('info: ', await wallet.getInfo());
             if (isCancelled) return;
 
             console.log('getInfo completed, now checking connection status...');
@@ -830,6 +857,73 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     await portalApp.registerImg(imageBase64);
   }, [portalApp]);
 
+  // Wallet info functions
+  const getWalletInfo = useCallback(async (): Promise<WalletInfo | null> => {
+    if (!nwcWallet) {
+      console.log('No NWC wallet available for getInfo');
+      return null;
+    }
+
+    try {
+      setWalletInfo(prev => ({ ...prev, isLoading: true, error: null }));
+
+      console.log('Fetching wallet info via getInfo...');
+      const info: any = await nwcWallet.getInfo();
+      const balance = await nwcWallet.getBalance();
+
+      console.log('Balance:', balance);
+
+      console.log('Wallet info received:', info);
+
+      // Map the response properties to our WalletInfo interface
+      // Using flexible property access to handle different response formats
+      const walletData: WalletInfo = {
+        alias: info.alias,
+        get_balance: Number(balance)
+      };
+
+      setWalletInfo({
+        data: walletData,
+        isLoading: false,
+        error: null,
+        lastUpdated: new Date(),
+      });
+
+      return walletData;
+    } catch (error) {
+      console.error('Error fetching wallet info:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch wallet info';
+
+      setWalletInfo(prev => ({
+        ...prev,
+        isLoading: false,
+        error: errorMessage,
+      }));
+
+      return null;
+    }
+  }, [nwcWallet]);
+
+  const refreshWalletInfo = useCallback(async () => {
+    await getWalletInfo();
+  }, [getWalletInfo]);
+
+  // Auto-refresh wallet info when wallet connects/changes
+  useEffect(() => {
+    if (nwcWallet && nwcConnectionStatus === true) {
+      console.log('Wallet connected, fetching wallet info...');
+      refreshWalletInfo();
+    } else if (!nwcWallet) {
+      // Clear wallet info when wallet disconnects
+      setWalletInfo({
+        data: null,
+        isLoading: false,
+        error: null,
+        lastUpdated: null,
+      });
+    }
+  }, [nwcWallet, nwcConnectionStatus, refreshWalletInfo]);
+
   // Context value
   const contextValue: NostrServiceContextType = {
     isInitialized,
@@ -857,6 +951,10 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     forceReconnect,
     submitNip05,
     submitImage,
+    // Wallet info from getinfo method
+    walletInfo,
+    refreshWalletInfo,
+    getWalletInfo,
   };
 
   return (

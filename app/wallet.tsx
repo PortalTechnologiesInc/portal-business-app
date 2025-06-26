@@ -6,7 +6,6 @@ import {
   TextInput,
   View,
   Modal,
-  BackHandler,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { ThemedText } from '@/components/ThemedText';
@@ -97,7 +96,6 @@ const deriveConnectionState = (
 export default function WalletManagementScreen() {
   const router = useRouter();
   const [walletUrl, setWalletUrlState] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -108,7 +106,13 @@ export default function WalletManagementScreen() {
   const params = useLocalSearchParams();
   const handledUrlRef = useRef<string | null>(null);
 
-  const { nwcConnectionStatus, nwcConnectionError, refreshNwcConnectionStatus } = useNostrService();
+  const {
+    nwcConnectionStatus,
+    nwcConnectionError,
+    refreshNwcConnectionStatus,
+    walletInfo,
+    refreshWalletInfo
+  } = useNostrService();
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
@@ -116,16 +120,11 @@ export default function WalletManagementScreen() {
   const surfaceSecondaryColor = useThemeColor({}, 'surfaceSecondary');
   const primaryTextColor = useThemeColor({}, 'textPrimary');
   const secondaryTextColor = useThemeColor({}, 'textSecondary');
-  const inputBackgroundColor = useThemeColor({}, 'inputBackground');
   const inputBorderColor = useThemeColor({}, 'inputBorder');
   const inputPlaceholderColor = useThemeColor({}, 'inputPlaceholder');
-  const buttonPrimaryColor = useThemeColor({}, 'buttonPrimary');
-  const buttonPrimaryTextColor = useThemeColor({}, 'buttonPrimaryText');
   const statusConnectedColor = useThemeColor({}, 'statusConnected');
   const statusConnectingColor = useThemeColor({}, 'statusConnecting');
   const statusErrorColor = useThemeColor({}, 'statusError');
-  const shadowColor = useThemeColor({}, 'shadowColor');
-  const modalBackgroundColor = useThemeColor({}, 'modalBackground');
 
   // Memoized connection state derivation - eliminates complex state updates
   const connectionState = useMemo(() => {
@@ -139,10 +138,6 @@ export default function WalletManagementScreen() {
 
       setWalletUrlState(url);
       setInputValue(url);
-
-      // Use real NWC connection status if available
-      const realConnectionStatus = nwcConnectionStatus !== null ? nwcConnectionStatus : connected;
-      setIsConnected(realConnectionStatus);
     } catch (error) {
       console.error('Error loading wallet data:', error);
       // Error state is handled by connectionState derivation
@@ -188,7 +183,6 @@ export default function WalletManagementScreen() {
   useEffect(() => {
     const subscription = walletUrlEvents.addListener('walletUrlChanged', async newUrl => {
       setWalletUrlState(newUrl || '');
-      setIsConnected(Boolean(newUrl?.trim()));
     });
 
     return () => subscription.remove();
@@ -197,8 +191,6 @@ export default function WalletManagementScreen() {
   // Optimized NWC status effect with better dependency management
   useEffect(() => {
     if (nwcConnectionStatus !== null) {
-      setIsConnected(nwcConnectionStatus);
-
       // Stop validating when we have a definitive status
       if (isValidating) {
         setIsValidating(false);
@@ -227,7 +219,6 @@ export default function WalletManagementScreen() {
     try {
       await saveWalletUrl('');
       setWalletUrlState('');
-      setIsConnected(false);
 
       // Refresh NWC connection status after clearing
       try {
@@ -255,7 +246,6 @@ export default function WalletManagementScreen() {
 
         await saveWalletUrl(urlToSave);
         setWalletUrlState(urlToSave);
-        setIsConnected(Boolean(urlToSave.trim()));
         setIsEditing(false);
         setShowConfirmModal(false);
 
@@ -376,6 +366,8 @@ export default function WalletManagementScreen() {
     );
   }
 
+  console.log(walletInfo.data)
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
       <ThemedView style={[styles.container, { backgroundColor }]}>
@@ -394,104 +386,86 @@ export default function WalletManagementScreen() {
             you to manage your crypto assets and make seamless transactions within the app.
           </ThemedText>
 
-          {/* Wallet URL Input with QR Code button */}
-          <View style={styles.walletUrlContainer}>
+          {/* Wallet URL Input Section */}
+          <View style={[styles.walletUrlCard, { backgroundColor: cardBackgroundColor }]}>
+            <View style={styles.walletUrlHeader}>
+              <ThemedText style={[styles.walletUrlLabel, { color: primaryTextColor }]}>
+                Wallet Connection URL
+              </ThemedText>
+              <TouchableOpacity
+                style={[styles.qrCodeButton, { backgroundColor: surfaceSecondaryColor }]}
+                onPress={handleScanQrCode}
+              >
+                <QrCode size={20} color={primaryTextColor} />
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.walletUrlInputContainer}>
-              <TextInput
+                            <TextInput
                 style={[
                   styles.walletUrlInput,
-                  { color: primaryTextColor, borderBottomColor: inputBorderColor },
+                  { 
+                    color: primaryTextColor, 
+                    backgroundColor: surfaceSecondaryColor,
+                    borderColor: isEditing ? inputBorderColor : 'transparent',
+                  },
                 ]}
                 value={inputValue}
                 onChangeText={setInputValue}
-                placeholder="Enter wallet URL"
+                placeholder="nostr+walletconnect://..."
                 placeholderTextColor={inputPlaceholderColor}
                 onFocus={() => setIsEditing(true)}
+                multiline={true}
+                textAlignVertical="top"
+                scrollEnabled={false}
               />
-              <TouchableOpacity style={styles.walletUrlAction} onPress={handleIconPress}>
+              <TouchableOpacity
+                style={[
+                  styles.walletUrlAction,
+                  { backgroundColor: isEditing && hasChanged ? statusConnectedColor : surfaceSecondaryColor }
+                ]}
+                onPress={handleIconPress}
+              >
                 {!isEditing ? (
-                  <Pencil size={20} color={primaryTextColor} />
+                  <Pencil size={18} color={primaryTextColor} />
                 ) : hasChanged ? (
-                  <Check size={20} color={statusConnectedColor} />
+                  <Check size={18} color="white" />
                 ) : (
-                  <X size={20} color={primaryTextColor} />
+                  <X size={18} color={primaryTextColor} />
                 )}
               </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              style={[styles.qrCodeButton, { backgroundColor: cardBackgroundColor }]}
-              onPress={handleScanQrCode}
-            >
-              <QrCode size={24} color={primaryTextColor} />
-            </TouchableOpacity>
+
+            {/* Helper text */}
+            <ThemedText style={[styles.walletUrlHelper, { color: secondaryTextColor }]}>
+              {!isEditing && !walletUrl
+                ? "Tap the pencil icon to enter your wallet URL or use the QR scanner"
+                : isEditing && hasChanged
+                ? "Tap the check icon to save your changes"
+                : isEditing
+                ? "Tap the X to cancel editing"
+                : "Your wallet connection URL is configured"
+              }
+            </ThemedText>
           </View>
 
-          {/* Connection Status Display */}
-          <View
-            style={[styles.connectionStatusContainer, { backgroundColor: cardBackgroundColor }]}
-          >
-            <View style={styles.connectionStatusRow}>
-              <View
-                style={[styles.connectionStatusIcon, { backgroundColor: surfaceSecondaryColor }]}
-              >
-                {connectionState.state === 'connected' && (
-                  <CheckCircle size={20} color={statusConnectedColor} />
-                )}
-                {connectionState.state === 'connecting' && (
-                  <View style={styles.loadingSpinner}>
-                    <CheckCircle size={20} color={statusConnectingColor} />
-                  </View>
-                )}
-                {connectionState.state === 'disconnected' && (
-                  <XCircle size={20} color={statusErrorColor} />
-                )}
-                {connectionState.state === 'error' && (
-                  <AlertTriangle size={20} color={statusErrorColor} />
-                )}
-                {connectionState.state === 'none' && (
-                  <AlertTriangle size={20} color={secondaryTextColor} />
-                )}
-              </View>
-              <View style={styles.connectionStatusContent}>
-                <ThemedText style={[styles.connectionStatusLabel, { color: primaryTextColor }]}>
-                  Wallet Connection
-                </ThemedText>
-                <ThemedText
-                  style={[
-                    styles.connectionStatusValue,
-                    connectionState.state === 'connected' && { color: statusConnectedColor },
-                    connectionState.state === 'connecting' && { color: statusConnectingColor },
-                    (connectionState.state === 'disconnected' ||
-                      connectionState.state === 'error') && {
-                      color: statusErrorColor,
-                    },
-                    connectionState.state === 'none' && { color: secondaryTextColor },
-                  ]}
-                >
-                  {connectionState.state === 'connected' && 'Connected'}
-                  {connectionState.state === 'connecting' && 'Connecting...'}
-                  {connectionState.state === 'disconnected' && 'Disconnected'}
-                  {connectionState.state === 'error' && 'Connection Error'}
-                  {connectionState.state === 'none' && 'No Wallet Configured'}
-                </ThemedText>
-                {connectionState.error && (
-                  <ThemedText style={[styles.connectionStatusError, { color: statusErrorColor }]}>
-                    {connectionState.error}
-                  </ThemedText>
-                )}
-                {connectionState.state === 'none' && (
-                  <ThemedText
-                    style={[styles.connectionStatusDescription, { color: secondaryTextColor }]}
-                  >
-                    Enter a wallet URL above to connect your wallet
-                  </ThemedText>
-                )}
-              </View>
-              {/* Refresh button for manual connection check */}
+          {/* Wallet Status & Info Container */}
+          <View style={[styles.walletStatusContainer, { backgroundColor: cardBackgroundColor }]}>
+            {/* Header with single refresh button */}
+            <View style={styles.walletStatusHeader}>
+              <ThemedText style={[styles.walletStatusTitle, { color: primaryTextColor }]}>
+                Wallet Status & Information
+              </ThemedText>
               {walletUrl && walletUrl.trim() && connectionState.state !== 'connecting' && (
                 <TouchableOpacity
                   style={[styles.refreshButton, { backgroundColor: surfaceSecondaryColor }]}
-                  onPress={handleRefreshConnection}
+                  onPress={async () => {
+                    // Refresh both connection status and wallet info
+                    await handleRefreshConnection();
+                    if (connectionState.state === 'connected') {
+                      await refreshWalletInfo();
+                    }
+                  }}
                 >
                   <ThemedText style={[styles.refreshButtonText, { color: primaryTextColor }]}>
                     ↻
@@ -499,6 +473,127 @@ export default function WalletManagementScreen() {
                 </TouchableOpacity>
               )}
             </View>
+
+            {/* Connection Status Section */}
+            <View style={styles.connectionStatusSection}>
+              <View style={styles.connectionStatusRow}>
+                <View
+                  style={[styles.connectionStatusIcon, { backgroundColor: surfaceSecondaryColor }]}
+                >
+                  {connectionState.state === 'connected' && (
+                    <CheckCircle size={20} color={statusConnectedColor} />
+                  )}
+                  {connectionState.state === 'connecting' && (
+                    <View style={styles.loadingSpinner}>
+                      <CheckCircle size={20} color={statusConnectingColor} />
+                    </View>
+                  )}
+                  {connectionState.state === 'disconnected' && (
+                    <XCircle size={20} color={statusErrorColor} />
+                  )}
+                  {connectionState.state === 'error' && (
+                    <AlertTriangle size={20} color={statusErrorColor} />
+                  )}
+                  {connectionState.state === 'none' && (
+                    <AlertTriangle size={20} color={secondaryTextColor} />
+                  )}
+                </View>
+                <View style={styles.connectionStatusContent}>
+                  <View style={styles.connectionStatusHorizontal}>
+                    <ThemedText style={[styles.connectionStatusLabel, { color: primaryTextColor }]}>
+                      Connection:
+                    </ThemedText>
+                    <ThemedText
+                      style={[
+                        styles.connectionStatusValue,
+                        connectionState.state === 'connected' && { color: statusConnectedColor },
+                        connectionState.state === 'connecting' && { color: statusConnectingColor },
+                        (connectionState.state === 'disconnected' ||
+                          connectionState.state === 'error') && {
+                          color: statusErrorColor,
+                        },
+                        connectionState.state === 'none' && { color: secondaryTextColor },
+                      ]}
+                    >
+                      {connectionState.state === 'connected' && 'Connected'}
+                      {connectionState.state === 'connecting' && 'Connecting...'}
+                      {connectionState.state === 'disconnected' && 'Disconnected'}
+                      {connectionState.state === 'error' && 'Connection Error'}
+                      {connectionState.state === 'none' && 'No Wallet Configured'}
+                    </ThemedText>
+                  </View>
+                  {connectionState.error && (
+                    <ThemedText style={[styles.connectionStatusError, { color: statusErrorColor }]}>
+                      {connectionState.error}
+                    </ThemedText>
+                  )}
+                  {connectionState.state === 'none' && (
+                    <ThemedText
+                      style={[styles.connectionStatusDescription, { color: secondaryTextColor }]}
+                    >
+                      Enter a wallet URL above to connect your wallet
+                    </ThemedText>
+                  )}
+                </View>
+              </View>
+            </View>
+
+            {/* Wallet Info Section - Only show when connected */}
+            {connectionState.state === 'connected' && (
+              <View style={styles.walletInfoSection}>
+                <View style={styles.sectionDivider} />
+                <ThemedText style={[styles.sectionTitle, { color: primaryTextColor }]}>
+                  Wallet Details
+                </ThemedText>
+
+              {walletInfo.isLoading && (
+                <ThemedText style={[styles.walletInfoLoading, { color: secondaryTextColor }]}>
+                  Loading wallet information...
+                </ThemedText>
+              )}
+
+              {walletInfo.error && (
+                <ThemedText style={[styles.walletInfoError, { color: statusErrorColor }]}>
+                  Error: {walletInfo.error}
+                </ThemedText>
+              )}
+
+              {walletInfo.data && (
+                <>
+                  {/* Wallet Name and Balance in the same row */}
+                  <View style={styles.walletInfoRow}>
+                    <View style={styles.walletInfoItemWithLabels}>
+                      <View style={styles.walletInfoField}>
+                        <ThemedText style={[styles.walletInfoFieldLabel, { color: secondaryTextColor }]}>
+                          Name:
+                        </ThemedText>
+                        <ThemedText style={[styles.walletInfoFieldValue, { color: primaryTextColor }]}>
+                          {walletInfo.data.alias || 'Lightning Wallet'}
+                        </ThemedText>
+                      </View>
+                      {walletInfo.data.get_balance !== undefined && (
+                        <View style={styles.walletInfoField}>
+                          <ThemedText style={[styles.walletInfoFieldLabel, { color: secondaryTextColor }]}>
+                            Balance:
+                          </ThemedText>
+                          <ThemedText style={[styles.walletInfoFieldValue, { color: statusConnectedColor }]}>
+                            ⚡ {Math.floor(walletInfo.data.get_balance / 1000).toLocaleString()} sats
+                          </ThemedText>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </>
+              )}
+
+              {/* Show placeholder message if no wallet data and not loading */}
+              {!walletInfo.data && !walletInfo.isLoading && !walletInfo.error && (
+                                 <ThemedText style={[styles.walletInfoPlaceholder, { color: secondaryTextColor }]}>
+                   Wallet information will appear here once loaded.
+                 </ThemedText>
+               )}
+              </View>
+            )}
           </View>
         </ThemedView>
 
@@ -576,33 +671,60 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     marginBottom: 24,
   },
-  walletUrlContainer: {
+  walletUrlCard: {
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 24,
+    // backgroundColor handled by theme
+  },
+  walletUrlHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  walletUrlLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    // color handled by theme
   },
   walletUrlInputContainer: {
-    flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    // borderBottomColor handled by theme
-    marginRight: 12,
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
   walletUrlInput: {
     flex: 1,
-    // color handled by theme
-    fontSize: 16,
-    paddingVertical: 8,
+    // color and backgroundColor handled by theme
+    fontSize: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginRight: 8,
+    textAlignVertical: 'top',
+    minHeight: 44,
+    maxHeight: 200,
   },
   walletUrlAction: {
-    paddingHorizontal: 8,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    // backgroundColor handled by theme
+  },
+  walletUrlHelper: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    lineHeight: 16,
+    // color handled by theme
   },
   qrCodeButton: {
     // backgroundColor handled by theme
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -614,16 +736,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: Colors.almostWhite,
   },
-  connectionStatusContainer: {
+  walletStatusContainer: {
     // backgroundColor handled by theme
     borderRadius: 20,
     padding: 16,
     marginTop: 16,
     minHeight: 80,
   },
+  walletStatusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  walletStatusTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  connectionStatusSection: {
+    marginBottom: 0,
+  },
   connectionStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    width: '100%',
   },
   connectionStatusIcon: {
     width: 40,
@@ -640,15 +776,19 @@ const styles = StyleSheet.create({
   connectionStatusContent: {
     flex: 1,
   },
+  connectionStatusHorizontal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
   connectionStatusLabel: {
     fontSize: 14,
     color: Colors.dirtyWhite,
-    marginBottom: 4,
   },
   connectionStatusValue: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 4,
   },
   connectionStatusError: {
     fontSize: 13,
@@ -660,6 +800,20 @@ const styles = StyleSheet.create({
     color: Colors.gray,
     fontStyle: 'italic',
   },
+  walletInfoSection: {
+    marginTop: 8,
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
   refreshButton: {
     width: 32,
     height: 32,
@@ -670,6 +824,7 @@ const styles = StyleSheet.create({
   },
   refreshButtonText: {
     fontSize: 18,
+    marginTop: -2,
     fontWeight: 'bold',
   },
   modalOverlay: {
@@ -730,5 +885,66 @@ const styles = StyleSheet.create({
     color: Colors.almostWhite,
     fontSize: 16,
     fontWeight: 'bold',
+  },
+
+  walletInfoLoading: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 16,
+  },
+  walletInfoError: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 16,
+  },
+  walletInfoPlaceholder: {
+    fontSize: 14,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: 16,
+  },
+  walletInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  walletInfoItem: {
+    flex: 1,
+  },
+  walletInfoItemWithLabels: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  walletInfoField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  walletInfoFieldLabel: {
+    fontSize: 14,
+    color: Colors.dirtyWhite,
+    marginRight: 6,
+  },
+  walletInfoFieldValue: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  walletInfoLabel: {
+    fontSize: 14,
+    color: Colors.dirtyWhite,
+    marginBottom: 4,
+  },
+  walletInfoValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  walletInfoSubtext: {
+    fontSize: 13,
+    color: Colors.gray,
+    fontStyle: 'italic',
   },
 });

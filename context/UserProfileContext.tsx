@@ -353,7 +353,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
           if (errorMessage.includes('409')) {
             nip05Error = `Username "${newUsername}" is already taken. Please choose a different name.`;
           } else {
-            nip05Error = `Failed to register username: ${errorMessage}`;
+            nip05Error = `Registration service offline. Please try again later.`;
           }
 
           console.log('NIP05 failed, continuing with other profile updates...');
