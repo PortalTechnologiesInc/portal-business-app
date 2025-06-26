@@ -20,7 +20,9 @@
       "supportsTablet": true,
       "userInterfaceStyle": "dark",
       "bundleIdentifier": "com.twentytwo.portal",
-      "associatedDomains": ["applinks:portal.app"]
+      "associatedDomains": [
+        "applinks:portal.app"
+      ]
     },
     "android": {
       "adaptiveIcon": {
@@ -38,7 +40,10 @@
               "scheme": "portal"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -59,7 +64,8 @@
         }
       ],
       "expo-secure-store",
-      "expo-sqlite"
+      "expo-sqlite",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

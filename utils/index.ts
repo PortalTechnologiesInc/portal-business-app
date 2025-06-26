@@ -1,4 +1,4 @@
-import type { Frequency } from './models/Subscription';
+import type { Frequency } from '../models/Subscription';
 
 // Convert cents to dollars by dividing by 100 and fix to 2 decimal places
 export function formatCentsToCurrency(cents: number): string {
@@ -198,49 +198,128 @@ export function generateRandomGamertag(): string {
     'Raven',
     'Bear',
     'Shark',
+    'Viper',
     'Panther',
     'Falcon',
-    'Viper',
     'Cobra',
-    'Fox',
-    'Lynx',
+    'Rhino',
+    'Scorpion',
+    'Spider',
     'Warrior',
+    'Knight',
     'Hunter',
+    'Scout',
+    'Ranger',
+    'Sniper',
+    'Assassin',
     'Guardian',
     'Defender',
     'Champion',
-    'Ranger',
-    'Scout',
-    'Knight',
-    'Soldier',
-    'Fighter',
+    'Gladiator',
     'Samurai',
     'Ninja',
-    'Assassin',
-    'Archer',
-    'Mage',
-    'Wizard',
-    'Blade',
-    'Sword',
-    'Shield',
-    'Arrow',
-    'Hammer',
-    'Axe',
-    'Spear',
-    'Dagger',
+    'Pirate',
+    'Viking',
+    'Titan',
+    'Giant',
+    'Demon',
+    'Angel',
+    'Spirit',
+    'Ghost',
+    'Phantom',
+    'Specter',
+    'Wraith',
+    'Beast',
+    'Monster',
+    'Creature',
+    'Machine',
+    'Robot',
+    'Cyborg',
+    'Android',
     'Storm',
+    'Thunder',
+    'Lightning',
     'Blaze',
     'Frost',
+    'Ice',
+    'Fire',
+    'Wind',
+    'Earth',
+    'Stone',
+    'Steel',
+    'Iron',
+    'Gold',
+    'Silver',
+    'Diamond',
+    'Crystal',
+    'Gem',
+    'Star',
+    'Moon',
+    'Sun',
+    'Nova',
+    'Comet',
+    'Meteor',
+    'Asteroid',
+    'Planet',
+    'Galaxy',
+    'Universe',
+    'Cosmos',
+    'Void',
+    'Abyss',
+    'Shadow',
+    'Light',
+    'Dark',
+    'Bright',
+    'Glow',
     'Spark',
-    'Bolt',
-    'Flash',
-    'Pulse',
-    'Wave',
+    'Flame',
+    'Ember',
   ];
 
   const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
   const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
-  const randomNumber = Math.floor(Math.random() * 9999) + 1;
+  const randomNumber = Math.floor(Math.random() * 1000); // Random number between 0-999
 
   return `${randomAdjective}${randomNoun}${randomNumber}`;
+}
+
+/**
+ * Determines whether to use light or dark color based on the current color scheme
+ */
+export function useColorSchemeColor<T>(light: T, dark: T, colorScheme?: 'light' | 'dark'): T {
+  const scheme = colorScheme || 'light';
+  return scheme === 'dark' ? dark : light;
+}
+
+/**
+ * Formats an avatar URI to handle both file URIs, URLs, and base64 data
+ * @param avatarUri - The avatar URI which could be a file path, URL, or base64 string
+ * @param cacheKey - Optional cache key to append for cache busting (only for portal URLs)
+ * @returns A properly formatted URI for use with React Native Image component
+ */
+export function formatAvatarUri(avatarUri: string | null, cacheKey?: number): string | null {
+  if (!avatarUri) return null;
+
+  // If it's already a data URI or file URI, return as-is
+  if (avatarUri.startsWith('data:') || avatarUri.startsWith('file:')) {
+    return avatarUri;
+  }
+
+  // If it's an HTTP/HTTPS URL
+  if (avatarUri.startsWith('http://') || avatarUri.startsWith('https://')) {
+    // Add cache-busting for portal profile URLs to ensure fresh images
+    if (cacheKey && avatarUri.includes('profile.getportal.cc')) {
+      const separator = avatarUri.includes('?') ? '&' : '?';
+      return `${avatarUri}${separator}_t=${cacheKey}`;
+    }
+    return avatarUri;
+  }
+
+  // If it looks like base64 data (long string with base64 characters), format as data URI
+  if (avatarUri.length > 100 && /^[A-Za-z0-9+/]*={0,2}$/.test(avatarUri)) {
+    return `data:image/png;base64,${avatarUri}`;
+  }
+
+  // For anything else, return as-is (might be a relative URL or other format)
+  return avatarUri;
 }

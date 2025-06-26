@@ -35,11 +35,12 @@ import { isAppLockEnabled, setAppLockEnabled, canEnableAppLock } from '@/service
 import { useAppLock } from '@/context/AppLockContext';
 import { useTheme, ThemeMode } from '@/context/ThemeContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { formatAvatarUri } from '@/utils';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { resetOnboarding } = useOnboarding();
-  const { username, avatarUri, setUsername, setAvatarUri, isProfileEditable, fetchProfile } =
+  const { username, avatarUri, avatarRefreshKey, setUsername, setAvatarUri, setProfile, isProfileEditable, fetchProfile, syncStatus } =
     useUserProfile();
   const nostrService = useNostrService();
   const { refreshLockStatus } = useAppLock();
@@ -47,6 +48,8 @@ export default function SettingsScreen() {
   const [isWalletConnectedState, setIsWalletConnectedState] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [usernameInput, setUsernameInput] = useState('');
+  const [networkUsername, setNetworkUsername] = useState('');
+  const [networkAvatarUri, setNetworkAvatarUri] = useState<string | null>(null);
   const [profileIsLoading, setProfileIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [appLockEnabled, setAppLockEnabledState] = useState(false);
@@ -123,8 +126,19 @@ export default function SettingsScreen() {
   useEffect(() => {
     if (username) {
       setUsernameInput(username);
+      setNetworkUsername(username);
     }
   }, [username]);
+
+  // Track network state when profile is loaded/refreshed from network
+  useEffect(() => {
+    // Only update network state when syncing is completed (profile loaded from network)
+    if (syncStatus === 'completed') {
+      setNetworkUsername(username);
+      setNetworkAvatarUri(avatarUri);
+      console.log('DEBUG: Updated network state - username:', username, 'avatar:', avatarUri ? 'present' : 'none');
+    }
+  }, [syncStatus]); // Only depend on syncStatus
 
   const handleAvatarPress = async () => {
     // Don't allow avatar change during sync
@@ -151,11 +165,22 @@ export default function SettingsScreen() {
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8,
+        quality: 0.8, // Reduced quality to help with file size
+        allowsMultipleSelection: false,
       });
 
       if (!result.canceled) {
-        await setAvatarUri(result.assets[0].uri);
+        try {
+          console.log('DEBUG: Selected image:', result.assets[0]);
+          await setAvatarUri(result.assets[0].uri);
+          showToast('Avatar updated successfully', 'success');
+        } catch (error) {
+          console.error('DEBUG: Error setting avatar:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Failed to set avatar';
+          Alert.alert('Error', errorMessage);
+        }
+      } else {
+        console.log('DEBUG: Image selection canceled');
       }
     } catch (error) {
       console.error('Error selecting image:', error);
@@ -186,8 +211,11 @@ export default function SettingsScreen() {
   };
 
   const handleSaveProfile = async () => {
+    console.log('🔍🔍🔍 SAVE PROFILE BUTTON CLICKED 🔍🔍🔍');
+    
     // Don't allow profile save during sync
     if (!isProfileEditable) {
+      console.log('❌ Profile not editable - sync in progress');
       Alert.alert(
         'Profile Sync in Progress',
         'Please wait for profile synchronization to complete before making changes.'
@@ -196,31 +224,65 @@ export default function SettingsScreen() {
     }
 
     const newUsername = usernameInput.trim();
-    const currentAvatarUri = avatarUri || '';
 
-    // Check if anything has actually changed
-    if (newUsername === username) {
+    // Check if anything has actually changed (both username and avatar)
+    const usernameChanged = newUsername !== networkUsername;
+    const avatarChanged = avatarUri !== networkAvatarUri;
+
+    console.log('🔍🔍🔍 CHANGE DETECTION ANALYSIS 🔍🔍🔍');
+    console.log('📝 Current usernameInput:', `"${usernameInput}"`);
+    console.log('📝 Trimmed newUsername:', `"${newUsername}"`);
+    console.log('📝 Network username:', `"${networkUsername}"`);
+    console.log('📝 Username changed:', usernameChanged);
+    console.log('🖼️ Current avatarUri:', avatarUri || 'NULL');
+    console.log('🖼️ Network avatarUri:', networkAvatarUri || 'NULL');
+    console.log('🖼️ Avatar changed:', avatarChanged);
+    console.log('📊 Overall has changes:', usernameChanged || avatarChanged);
+
+    if (!usernameChanged && !avatarChanged) {
+      console.log('⚠️⚠️⚠️ NO CHANGES DETECTED - STOPPING HERE ⚠️⚠️⚠️');
       showToast('No changes to save', 'success');
       return;
     }
 
+    console.log('✅✅✅ CHANGES DETECTED - PROCEEDING WITH SAVE ✅✅✅');
+
     try {
+      console.log('🔄 Setting profileIsLoading to true');
       setProfileIsLoading(true);
 
-      await setUsername(newUsername);
+      console.log('🔄 About to call setProfile with:');
+      console.log('  - newUsername:', `"${newUsername}"`);
+      console.log('  - avatarUri:', avatarUri || 'NULL');
+      
+      // Use the new setProfile method that handles both username and image
+      console.log('🚀 CALLING setProfile() FROM SETTINGS...');
+      await setProfile(newUsername, avatarUri);
+      console.log('✅ setProfile() returned successfully');
 
-      await nostrService.setUserProfile({
-        nip05: `${newUsername}@getportal.cc`,
-        name: newUsername,
-        picture: currentAvatarUri,
-        displayName: newUsername,
-      });
+      // Update the network state after successful save
+      console.log('🔄 Updating network state after successful save');
+      setNetworkUsername(newUsername);
+      setNetworkAvatarUri(avatarUri);
 
+      // Provide specific feedback about what was saved
+      if (usernameChanged && avatarChanged) {
+        showToast('Profile and avatar saved successfully', 'success');
+      } else if (usernameChanged) {
+        showToast('Profile saved successfully', 'success');
+      } else if (avatarChanged) {
+        showToast('Avatar saved successfully', 'success');
+      }
+
+      console.log('🔄 About to refresh profile');
       handleRefreshProfile();
     } catch (error) {
+      console.error('❌❌❌ ERROR IN handleSaveProfile ❌❌❌');
       console.error('Error saving profile:', error);
-      Alert.alert('Error', 'Failed to save profile. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save profile';
+      Alert.alert('Error', errorMessage);
     } finally {
+      console.log('🔄 Setting profileIsLoading to false');
       setProfileIsLoading(false);
     }
   };
@@ -437,7 +499,7 @@ export default function SettingsScreen() {
               >
                 {avatarUri ? (
                   <Image
-                    source={{ uri: avatarUri }}
+                    source={{ uri: formatAvatarUri(avatarUri, avatarRefreshKey) || '' }}
                     style={[styles.avatar, { borderColor: inputBorderColor }]}
                   />
                 ) : (
@@ -501,7 +563,16 @@ export default function SettingsScreen() {
                       (!isProfileEditable || profileIsLoading) && { color: secondaryTextColor },
                     ]}
                   >
-                    {profileIsLoading ? 'Saving...' : 'Save Profile'}
+                    {profileIsLoading ? 'Saving...' : (() => {
+                      const usernameChanged = usernameInput.trim() !== networkUsername;
+                      const avatarChanged = avatarUri !== networkAvatarUri;
+                      const hasChanges = usernameChanged || avatarChanged;
+                      
+                      if (hasChanges) {
+                        return 'Save Changes';
+                      }
+                      return 'Save Profile';
+                    })()}
                   </ThemedText>
                 </TouchableOpacity>
               </View>

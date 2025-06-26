@@ -135,6 +135,8 @@ interface NostrServiceContextType {
   getServiceName: (publicKey: string) => Promise<Profile | undefined>;
   dismissPendingRequest: (id: string) => void;
   setUserProfile: (profile: Profile) => Promise<void>;
+  submitNip05: (nip05: string) => Promise<void>;
+  submitImage: (imageBase64: string) => Promise<void>;
   closeRecurringPayment: (pubkey: string, subscriptionId: string) => Promise<void>;
 
   // Connection management functions
@@ -284,7 +286,10 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
           await DB.updateRelays(DEFAULT_RELAYS);
         }
         const app = await PortalApp.create(keypair, relays);
+        
+        // Start listening and give it a moment to establish connections
         app.listen(); // Listen asynchronously
+        console.log('PortalApp listening started...');
 
         app
           .listenForAuthChallenge(
@@ -776,11 +781,16 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     }
   }, [portalApp, refreshConnectionStatus]);
 
-  // Initial connection status fetch (but no periodic refresh here)
+  // Initial connection status fetch with delay to allow relay connections to establish
   useEffect(() => {
-    refreshConnectionStatus();
-    // Also refresh NWC status when wallet changes
-    refreshNwcConnectionStatus();
+    // Add a small delay to allow relay connections to establish after initialization
+    const timer = setTimeout(() => {
+      refreshConnectionStatus();
+      // Also refresh NWC status when wallet changes
+      refreshNwcConnectionStatus();
+    }, 2000); // 2 second delay to allow relay connections to establish
+
+    return () => clearTimeout(timer);
   }, [refreshConnectionStatus, refreshNwcConnectionStatus]);
 
   // Add AppState listener to handle background/foreground transitions
@@ -804,6 +814,21 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       subscription?.remove();
     };
   }, [portalApp, refreshConnectionStatus, refreshNwcConnectionStatus]);
+
+
+  const submitNip05 = useCallback(async (nip05: string) => {
+    if (!portalApp) {
+      throw new Error('PortalApp not initialized');
+    }
+    await portalApp.registerNip05(nip05);
+  }, [portalApp]);
+
+  const submitImage = useCallback(async (imageBase64: string) => {
+    if (!portalApp) {
+      throw new Error('PortalApp not initialized');
+    }
+    await portalApp.registerImg(imageBase64);
+  }, [portalApp]);
 
   // Context value
   const contextValue: NostrServiceContextType = {
@@ -830,6 +855,8 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     nwcConnectionError,
     refreshNwcConnectionStatus,
     forceReconnect,
+    submitNip05,
+    submitImage,
   };
 
   return (
