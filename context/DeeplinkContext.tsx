@@ -63,10 +63,6 @@ export const DeeplinkProvider = ({ children }: { children: ReactNode }) => {
 
         if (isBasicSchemeUrl) {
           console.log('Basic scheme URL detected, skipping authentication parsing:', url);
-          // Navigate to tabs without processing as auth URL
-          setTimeout(() => {
-            router.replace('/(tabs)');
-          }, 500);
           return;
         }
 
@@ -79,17 +75,8 @@ export const DeeplinkProvider = ({ children }: { children: ReactNode }) => {
 
         // Send auth init request
         nostrService.sendAuthInit(parsedUrl);
-
-        // Navigate to tabs
-        setTimeout(() => {
-          router.replace('/(tabs)');
-        }, 500);
       } catch (error) {
         console.error('Failed to handle deeplink URL:', error);
-        // On any parsing error, just navigate to tabs
-        setTimeout(() => {
-          router.replace('/(tabs)');
-        }, 500);
       }
     },
     [showSkeletonLoader, nostrService]

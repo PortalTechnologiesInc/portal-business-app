@@ -2,62 +2,36 @@ import { ThemedText } from "@/components/ThemedText";
 import {
 	useLocalSearchParams,
 	router,
-	useRootNavigationState,
 } from "expo-router";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { View } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { useMnemonic } from "@/context/MnemonicContext";
+import { useDeeplink } from "@/context/DeeplinkContext";
 
-// Key for storing pending deeplinks
+// Key for storing pending deeplinks - must match DeeplinkContext
 const PENDING_DEEPLINK_KEY = "PENDING_DEEPLINK";
-
-// Try to import DeeplinkContext but don't fail if it's not available
-let useDeeplink: (() => { handleDeepLink: (url: string) => void }) | undefined;
-try {
-	useDeeplink = require("@/context/DeeplinkContext").useDeeplink;
-} catch (error) {
-	console.log("DeeplinkContext not available");
-}
-
-// Define type for handleDeepLink function
-type HandleDeepLinkFn = (url: string) => void;
 
 export default function DeeplinkHandler() {
 	const params = useLocalSearchParams();
-	const [fullUrl, setFullUrl] = useState("");
-	const rootNavigationState = useRootNavigationState();
 	const { isOnboardingComplete } = useOnboarding();
 	const { mnemonic } = useMnemonic();
+	const { handleDeepLink } = useDeeplink();
+	
 	// Flag to track if we've already processed this deeplink
 	const hasProcessedDeeplink = useRef(false);
 
-	// Try to get the deeplink context if available
-	let handleDeepLink: HandleDeepLinkFn | undefined;
-	try {
-		if (useDeeplink) {
-			const deeplinkContext = useDeeplink();
-			handleDeepLink = deeplinkContext?.handleDeepLink;
-		}
-	} catch (error) {
-		console.log("DeeplinkContext not available, will store deeplink for later");
-	}
-
-	console.log("params", params);
-
 	// Determine appropriate navigation target based on app state
-	const getNavigationTarget = useCallback(() => {
+	const getNavigationTarget = () => {
 		if (!isOnboardingComplete) {
 			return "/onboarding";
 		}
-
 		if (!mnemonic) {
 			return "/settings";
 		}
-
 		return "/(tabs)";
-	}, [isOnboardingComplete, mnemonic]);
+	};
 
 	useEffect(() => {
 		// Skip if we've already processed this deeplink
@@ -78,43 +52,52 @@ export default function DeeplinkHandler() {
 
 		// Reconstruct full URL
 		const path = segments.join("/");
-		// Add portal:// protocol prefix to ensure the URL is properly formatted
-		const reconstructed = `portal://${path}${queryParams ? `?${queryParams}` : ""}`;
+		const reconstructedUrl = `portal://${path}${queryParams ? `?${queryParams}` : ""}`;
 
-		setFullUrl(reconstructed);
-		console.log("Reconstructed URL:", reconstructed);
+		console.log("Processing deeplink:", reconstructedUrl);
 
-		// Mark as processed
+		// Mark as processed immediately to prevent re-processing
 		hasProcessedDeeplink.current = true;
 
-		// If DeeplinkContext is available, process the deeplink
-		if (reconstructed) {
-			if (handleDeepLink) {
-				// DeeplinkContext is available, let it handle the navigation
-				console.log("Using DeeplinkContext to handle deeplink");
-				handleDeepLink(reconstructed);
-			} else {
-				// DeeplinkContext not ready, store the deeplink for later processing
-				console.log("DeeplinkContext not ready, storing deeplink for later");
-				SecureStore.setItemAsync(PENDING_DEEPLINK_KEY, reconstructed)
+		// Navigation function that properly clears history
+		const navigateWithClearHistory = () => {
+			const target = getNavigationTarget();
+			console.log("Clearing navigation history and navigating to:", target);
+			
+			// Use the proven solution from GitHub discussions
+			router.dismissAll();
+			router.replace(target);
+		};
+
+		// Process the deeplink if we have a valid URL
+		if (reconstructedUrl && reconstructedUrl !== "portal://") {
+			try {
+				// Process the deeplink
+				handleDeepLink(reconstructedUrl);
+				// Navigate after processing with clean history
+				navigateWithClearHistory();
+			} catch (error) {
+				console.error("Failed to process deeplink, storing for later:", error);
+				// Store for later processing if DeeplinkContext fails
+				SecureStore.setItemAsync(PENDING_DEEPLINK_KEY, reconstructedUrl)
 					.then(() => {
-						console.log("Stored deeplink for later processing:", reconstructed);
-						// Navigate based on app state to avoid loops
-						const target = getNavigationTarget();
-						console.log("Navigating to:", target);
-						// Use replace to avoid creating navigation history
-						router.replace(target);
+						console.log("Stored deeplink for later processing");
+						navigateWithClearHistory();
 					})
-					.catch((error) => {
-						console.error("Failed to store deeplink:", error);
-						router.replace(getNavigationTarget());
+					.catch((storeError) => {
+						console.error("Failed to store deeplink:", storeError);
+						// Navigate anyway to prevent the user from being stuck
+						navigateWithClearHistory();
 					});
 			}
+		} else {
+			// No valid deeplink, just navigate
+			navigateWithClearHistory();
 		}
-	}, [params, getNavigationTarget, handleDeepLink]);
+	}, [params, isOnboardingComplete, mnemonic, handleDeepLink]);
 
 	return (
-		<View>
+		<View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
 			<ThemedText>Processing deeplink...</ThemedText>
 		</View>
 	);

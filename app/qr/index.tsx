@@ -42,13 +42,6 @@ export default function QRScannerScreen() {
 
   const toggleTorch = () => {
     setEnableTorch(!enableTorch);
-
-    // Use router.replace to completely replace the navigation stack
-    // This will make it so that when the user gets to the home page,
-    // there's no QR scanner page in the history
-    setTimeout(() => {
-      router.replace('/(tabs)');
-    }, 300);
   };
 
   const handleBarCodeScanned = (result: BarcodeResult) => {
@@ -59,14 +52,16 @@ export default function QRScannerScreen() {
     setScanned(true);
     console.log(`Bar code with type ${type} and data ${data} has been scanned!`);
 
-    // Show the skeleton loader
-    const parsedUrl = parseAuthInitUrl(data);
-    showSkeletonLoader(parsedUrl);
-    nostrService.sendAuthInit(parsedUrl);
+    try {
+      // Show the skeleton loader
+      const parsedUrl = parseAuthInitUrl(data);
+      showSkeletonLoader(parsedUrl);
+      nostrService.sendAuthInit(parsedUrl);
+    } catch (error) {
+      console.error('Failed to process QR code:', error);
+    }
 
-    // Use router.replace to completely replace the navigation stack
-    // This will make it so that when the user gets to the home page,
-    // there's no QR scanner page in the history
+    // Navigate back with clean history after a brief delay for UX
     setTimeout(() => {
       router.replace('/(tabs)');
     }, 300);

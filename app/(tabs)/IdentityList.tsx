@@ -55,7 +55,7 @@ export default function IdentityList({ onManageIdentity }: IdentityListProps) {
           </ThemedText>
           <TouchableOpacity
             style={[styles.createButton, { backgroundColor: buttonPrimary }]}
-            onPress={() => router.navigate('/')}
+            onPress={() => router.replace('/(tabs)')}
           >
             <ThemedText style={[styles.createButtonText, { color: buttonPrimaryText }]}>
               Create New Identity
@@ -80,7 +80,7 @@ export default function IdentityList({ onManageIdentity }: IdentityListProps) {
               shadowColor: shadowColor,
             },
           ]}
-          onPress={() => router.navigate('/')}
+          onPress={() => router.replace('/(tabs)')}
         >
           <ThemedText style={[styles.fabIcon, { color: buttonPrimaryText }]}>+</ThemedText>
         </TouchableOpacity>
