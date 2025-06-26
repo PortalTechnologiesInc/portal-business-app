@@ -90,15 +90,19 @@ export default function DeeplinkHandler() {
 		// If DeeplinkContext is available, process the deeplink
 		if (reconstructed) {
 			if (handleDeepLink) {
+				// DeeplinkContext is available, let it handle the navigation
+				console.log("Using DeeplinkContext to handle deeplink");
 				handleDeepLink(reconstructed);
 			} else {
-				// Store the deeplink for later processing
+				// DeeplinkContext not ready, store the deeplink for later processing
+				console.log("DeeplinkContext not ready, storing deeplink for later");
 				SecureStore.setItemAsync(PENDING_DEEPLINK_KEY, reconstructed)
 					.then(() => {
 						console.log("Stored deeplink for later processing:", reconstructed);
 						// Navigate based on app state to avoid loops
 						const target = getNavigationTarget();
 						console.log("Navigating to:", target);
+						// Use replace to avoid creating navigation history
 						router.replace(target);
 					})
 					.catch((error) => {
@@ -108,17 +112,6 @@ export default function DeeplinkHandler() {
 			}
 		}
 	}, [params, getNavigationTarget, handleDeepLink]);
-
-	// Handle navigation after the navigation state is ready
-	useEffect(() => {
-		if (
-			rootNavigationState?.key &&
-			handleDeepLink &&
-			!hasProcessedDeeplink.current
-		) {
-			router.replace("/(tabs)");
-		}
-	}, [rootNavigationState?.key, handleDeepLink]);
 
 	return (
 		<View>

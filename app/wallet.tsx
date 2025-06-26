@@ -158,19 +158,14 @@ export default function WalletManagementScreen() {
 
       // Only refresh NWC status if we have a wallet configured
       if (walletUrl && walletUrl.trim()) {
-        // Initial check when entering the page
+        // Initial check when entering the page (only once, no polling)
         refreshNwcConnectionStatus();
 
-        // Set up periodic refresh for NWC connection status
-        const interval = setInterval(() => {
-          if (walletUrl && walletUrl.trim()) {
-            refreshNwcConnectionStatus();
-          }
-        }, 8000); // Check every 8 seconds (less frequent than homepage to reduce load)
+        // No more polling interval - let context handle periodic checks
+        console.log('🔐 Initial NWC check complete, context will handle polling');
 
         return () => {
-          console.log('🔐 Left Wallet Page: Stopping NWC connection monitoring');
-          clearInterval(interval);
+          console.log('🔐 Left Wallet Page: NWC monitoring handled by context');
         };
       } else {
         console.log('🔐 No wallet configured, skipping NWC monitoring');
@@ -365,8 +360,6 @@ export default function WalletManagementScreen() {
       </SafeAreaView>
     );
   }
-
-  console.log(walletInfo.data)
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>

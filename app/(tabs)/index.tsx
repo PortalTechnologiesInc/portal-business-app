@@ -78,27 +78,27 @@ export default function Home() {
       console.log('🏠 Entered Homepage: Starting connection monitoring');
 
       // Stable reference to the service
-      const { refreshConnectionStatus, refreshNwcConnectionStatus } = nostrService;
+      const { refreshConnectionStatus } = nostrService;
 
       // Initial fetch when entering homepage - trigger immediately with shorter delay
       const initialCheck = () => {
         refreshConnectionStatus();
-        refreshNwcConnectionStatus();
+        // Remove NWC polling from homepage - let context handle it
       };
 
       // Immediate check
       initialCheck();
 
-      // Set up periodic refresh for connection status with longer interval to reduce load
+      // Set up periodic refresh for relay connection status only
       const interval = setInterval(() => {
         if (isMounted.current) {
           refreshConnectionStatus();
-          refreshNwcConnectionStatus();
+          // Remove NWC polling from homepage - let context handle it
         }
-      }, 5000); // Increased to 5 seconds to reduce frequency
+      }, 5000); // Only relay status polling
 
       return () => {
-        console.log('🏠 Leaved Homepage: Stopping connection monitoring');
+        console.log('🏠 Left Homepage: Stopping connection monitoring');
         clearInterval(interval);
       };
     }, []) // Empty dependency array - only run on focus/blur

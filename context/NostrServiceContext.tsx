@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { AppState } from 'react-native';
 import {
   AuthChallengeEvent,
@@ -258,28 +258,28 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   walletUrl,
   children,
 }) => {
-  const [isInitialized, setIsInitialized] = useState(false);
   const [portalApp, setPortalApp] = useState<PortalAppInterface | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
-  const [nwcWallet, setNwcWallet] = useState<Nwc | null>(null);
   const [pendingRequests, setPendingRequests] = useState<{ [key: string]: PendingRequest }>({});
-  const [connectionStatus, setConnectionStatus] = useState<Map<string, any> | null>(null);
-  const [lastConnectionUpdate, setLastConnectionUpdate] = useState<Date | null>(null);
+  const [nwcWallet, setNwcWallet] = useState<Nwc | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<any>(null);
   const [nwcConnectionStatus, setNwcConnectionStatus] = useState<boolean | null>(null);
   const [nwcConnectionError, setNwcConnectionError] = useState<string | null>(null);
-
-  // Simple NWC timeout handling: wait 60 seconds after timeout
   const [nwcTimeoutUntil, setNwcTimeoutUntil] = useState<number | null>(null);
   const [nwcCheckInProgress, setNwcCheckInProgress] = useState(false);
   const [lastNwcCheck, setLastNwcCheck] = useState<number>(0);
-
-  // Wallet info state from getinfo method
   const [walletInfo, setWalletInfo] = useState<WalletInfoState>({
     data: null,
     isLoading: false,
     error: null,
     lastUpdated: null,
   });
+
+  // Refs to store current values for stable AppState listener
+  const portalAppRef = useRef<PortalAppInterface | null>(null);
+  const refreshConnectionStatusRef = useRef<(() => Promise<void>) | null>(null);
+  const refreshNwcConnectionStatusRef = useRef<(() => Promise<void>) | null>(null);
 
   const sqliteContext = useSQLiteContext();
   const DB = new DatabaseService(sqliteContext);
@@ -630,11 +630,9 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       try {
         const status = await portalApp.connectionStatus();
         setConnectionStatus(status);
-        setLastConnectionUpdate(new Date());
       } catch (error) {
         console.error('NostrService: Error fetching connection status:', error);
         setConnectionStatus(null);
-        setLastConnectionUpdate(new Date());
       }
     }
   }, [portalApp]);
@@ -708,7 +706,6 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
 
     // Skip if another check is already in progress
     if (nwcCheckInProgress) {
-      console.log('Skipping NWC check - already in progress');
       return;
     }
 
@@ -720,7 +717,6 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
 
     // Add debounce: Skip if we've checked within the last 3 seconds
     if (now - lastNwcCheck < 3000) {
-      console.log('Skipping NWC check - too frequent (debounced)');
       return;
     }
 
@@ -729,7 +725,6 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     setLastNwcCheck(now);
 
     try {
-      console.log('Checking NWC wallet connection status...');
       setNwcConnectionError(null);
 
       // Use optimized timeout with proper cleanup
@@ -737,10 +732,8 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
 
       try {
         // Call getInfo first to establish relay connections before checking status
-        console.log('Calling getInfo to establish relay connections...');
         await Promise.race([currentWallet.getInfo(), timeoutPromise]);
 
-        console.log('getInfo completed, now checking connection status...');
         const status: any = await Promise.race([currentWallet.connectionStatus(), timeoutPromise]);
 
         cleanup();
@@ -755,8 +748,6 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
         if (isConnected) {
           setNwcTimeoutUntil(null);
         }
-
-        console.log('NWC wallet connection status:', isConnected ? 'Connected' : 'Disconnected');
 
         // Always clear in-progress flag on successful completion
         setNwcCheckInProgress(false);
@@ -775,18 +766,17 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
         setNwcConnectionStatus(false);
         setNwcConnectionError(userFriendlyError);
 
-        // If timeout error, just log as info since it's expected
+        // If timeout error, set timeout period without logging
         if (errorMessage.includes('timeout')) {
-          console.log('NWC connection timeout - will retry in 60 seconds');
           const timeoutUntil = Date.now() + 60000; // 60 seconds from now
           setNwcTimeoutUntil(timeoutUntil);
         } else {
-          // Log other errors normally
+          // Log other errors normally (keep real errors)
           console.error('NostrService: Error fetching NWC connection status:', error);
         }
       }
     }
-  }, [nwcWallet, nwcTimeoutUntil, nwcCheckInProgress, lastNwcCheck]);
+  }, [nwcWallet]); // Only depend on nwcWallet to prevent infinite recreation
 
   // Force reconnect function to trigger immediate reconnection
   const forceReconnect = useCallback(async () => {
@@ -807,29 +797,77 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     }
   }, [portalApp, refreshConnectionStatus]);
 
+  // Centralized NWC polling - only when wallet is configured
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    if (nwcWallet) {
+      // Start periodic polling every 5 seconds (unified with relay polling)
+      interval = setInterval(() => {
+        if (refreshNwcConnectionStatusRef.current) {
+          refreshNwcConnectionStatusRef.current();
+        }
+      }, 5000);
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [nwcWallet]); // Only start/stop when wallet configuration changes
+
   // Initial connection status fetch with delay to allow relay connections to establish
   useEffect(() => {
     // Add a small delay to allow relay connections to establish after initialization
     const timer = setTimeout(() => {
-      refreshConnectionStatus();
-      // Also refresh NWC status when wallet changes
-      refreshNwcConnectionStatus();
+      if (refreshConnectionStatusRef.current) {
+        refreshConnectionStatusRef.current();
+      }
+      if (refreshNwcConnectionStatusRef.current) {
+        refreshNwcConnectionStatusRef.current();
+      }
     }, 2000); // 2 second delay to allow relay connections to establish
 
     return () => clearTimeout(timer);
-  }, [refreshConnectionStatus, refreshNwcConnectionStatus]);
+  }, []); // Empty dependency array - only run once on mount
 
-  // Add AppState listener to handle background/foreground transitions
+  // Update refs when values change (no effect recreation)
   useEffect(() => {
-    const handleAppStateChange = (nextAppState: string) => {
+    portalAppRef.current = portalApp;
+  }, [portalApp]);
+
+  useEffect(() => {
+    refreshConnectionStatusRef.current = refreshConnectionStatus;
+  }, [refreshConnectionStatus]);
+
+  useEffect(() => {
+    refreshNwcConnectionStatusRef.current = refreshNwcConnectionStatus;
+  }, [refreshNwcConnectionStatus]);
+
+  // Stable AppState listener - runs only once, never recreated
+  useEffect(() => {
+    console.log('🔄 Setting up STABLE AppState listener (runs once)');
+    
+    const handleAppStateChange = async (nextAppState: string) => {
       console.log('AppState changed to:', nextAppState);
 
-      if (nextAppState === 'active' && portalApp) {
-        console.log('📱 App became active - refreshing connection status');
-        // Only trigger connection status refresh when app becomes active
-        // Remove the recursive forceReconnect call to prevent loops
-        refreshConnectionStatus();
-        refreshNwcConnectionStatus();
+      if (nextAppState === 'active') {
+        if (portalAppRef.current) {
+          console.log('📱 App became active - refreshing connection status');
+          try {
+            if (refreshConnectionStatusRef.current) {
+              await refreshConnectionStatusRef.current();
+            }
+            if (refreshNwcConnectionStatusRef.current) {
+              await refreshNwcConnectionStatusRef.current();
+            }
+          } catch (error) {
+            console.error('Error refreshing connection status on app active:', error);
+          }
+        } else {
+          console.log('⚠️ App became active but portalApp is null');
+        }
       }
     };
 
@@ -837,10 +875,13 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     const subscription = AppState.addEventListener('change', handleAppStateChange);
 
     return () => {
+      console.log('🧹 Removing STABLE AppState listener (only on unmount)');
       subscription?.remove();
     };
-  }, [portalApp, refreshConnectionStatus, refreshNwcConnectionStatus]);
+  }, []); // EMPTY dependency array - never recreated
 
+  // Remove the old unstable AppState listener
+  // (commenting out the old one that was being recreated constantly)
 
   const submitNip05 = useCallback(async (nip05: string) => {
     if (!portalApp) {

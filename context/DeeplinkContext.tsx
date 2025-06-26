@@ -117,26 +117,12 @@ export const DeeplinkProvider = ({ children }: { children: ReactNode }) => {
 
   // Listen for deeplink events
   useEffect(() => {
-    // Handle URLs that the app was opened with
-    const getInitialURL = async () => {
-      if (initialUrlProcessed.current) {
-        console.log('Initial URL already processed, skipping');
-        return;
-      }
-
-      const initialUrl = await Linking.getInitialURL();
-      if (initialUrl) {
-        console.log('App opened with URL:', initialUrl);
-        initialUrlProcessed.current = true;
-        handleDeepLink(initialUrl);
-      }
-    };
-
-    getInitialURL();
-
-    // Add event listener for URL events that happen while the app is running
+    // Don't handle initial URL here - let [...deeplink].tsx handle cold start deeplinks
+    // This prevents double navigation when app is opened with deeplink
+    
+    // Only add event listener for URL events that happen while the app is running
     const subscription = Linking.addEventListener('url', event => {
-      console.log('Got URL event:', event.url);
+      console.log('Got URL event while app running:', event.url);
       handleDeepLink(event.url);
     });
 
