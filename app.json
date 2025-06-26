@@ -29,7 +29,7 @@
         "foregroundImage": "./assets/images/appLogo.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.twentytwo.portal",
+      "package": "com.portaltechnologiesinc.portal",
       "userInterfaceStyle": "dark",
       "intentFilters": [
         {
