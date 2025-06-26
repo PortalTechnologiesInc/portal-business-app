@@ -682,7 +682,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
 
     // Skip if another check is already in progress
     if (nwcCheckInProgress) {
-      console.log('⏸️ Skipping NWC check - already in progress');
+      console.log('Skipping NWC check - already in progress');
       return;
     }
 
@@ -694,7 +694,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
 
     // Add debounce: Skip if we've checked within the last 3 seconds
     if (now - lastNwcCheck < 3000) {
-      console.log('⏸️ Skipping NWC check - too frequent (debounced)');
+      console.log('Skipping NWC check - too frequent (debounced)');
       return;
     }
 
@@ -769,15 +769,15 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       return;
     }
 
-    console.log('🔄 Force reconnecting to relays...');
+          console.log('Force reconnecting to relays...');
 
     try {
       // Only refresh connection status, don't trigger recursive calls
       await refreshConnectionStatus();
 
-      console.log('✅ Force reconnect initiated');
+              console.log('Force reconnect initiated');
     } catch (error) {
-      console.error('❌ Error during force reconnect:', error);
+              console.error('Error during force reconnect:', error);
     }
   }, [portalApp, refreshConnectionStatus]);
 
@@ -796,7 +796,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   // Add AppState listener to handle background/foreground transitions
   useEffect(() => {
     const handleAppStateChange = (nextAppState: string) => {
-      console.log('🔄 AppState changed to:', nextAppState);
+      console.log('AppState changed to:', nextAppState);
 
       if (nextAppState === 'active' && portalApp) {
         console.log('📱 App became active - refreshing connection status');

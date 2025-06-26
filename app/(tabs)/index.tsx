@@ -24,9 +24,8 @@ import { QrCode, ArrowRight, User } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as SecureStore from 'expo-secure-store';
-import { generateRandomGamertag, formatAvatarUri } from '@/utils';
+import { formatAvatarUri } from '@/utils';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { keyToHex } from 'portal-app-lib';
 
 const FIRST_LAUNCH_KEY = 'portal_first_launch_completed';
 

@@ -211,11 +211,9 @@ export default function SettingsScreen() {
   };
 
   const handleSaveProfile = async () => {
-    console.log('🔍🔍🔍 SAVE PROFILE BUTTON CLICKED 🔍🔍🔍');
-    
     // Don't allow profile save during sync
     if (!isProfileEditable) {
-      console.log('❌ Profile not editable - sync in progress');
+      console.log('Profile not editable - sync in progress');
       Alert.alert(
         'Profile Sync in Progress',
         'Please wait for profile synchronization to complete before making changes.'
@@ -229,39 +227,22 @@ export default function SettingsScreen() {
     const usernameChanged = newUsername !== networkUsername;
     const avatarChanged = avatarUri !== networkAvatarUri;
 
-    console.log('🔍🔍🔍 CHANGE DETECTION ANALYSIS 🔍🔍🔍');
-    console.log('📝 Current usernameInput:', `"${usernameInput}"`);
-    console.log('📝 Trimmed newUsername:', `"${newUsername}"`);
-    console.log('📝 Network username:', `"${networkUsername}"`);
-    console.log('📝 Username changed:', usernameChanged);
-    console.log('🖼️ Current avatarUri:', avatarUri || 'NULL');
-    console.log('🖼️ Network avatarUri:', networkAvatarUri || 'NULL');
-    console.log('🖼️ Avatar changed:', avatarChanged);
-    console.log('📊 Overall has changes:', usernameChanged || avatarChanged);
+    console.log('Checking for profile changes - username:', usernameChanged, 'avatar:', avatarChanged);
 
     if (!usernameChanged && !avatarChanged) {
-      console.log('⚠️⚠️⚠️ NO CHANGES DETECTED - STOPPING HERE ⚠️⚠️⚠️');
+      console.log('No changes detected');
       showToast('No changes to save', 'success');
       return;
     }
 
-    console.log('✅✅✅ CHANGES DETECTED - PROCEEDING WITH SAVE ✅✅✅');
-
     try {
-      console.log('🔄 Setting profileIsLoading to true');
       setProfileIsLoading(true);
 
-      console.log('🔄 About to call setProfile with:');
-      console.log('  - newUsername:', `"${newUsername}"`);
-      console.log('  - avatarUri:', avatarUri || 'NULL');
-      
       // Use the new setProfile method that handles both username and image
-      console.log('🚀 CALLING setProfile() FROM SETTINGS...');
       await setProfile(newUsername, avatarUri);
-      console.log('✅ setProfile() returned successfully');
+      console.log('Profile saved successfully');
 
       // Update the network state after successful save
-      console.log('🔄 Updating network state after successful save');
       setNetworkUsername(newUsername);
       setNetworkAvatarUri(avatarUri);
 
@@ -274,15 +255,12 @@ export default function SettingsScreen() {
         showToast('Avatar saved successfully', 'success');
       }
 
-      console.log('🔄 About to refresh profile');
       handleRefreshProfile();
     } catch (error) {
-      console.error('❌❌❌ ERROR IN handleSaveProfile ❌❌❌');
       console.error('Error saving profile:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to save profile';
-      Alert.alert('Error', errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
-      console.log('🔄 Setting profileIsLoading to false');
       setProfileIsLoading(false);
     }
   };

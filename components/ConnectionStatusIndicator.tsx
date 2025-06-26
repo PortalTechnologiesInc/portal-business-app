@@ -5,22 +5,18 @@ import {
   Modal,
   StyleSheet,
   ScrollView,
-  Text,
   Animated,
   Dimensions,
 } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { Colors } from '@/constants/Colors';
 import {
   useNostrService,
   type RelayInfo,
   type ConnectionSummary,
 } from '@/context/NostrServiceContext';
-import { isWalletConnected, walletUrlEvents } from '@/services/SecureStorageService';
-import { Wifi, WifiOff, Wallet, X, CheckCircle, AlertCircle, XCircle } from 'lucide-react-native';
+import { Wifi, Wallet, X, CheckCircle, XCircle, AlertCircle } from 'lucide-react-native';
 import { useThemeColor } from '@/hooks/useThemeColor';
 
 type ConnectionStatus = 'connected' | 'partial' | 'disconnected';
@@ -120,7 +116,7 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
       case 'connected':
         return 'Connected';
       case 'partial':
-        return 'Partial Connection';
+        return 'Partial';
       case 'disconnected':
         return !isOnline ? 'Offline' : 'Disconnected';
       default:
@@ -457,7 +453,7 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
                           Relay Connections
                         </ThemedText>
                         <ThemedText style={[styles.detailValue, { color: textPrimaryColor }]}>
-                          {relayDetails.allRelaysConnected ? 'All Connected' : 'Partial Connection'}
+                          {relayDetails.allRelaysConnected ? 'All Connected' : 'Partial'}
                         </ThemedText>
                         <ThemedText
                           style={[styles.detailDescription, { color: textSecondaryColor }]}

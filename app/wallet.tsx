@@ -322,7 +322,7 @@ export default function WalletManagementScreen() {
   // Manual refresh function for connection status
   const handleRefreshConnection = useCallback(async () => {
     if (walletUrl && walletUrl.trim()) {
-      console.log('🔄 Manual NWC connection refresh triggered');
+      console.log('Manual NWC connection refresh triggered');
       await refreshNwcConnectionStatus();
     }
   }, [walletUrl, refreshNwcConnectionStatus]);

@@ -9,46 +9,35 @@ import { keyToHex } from 'portal-app-lib';
 // Helper function to validate image
 const validateImage = async (uri: string): Promise<{ isValid: boolean; error?: string }> => {
   try {
-    console.log('DEBUG: Validating image URI:', uri);
-    
     // Get file info
     const fileInfo = await FileSystem.getInfoAsync(uri);
-    console.log('DEBUG: File info:', fileInfo);
 
     if (!fileInfo.exists) {
-      console.log('DEBUG: File does not exist');
       return { isValid: false, error: 'File does not exist' };
     }
 
     // Check file size (3MB limit - reduced from 5MB)
     if (fileInfo.size && fileInfo.size > 3 * 1024 * 1024) {
-      console.log('DEBUG: File too large:', fileInfo.size, 'bytes');
       const sizeInMB = (fileInfo.size / (1024 * 1024)).toFixed(2);
       return { isValid: false, error: `Image is ${sizeInMB}MB. Please choose an image smaller than 3MB.` };
     }
 
-    console.log('DEBUG: File size OK:', fileInfo.size, 'bytes');
-
     // Check file extension for GIF
     const extension = uri.toLowerCase().split('.').pop();
-    console.log('DEBUG: File extension:', extension);
-    
+
     if (extension === 'gif') {
-      console.log('DEBUG: GIF files not supported');
       return { isValid: false, error: 'GIF images are not supported' };
     }
 
     // Check MIME type if available (additional GIF check)
     const mimeTypes = ['image/gif'];
     if (fileInfo.uri && mimeTypes.some(type => fileInfo.uri.includes(type))) {
-      console.log('DEBUG: GIF MIME type detected');
       return { isValid: false, error: 'GIF images are not supported' };
     }
 
-    console.log('DEBUG: Image validation passed');
     return { isValid: true };
   } catch (error) {
-    console.error('DEBUG: Image validation error:', error);
+    console.error('Image validation error:', error);
     return { isValid: false, error: 'Failed to validate image' };
   }
 };
@@ -57,7 +46,7 @@ const validateImage = async (uri: string): Promise<{ isValid: boolean; error?: s
 const isBase64String = (str: string): boolean => {
   // Base64 strings are typically much longer and contain only valid base64 characters
   if (str.length < 100) return false; // Too short to be an image
-  
+
   // Check if it contains only valid base64 characters
   const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
   return base64Regex.test(str) && !str.startsWith('data:') && !str.startsWith('file:') && !str.startsWith('http');
@@ -89,7 +78,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const [avatarUri, setAvatarUriState] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<ProfileSyncStatus>('idle');
   const [avatarRefreshKey, setAvatarRefreshKey] = useState<number>(Date.now());
-  
+
   // Track what's actually saved on the network (for change detection)
   const [networkUsername, setNetworkUsername] = useState<string>('');
   const [networkAvatarUri, setNetworkAvatarUri] = useState<string | null>(null);
@@ -121,6 +110,18 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
     loadLocalProfile();
   }, []);
 
+  // Safety mechanism: reset sync status if stuck for too long
+  useEffect(() => {
+    if (syncStatus === 'syncing') {
+      const timer = setTimeout(() => {
+        console.log('Profile sync timeout, resetting to failed');
+        setSyncStatus('failed');
+      }, 30000); // 30 second safety timeout
+
+      return () => clearTimeout(timer);
+    }
+  }, [syncStatus]);
+
   // Auto-fetch profile on app load when NostrService is ready
   useEffect(() => {
     const autoFetchProfile = async () => {
@@ -134,45 +135,50 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
         return;
       }
 
-      console.log('🚀 Auto-fetching profile on app load for:', nostrService.publicKey);
-      
+      console.log('Auto-fetching profile for:', nostrService.publicKey);
+
       try {
         // Fetch the profile from the network
         const result = await fetchProfile(nostrService.publicKey);
-        
+
         if (result.found) {
-          console.log('✅ Auto-fetch successful - profile found and loaded');
+          console.log('Profile loaded from network');
         } else {
-          console.log('ℹ️ Auto-fetch completed - no profile found on network');
-          
+          console.log('No profile found on network');
+
           // Check if this is a newly generated seed (new user)
           try {
             const seedOrigin = await SecureStore.getItemAsync('portal_seed_origin');
             if (seedOrigin === 'generated') {
-              console.log('🎯 New user detected - auto-generating profile');
-              
+              console.log('New user detected - auto-generating profile');
+
               // Generate a random username for new users
               const randomUsername = generateRandomGamertag();
-              console.log('🎲 Generated random username:', randomUsername);
-              
+
               // Set the username locally and update state
               await setUsername(randomUsername);
               setNetworkUsername(''); // Keep network state empty since nothing is saved yet
-              
+
               // Clear the seed origin flag so this only happens once
               await SecureStore.deleteItemAsync('portal_seed_origin');
-              
-              console.log('✅ Auto-generated profile setup completed');
-              console.log('💡 User can now edit and save their profile in settings');
-            } else {
-              console.log('📥 Imported seed - no auto-generation, waiting for user to set profile');
+
+              console.log('Auto-generated profile setup completed');
+
+              // Auto-save the generated profile to the network
+              try {
+                await setProfile(randomUsername);
+                console.log('Auto-generated profile saved to network');
+              } catch (error) {
+                console.log('Failed to auto-save profile to network:', error);
+                // Don't throw - let user manually save later
+              }
             }
           } catch (error) {
-            console.log('⚠️ Could not check seed origin, skipping auto-generation:', error);
+            console.log('Could not check seed origin, skipping auto-generation:', error);
           }
         }
       } catch (error) {
-        console.log('⚠️ Auto-fetch failed:', error);
+        console.log('Auto-fetch failed:', error);
         // Don't throw - this is a background operation
       }
     };
@@ -184,7 +190,6 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
     publicKey: string
   ): Promise<{ found: boolean; username?: string; avatarUri?: string }> => {
     if (!publicKey || syncStatus === 'syncing') {
-      console.log('Profile fetch skipped: no publicKey or already syncing');
       return { found: false };
     }
 
@@ -195,24 +200,27 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
       return { found: false };
     }
 
-    console.log('Starting profile fetch for:', publicKey);
+    console.log('Fetching profile for:', publicKey);
     setSyncStatus('syncing');
 
     try {
-      // Fetch fresh profile data
-      console.log('DEBUG: About to call nostrService.getServiceName with pubkey:', publicKey);
-      const fetchedProfile = await nostrService.getServiceName(publicKey);
-      console.log('DEBUG: getServiceName returned:', fetchedProfile);
+      // Fetch fresh profile data with timeout
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 15000); // 15 second timeout
+      });
+
+      const fetchedProfile = await Promise.race([
+        nostrService.getServiceName(publicKey),
+        timeoutPromise
+      ]) as any;
 
       if (fetchedProfile) {
-        console.log('Fetched profile:', fetchedProfile);
+        console.log('Profile fetched successfully');
 
         // Extract data from fetched profile
         const fetchedUsername = fetchedProfile.nip05?.split('@')[0] || fetchedProfile.name || '';
         const fetchedAvatarUri = fetchedProfile.picture || null; // Ensure null instead of empty string
-
-        console.log('Extracted username from profile:', fetchedUsername);
-        console.log('Extracted avatar from profile:', fetchedAvatarUri);
 
         // Save the fetched data to local storage
         if (fetchedUsername) {
@@ -220,12 +228,11 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
         }
 
         // Always update avatar to match network profile (even if null/empty)
-        console.log('Updating avatar to match network profile:', fetchedAvatarUri || 'null');
         setAvatarUriState(fetchedAvatarUri);
-        
+
         // Force avatar refresh to bust cache
         setAvatarRefreshKey(Date.now());
-        
+
         if (fetchedAvatarUri) {
           // Cache the avatar URL in SecureStore
           await SecureStore.setItemAsync(AVATAR_URI_KEY, fetchedAvatarUri);
@@ -237,7 +244,6 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
         // Update network state to reflect what was fetched
         setNetworkUsername(fetchedUsername);
         setNetworkAvatarUri(fetchedAvatarUri);
-        console.log('DEBUG: Updated network state from fetch - username:', fetchedUsername, 'avatar:', fetchedAvatarUri ? 'present' : 'none');
 
         setSyncStatus('completed');
 
@@ -314,12 +320,10 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
       const usernameChanged = newUsername !== networkUsername;
       const avatarChanged = newAvatarUri !== networkAvatarUri;
 
-      console.log('🔄🔄🔄 NEW PROFILE FLOW STARTED 🔄🔄🔄');
-      console.log('📝 Username changed:', usernameChanged, `("${networkUsername}" -> "${newUsername}")`);
-      console.log('🖼️ Avatar changed:', avatarChanged, `("${networkAvatarUri}" -> "${newAvatarUri}")`);
+      console.log('Updating profile - username changed:', usernameChanged, 'avatar changed:', avatarChanged);
 
       if (!usernameChanged && !avatarChanged) {
-        console.log('⚠️ No changes detected, skipping profile update');
+        console.log('No changes detected, skipping profile update');
         setSyncStatus('completed');
         return;
       }
@@ -327,30 +331,32 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
       // Step 1: Handle username changes (submitNip05)
       let nip05Error: string | null = null;
       let actualUsernameToUse = networkUsername; // Default to current network username
-      
+
       if (usernameChanged) {
-        console.log('🚀 STEP 1: Submitting NIP05 registration');
-        console.log('📝 Registering username:', newUsername);
-        
+        console.log('Registering NIP05 username:', newUsername);
+
         try {
           await nostrService.submitNip05(newUsername);
-          console.log('✅ NIP05 registration successful');
+          console.log('NIP05 registration successful');
           actualUsernameToUse = newUsername; // Use new username if successful
-        } catch (error) {
-          console.error('❌ NIP05 registration failed:', error);
-          
+        } catch (error: any) {
+          console.error('NIP05 registration failed');
+
           // Store the error but don't throw - continue with other updates
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          if (errorMessage.toLowerCase().includes('already taken') || 
-              errorMessage.toLowerCase().includes('exists') ||
-              errorMessage.toLowerCase().includes('unavailable')) {
-            
+          let errorMessage = '';
+
+          // Extract error from portal app response
+          if (error.inner && Array.isArray(error.inner) && error.inner.length > 0) {
+            errorMessage = error.inner[0];
+          }
+
+          if (errorMessage.includes('409')) {
             nip05Error = `Username "${newUsername}" is already taken. Please choose a different name.`;
           } else {
             nip05Error = `Failed to register username: ${errorMessage}`;
           }
-          
-          console.log('⚠️ NIP05 failed, but continuing with other profile updates...');
+
+          console.log('NIP05 failed, continuing with other profile updates...');
           // Keep actualUsernameToUse as networkUsername (previous valid username)
         }
       }
@@ -358,35 +364,31 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
       // Step 2: Handle avatar changes (submitImage)
       let imageUrl = '';
       if (avatarChanged && newAvatarUri) {
-        console.log('🚀 STEP 2: Processing and uploading image');
-        console.log('🖼️ Processing avatar URI:', newAvatarUri);
-        
+        console.log('Processing and uploading image');
+
         let cleanBase64 = '';
-        
+
         // Check if the avatar is already base64 (from network fetch)
         if (isBase64String(newAvatarUri)) {
-          console.log('📄 Avatar is already base64, using directly');
+          console.log('Avatar is already base64, using directly');
           cleanBase64 = newAvatarUri;
         } else {
-          console.log('📁 Avatar is file URI, validating and converting to base64');
-          
+          console.log('Converting file URI to base64');
+
           // Validate the image file
           const validation = await validateImage(newAvatarUri);
           if (!validation.isValid) {
-            console.error('❌ Image validation failed:', validation.error);
+            console.error('Image validation failed:', validation.error);
             throw new Error(validation.error || 'Invalid image');
           }
-          
-          console.log('✅ Image validation passed, reading as base64');
-          
+
           // Read image as base64
           try {
             cleanBase64 = await FileSystem.readAsStringAsync(newAvatarUri, {
               encoding: FileSystem.EncodingType.Base64,
             });
-            console.log('✅ Successfully converted to base64, length:', cleanBase64.length);
           } catch (error) {
-            console.error('❌ Failed to read image as base64:', error);
+            console.error('Failed to read image as base64:', error);
             throw new Error('Failed to process image file');
           }
         }
@@ -396,35 +398,40 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
           const commaIndex = cleanBase64.indexOf(',');
           if (commaIndex !== -1) {
             cleanBase64 = cleanBase64.substring(commaIndex + 1);
-            console.log('🧹 Removed data URL prefix, clean base64 length:', cleanBase64.length);
           }
         }
 
-        console.log('🚀 Uploading image to portal servers');
+        console.log('Uploading image to portal servers');
         try {
           await nostrService.submitImage(cleanBase64);
-          console.log('✅ Image upload successful');
-          
+          console.log('Image upload successful');
+
           // Generate portal image URL using hex pubkey
           const hexPubkey = keyToHex(nostrService.publicKey);
           imageUrl = `https://profile.getportal.cc/${hexPubkey}`;
-          console.log('🔗 Generated image URL:', imageUrl);
-        } catch (error) {
-          console.error('❌ Image upload failed:', error);
-          const errorMessage = error instanceof Error ? error.message : String(error);
+        } catch (error: any) {
+          console.error('Image upload failed');
+          
+          // Extract error from portal app response
+          let errorMessage = '';
+          if (error.inner && Array.isArray(error.inner) && error.inner.length > 0) {
+            errorMessage = error.inner[0];
+          } else {
+            errorMessage = error instanceof Error ? error.message : String(error);
+          }
+          
           throw new Error(`Failed to upload image: ${errorMessage}`);
         }
       } else if (!avatarChanged && networkAvatarUri) {
         // Keep existing image URL if avatar didn't change
-        console.log('🔄 Keeping existing avatar');
         if (networkAvatarUri.startsWith('https://profile.getportal.cc/')) {
           imageUrl = networkAvatarUri;
         }
       }
 
       // Step 3: Set complete profile (setUserProfile)
-      console.log('🚀 STEP 3: Setting complete profile');
-      
+      console.log('Setting complete profile');
+
       const profileUpdate = {
         nip05: `${actualUsernameToUse}@getportal.cc`,
         name: actualUsernameToUse,
@@ -432,49 +439,42 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
         picture: imageUrl, // Use the portal image URL or empty string
       };
 
-      console.log('📦📦📦 FINAL PROFILE OBJECT 📦📦📦');
-      console.log('📦 Profile:', JSON.stringify(profileUpdate, null, 2));
-      console.log('📦 Picture URL:', profileUpdate.picture || 'EMPTY');
-
       await nostrService.setUserProfile(profileUpdate);
-      console.log('✅ Profile set successfully');
+      console.log('Profile set successfully');
 
       // Update local state - use the actual username that worked
       await setUsername(actualUsernameToUse);
       if (avatarChanged) {
         // Store the portal image URL, not the local file URI
         setAvatarUriState(imageUrl || null);
-        
+
         // Force avatar refresh to bust cache when avatar changes
         setAvatarRefreshKey(Date.now());
-        
+
         // Cache the image URL in SecureStore after successful upload
         if (imageUrl) {
           await SecureStore.setItemAsync(AVATAR_URI_KEY, imageUrl);
-          console.log('💾 Cached avatar URL in SecureStore:', imageUrl);
         } else {
           await SecureStore.deleteItemAsync(AVATAR_URI_KEY);
-          console.log('🗑️ Cleared cached avatar URL from SecureStore');
         }
       }
 
       // Update network state to reflect what was actually saved
       setNetworkUsername(actualUsernameToUse);
       setNetworkAvatarUri(imageUrl || null);
-      console.log('✅ Updated network state after save');
-      
+
       if (nip05Error) {
         // Profile was partially updated but NIP05 failed
-        console.log('⚠️⚠️⚠️ PROFILE UPDATE COMPLETED WITH NIP05 ERROR ⚠️⚠️⚠️');
+        console.log('Profile update completed with NIP05 error');
         setSyncStatus('completed'); // Still mark as completed so user can edit again
         throw new Error(nip05Error); // Throw the NIP05 error to show to user
       } else {
-        console.log('🎉🎉🎉 PROFILE UPDATE COMPLETED SUCCESSFULLY 🎉🎉🎉');
+        console.log('Profile update completed successfully');
         setSyncStatus('completed');
       }
     } catch (error) {
       setSyncStatus('failed');
-      console.error('❌❌❌ PROFILE UPDATE FAILED ❌❌❌', error);
+      console.error('Profile update failed:', error);
       throw error;
     }
   };
