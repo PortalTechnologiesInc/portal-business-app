@@ -39,12 +39,23 @@ export const ActivityMainCard: React.FC<ActivityMainCardProps> = ({
     textSecondary: secondaryTextColor,
   };
 
+  const getIconBackgroundColor = () => {
+    if (activityStatus === 'failed') {
+      return statusErrorColor;
+    }
+    if (activityStatus === 'pending') {
+      return statusWarningColor;
+    }
+    // Success or default case
+    return isAuth ? statusConnectedColor : buttonSecondaryColor;
+  };
+
   return (
     <View style={[styles.mainCard, { backgroundColor: surfaceSecondaryColor }]}>
       <View
         style={[
           styles.activityIconContainer,
-          { backgroundColor: isAuth ? statusConnectedColor : buttonSecondaryColor },
+          { backgroundColor: getIconBackgroundColor() },
         ]}
       >
         {isAuth ? (

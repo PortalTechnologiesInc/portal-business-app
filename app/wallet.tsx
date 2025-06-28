@@ -294,7 +294,8 @@ export default function WalletManagementScreen() {
     if (hasChanged) {
       validateAndSaveWalletUrl();
     } else {
-      handleClearInput();
+      // Cancel editing - revert to original wallet URL without clearing
+      setInputValue(walletUrl);
       setIsEditing(false);
     }
   };
@@ -397,20 +398,21 @@ export default function WalletManagementScreen() {
                             <TextInput
                 style={[
                   styles.walletUrlInput,
-                  { 
-                    color: primaryTextColor, 
+                  {
+                    color: primaryTextColor,
                     backgroundColor: surfaceSecondaryColor,
                     borderColor: isEditing ? inputBorderColor : 'transparent',
                   },
                 ]}
-                value={inputValue}
+                value={isEditing ? inputValue : (walletUrl ? '•'.repeat(walletUrl.length) : '')}
                 onChangeText={setInputValue}
-                placeholder="nostr+walletconnect://..."
+                placeholder={walletUrl && !isEditing ? "Tap to edit wallet URL" : "nostr+walletconnect://..."}
                 placeholderTextColor={inputPlaceholderColor}
                 onFocus={() => setIsEditing(true)}
                 multiline={true}
                 textAlignVertical="top"
                 scrollEnabled={false}
+                editable={isEditing}
               />
               <TouchableOpacity
                 style={[

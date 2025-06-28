@@ -11,13 +11,17 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { formatDayAndDate } from '@/utils';
-import { FontAwesome6 } from '@expo/vector-icons';
 import {
   Calendar,
   AlertCircle,
   Shield,
   BanknoteIcon,
   DollarSign,
+  Hash,
+  Server,
+  Coins,
+  Info,
+  Link,
 } from 'lucide-react-native';
 import { ActivityType } from '@/models/Activity';
 import { DatabaseService } from '@/services/database';
@@ -44,7 +48,6 @@ export default function ActivityDetailScreen() {
   const buttonSecondaryColor = useThemeColor({}, 'buttonSecondary');
   const buttonSecondaryTextColor = useThemeColor({}, 'buttonSecondaryText');
   const statusErrorColor = useThemeColor({}, 'statusError');
-  const statusConnectedColor = useThemeColor({}, 'statusConnected');
 
   useEffect(() => {
     const fetchActivity = async () => {
@@ -165,7 +168,7 @@ export default function ActivityDetailScreen() {
               />
 
               <ActivityDetailRow
-                icon="hashtag"
+                icon={<Hash size={18} color={secondaryTextColor} />}
                 label="Activity ID"
                 value={activity.id}
                 copyable
@@ -173,7 +176,7 @@ export default function ActivityDetailScreen() {
               />
 
               <ActivityDetailRow
-                icon="server"
+                icon={<Server size={18} color={secondaryTextColor} />}
                 label="Service Key"
                 value={activity.service_key}
                 copyable
@@ -190,7 +193,7 @@ export default function ActivityDetailScreen() {
 
                   {activity.currency && (
                     <ActivityDetailRow
-                      icon="coins"
+                      icon={<Coins size={18} color={secondaryTextColor} />}
                       label="Currency"
                       value={activity.currency}
                     />
@@ -199,13 +202,13 @@ export default function ActivityDetailScreen() {
               )}
 
               <ActivityDetailRow
-                icon="info-circle"
+                icon={<Info size={18} color={secondaryTextColor} />}
                 label="Status Details"
                 value={activity.detail}
               />
 
               <ActivityDetailRow
-                icon="link"
+                icon={<Link size={18} color={secondaryTextColor} />}
                 label="Request ID"
                 value={activity.request_id}
                 copyable
@@ -224,9 +227,9 @@ export default function ActivityDetailScreen() {
             <View style={[styles.infoCard, { backgroundColor: surfaceSecondaryColor }]}>
               <View style={styles.infoContent}>
                 {isAuth ? (
-                  <Shield size={24} color={statusConnectedColor} style={styles.infoIcon} />
+                  <Shield size={24} color={primaryTextColor} style={styles.infoIcon} />
                 ) : (
-                  <BanknoteIcon size={24} color={statusConnectedColor} style={styles.infoIcon} />
+                  <BanknoteIcon size={24} color={primaryTextColor} style={styles.infoIcon} />
                 )}
                 <View style={styles.infoTextContainer}>
                   <ThemedText style={[styles.infoTitle, { color: primaryTextColor }]}>
