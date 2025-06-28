@@ -9,6 +9,7 @@ import { formatRelativeTime } from '@/utils';
 import type { ActivityWithDates } from '@/services/database';
 import { router } from 'expo-router';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { getActivityStatus, getStatusColor } from '@/utils/activityHelpers';
 
 interface ActivityRowProps {
   activity: ActivityWithDates;
@@ -25,37 +26,20 @@ export const ActivityRow: React.FC<ActivityRowProps> = ({ activity }) => {
   const primaryTextColor = useThemeColor({}, 'textPrimary');
   const secondaryTextColor = useThemeColor({}, 'textSecondary');
 
-  const getActivityStatus = (detail: string): 'success' | 'failed' | 'pending' => {
-    const lowerDetail = detail.toLowerCase();
-    if (lowerDetail.includes('approved') || lowerDetail.includes('success')) {
-      return 'success';
-    } else if (
-      lowerDetail.includes('failed') ||
-      lowerDetail.includes('denied') ||
-      lowerDetail.includes('error') ||
-      lowerDetail.includes('rejected')
-    ) {
-      return 'failed';
-    } else {
-      return 'pending';
-    }
-  };
+  const statusConnectedColor = useThemeColor({}, 'statusConnected');
+  const statusWarningColor = useThemeColor({}, 'statusWarning');
+  const statusErrorColor = useThemeColor({}, 'statusError');
+  const borderPrimaryColor = useThemeColor({}, 'borderPrimary');
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'success':
-        return useThemeColor({}, 'statusConnected');
-      case 'pending':
-        return useThemeColor({}, 'statusWarning');
-      case 'failed':
-        return useThemeColor({}, 'statusError');
-      default:
-        return useThemeColor({}, 'borderPrimary');
-    }
+  const statusColors = {
+    statusConnected: statusConnectedColor,
+    statusWarning: statusWarningColor,
+    statusError: statusErrorColor,
+    textSecondary: borderPrimaryColor,
   };
 
   const activityStatus = getActivityStatus(activity.detail);
-  const statusColor = getStatusColor(activityStatus);
+  const statusColor = getStatusColor(activityStatus, statusColors);
 
   return (
     <TouchableOpacity
