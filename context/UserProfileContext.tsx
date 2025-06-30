@@ -211,7 +211,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
       });
 
       const fetchedProfile = await Promise.race([
-        nostrService.getServiceName(publicKey),
+        nostrService.portalApp.fetchProfile(publicKey),
         timeoutPromise
       ]) as any;
 
@@ -220,6 +220,7 @@ export const UserProfileProvider: React.FC<{ children: React.ReactNode }> = ({ c
 
         // Extract data from fetched profile
         const fetchedUsername = fetchedProfile.nip05?.split('@')[0] || fetchedProfile.name || '';
+        console.log("aaaaaaaaaaaaaaaaaaa", fetchedProfile)
         const fetchedAvatarUri = fetchedProfile.picture || null; // Ensure null instead of empty string
 
         // Save the fetched data to local storage

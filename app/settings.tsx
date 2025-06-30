@@ -13,7 +13,6 @@ import {
 import Clipboard from '@react-native-clipboard/clipboard';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { Colors } from '@/constants/Colors';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, User, Pencil, ChevronRight, Fingerprint, Shield } from 'lucide-react-native';
 import { Moon, Sun, Smartphone } from 'lucide-react-native';
@@ -60,14 +59,11 @@ export default function SettingsScreen() {
   const cardBackgroundColor = useThemeColor({}, 'cardBackground');
   const primaryTextColor = useThemeColor({}, 'textPrimary');
   const secondaryTextColor = useThemeColor({}, 'textSecondary');
-  const inputBackgroundColor = useThemeColor({}, 'inputBackground');
   const inputBorderColor = useThemeColor({}, 'inputBorder');
   const inputPlaceholderColor = useThemeColor({}, 'inputPlaceholder');
   const buttonPrimaryColor = useThemeColor({}, 'buttonPrimary');
-  const buttonSecondaryColor = useThemeColor({}, 'buttonSecondary');
   const buttonDangerColor = useThemeColor({}, 'buttonDanger');
   const buttonPrimaryTextColor = useThemeColor({}, 'buttonPrimaryText');
-  const buttonSecondaryTextColor = useThemeColor({}, 'buttonSecondaryText');
   const buttonDangerTextColor = useThemeColor({}, 'buttonDangerText');
   const statusConnectedColor = useThemeColor({}, 'statusConnected');
 
@@ -260,7 +256,7 @@ export default function SettingsScreen() {
       console.error('Error saving profile:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to save profile';
       showToast(errorMessage, 'error');
-      
+
       // Reset username input to original network username when save fails
       setUsernameInput(networkUsername);
     } finally {
