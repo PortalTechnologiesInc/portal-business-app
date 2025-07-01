@@ -37,9 +37,14 @@ export default function IdentityList({ onManageIdentity }: IdentityListProps) {
   // Profile management state
   const { 
     username, 
+    displayName,
     avatarUri, 
     avatarRefreshKey, 
+    networkUsername,
+    networkDisplayName,
+    networkAvatarUri,
     setUsername, 
+    setDisplayName,
     setAvatarUri, 
     setProfile,
     isProfileEditable, 
@@ -48,8 +53,7 @@ export default function IdentityList({ onManageIdentity }: IdentityListProps) {
   } = useUserProfile();
   const nostrService = useNostrService();
   const [usernameInput, setUsernameInput] = useState('');
-  const [networkUsername, setNetworkUsername] = useState('');
-  const [networkAvatarUri, setNetworkAvatarUri] = useState<string | null>(null);
+  const [displayNameInput, setDisplayNameInput] = useState('');
   const [profileIsLoading, setProfileIsLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -71,15 +75,10 @@ export default function IdentityList({ onManageIdentity }: IdentityListProps) {
     if (username) {
       setUsernameInput(username);
     }
-  }, [username]);
-
-  // Track network state when profile is loaded/refreshed from network
-  useEffect(() => {
-    if (syncStatus === 'completed') {
-      setNetworkUsername(username);
-      setNetworkAvatarUri(avatarUri);
+    if (displayName) {
+      setDisplayNameInput(displayName);
     }
-  }, [syncStatus, username, avatarUri]);
+  }, [username, displayName]);
 
   const handleAvatarPress = async () => {
     if (!isProfileEditable) {
@@ -127,33 +126,52 @@ export default function IdentityList({ onManageIdentity }: IdentityListProps) {
   const handleSaveProfile = async () => {
     if (!isProfileEditable || profileIsLoading) return;
 
+    // Normalize and validate username
+    const normalizedUsername = usernameInput.trim().toLowerCase();
+    const trimmedDisplayName = displayNameInput.trim();
+    
     // Check if anything has actually changed
-    const usernameChanged = usernameInput.trim() !== networkUsername;
+    const usernameChanged = normalizedUsername !== networkUsername;
+    const displayNameChanged = trimmedDisplayName !== networkDisplayName;
     const avatarChanged = avatarUri !== networkAvatarUri;
 
-    if (!usernameChanged && !avatarChanged) {
+    if (!usernameChanged && !displayNameChanged && !avatarChanged) {
       showToast('No changes to save', 'success');
+      return;
+    }
+
+    // Client-side validation
+    if (normalizedUsername.includes(' ')) {
+      showToast('Username cannot contain spaces', 'error');
+      return;
+    }
+
+    if (normalizedUsername && !/^[a-z0-9._-]+$/.test(normalizedUsername)) {
+      showToast('Username can only contain lowercase letters, numbers, dots, underscores, and hyphens', 'error');
       return;
     }
 
     setProfileIsLoading(true);
     try {
-      const trimmedUsername = usernameInput.trim();
-      
-      // Use the setProfile method to save both username and avatar to the network
-      await setProfile(trimmedUsername || username || '', avatarUri);
+      // Use the setProfile method to save username, display name, and avatar to the network
+      await setProfile(
+        normalizedUsername || username || '', 
+        trimmedDisplayName,
+        avatarUri || undefined
+      );
 
-      // Update network state after successful save
-      setNetworkUsername(trimmedUsername || username || '');
-      setNetworkAvatarUri(avatarUri);
+      // Update local inputs to reflect the normalized values
+      setUsernameInput(normalizedUsername || username || '');
+      setDisplayNameInput(trimmedDisplayName);
 
       // Provide specific feedback about what was saved
-      if (usernameChanged && avatarChanged) {
-        showToast('Profile and avatar saved successfully', 'success');
-      } else if (usernameChanged) {
-        showToast('Profile saved successfully', 'success');
-      } else if (avatarChanged) {
-        showToast('Avatar saved successfully', 'success');
+      const changes = [];
+      if (usernameChanged) changes.push('username');
+      if (displayNameChanged) changes.push('display name');
+      if (avatarChanged) changes.push('avatar');
+      
+      if (changes.length > 0) {
+        showToast(`${changes.join(', ')} saved successfully`, 'success');
       }
       
     } catch (error) {
@@ -161,8 +179,9 @@ export default function IdentityList({ onManageIdentity }: IdentityListProps) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to save profile';
       showToast(errorMessage, 'error');
 
-      // Reset username input to original network username when save fails
+      // Reset inputs to original network values when save fails
       setUsernameInput(networkUsername);
+      setDisplayNameInput(networkDisplayName);
     } finally {
       setProfileIsLoading(false);
     }
@@ -269,24 +288,56 @@ export default function IdentityList({ onManageIdentity }: IdentityListProps) {
                 </View>
               </TouchableOpacity>
 
-              <View style={[styles.usernameContainer, { borderBottomColor: inputBorderColor }]}>
+              <View style={[styles.inputContainer, { borderBottomColor: inputBorderColor }]}>
+                <ThemedText style={[styles.inputLabel, { color: textSecondary }]}>
+                  Display Name
+                </ThemedText>
                 <TextInput
                   style={[
-                    styles.usernameInput,
+                    styles.displayNameInput,
                     { color: textPrimary },
-                    !isProfileEditable && styles.usernameInputDisabled,
+                    !isProfileEditable && styles.inputDisabled,
                   ]}
-                  value={usernameInput}
-                  onChangeText={setUsernameInput}
-                  placeholder="username"
+                  value={displayNameInput}
+                  onChangeText={setDisplayNameInput}
+                  placeholder="Your display name (optional)"
                   placeholderTextColor={inputPlaceholderColor}
-                  autoCapitalize="none"
-                  autoCorrect={false}
+                  autoCapitalize="words"
+                  autoCorrect={true}
                   editable={isProfileEditable}
                 />
-                <ThemedText style={[styles.usernameSuffix, { color: textSecondary }]}>
-                  @getportal.cc
+              </View>
+
+              <View style={[styles.usernameContainer, { borderBottomColor: inputBorderColor }]}>
+                <ThemedText style={[styles.inputLabel, { color: textSecondary }]}>
+                  Username
                 </ThemedText>
+                <View style={styles.usernameInputWrapper}>
+                  <TextInput
+                    style={[
+                      styles.usernameInput,
+                      { color: textPrimary },
+                      !isProfileEditable && styles.usernameInputDisabled,
+                    ]}
+                    value={usernameInput}
+                    onChangeText={(text) => {
+                      // Convert to lowercase and filter out invalid characters
+                      // Show lowercase letters instead of blocking capitals entirely
+                      const normalizedText = text
+                        .toLowerCase() // Convert capitals to lowercase
+                        .replace(/[^a-z0-9._-]/g, ''); // Remove spaces and other invalid characters
+                      setUsernameInput(normalizedText);
+                    }}
+                    placeholder="username"
+                    placeholderTextColor={inputPlaceholderColor}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={isProfileEditable}
+                  />
+                  <ThemedText style={[styles.usernameSuffix, { color: textSecondary }]}>
+                    @getportal.cc
+                  </ThemedText>
+                </View>
               </View>
 
               <TouchableOpacity
@@ -310,8 +361,9 @@ export default function IdentityList({ onManageIdentity }: IdentityListProps) {
                   >
                     {profileIsLoading ? 'Saving...' : (() => {
                       const usernameChanged = usernameInput.trim() !== networkUsername;
+                      const displayNameChanged = displayNameInput.trim() !== networkDisplayName;
                       const avatarChanged = avatarUri !== networkAvatarUri;
-                      const hasChanges = usernameChanged || avatarChanged;
+                      const hasChanges = usernameChanged || displayNameChanged || avatarChanged;
                       
                       return hasChanges ? 'Save Changes' : 'Save Profile';
                     })()}
@@ -469,13 +521,35 @@ const styles = StyleSheet.create({
   avatarEditBadgeDisabled: {
     opacity: 0.5,
   },
+  inputContainer: {
+    borderBottomWidth: 1,
+    marginBottom: 20,
+    width: '100%',
+    maxWidth: 500,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  displayNameInput: {
+    fontSize: 16,
+    paddingVertical: 8,
+    width: '100%',
+  },
+  inputDisabled: {
+    opacity: 0.5,
+  },
   usernameContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     borderBottomWidth: 1,
     marginBottom: 24,
     width: '100%',
     maxWidth: 500,
+  },
+  usernameInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
   },
   usernameInput: {
     fontSize: 16,

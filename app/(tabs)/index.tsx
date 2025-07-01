@@ -31,7 +31,7 @@ const FIRST_LAUNCH_KEY = 'portal_first_launch_completed';
 
 export default function Home() {
   const { isLoading } = useOnboarding();
-  const { username, avatarUri, avatarRefreshKey, fetchProfile, syncStatus, setUsername } = useUserProfile();
+  const { username, displayName, avatarUri, avatarRefreshKey, fetchProfile, syncStatus, setUsername } = useUserProfile();
   const nostrService = useNostrService();
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -179,6 +179,30 @@ export default function Home() {
     return username;
   }, [username]);
 
+  // Memoize the display name for welcome text
+  // Use display name if available, fallback to username
+  const welcomeDisplayName = useMemo(() => {
+    const nameToShow = displayName || username;
+    if (!nameToShow) return '';
+
+    // Get screen width to determine how many characters to show
+    const screenWidth = Dimensions.get('window').width;
+
+    let charsToShow = 25; // Slightly more generous for display names
+    if (screenWidth < 375) {
+      charsToShow = 12;
+    } else if (screenWidth < 414) {
+      charsToShow = 20;
+    }
+
+    // Truncate if too long
+    if (nameToShow.length > charsToShow) {
+      return `${nameToShow.substring(0, charsToShow - 3)}...`;
+    }
+
+    return nameToShow;
+  }, [displayName, username]);
+
   // Memoize handlers to prevent recreation on every render
   const handleQrScan = useCallback(() => {
     // Using 'modal' navigation to ensure cleaner navigation history
@@ -204,7 +228,7 @@ export default function Home() {
   if (isLoading || isFirstLaunch === null) {
     return (
       <View style={[styles.loaderContainer, { backgroundColor }]}>
-        <ActivityIndicator size="large" color={statusConnectedColor} />
+        <ActivityIndicator size="large" color={buttonPrimaryColor} />
       </View>
     );
   }
@@ -218,8 +242,8 @@ export default function Home() {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[statusConnectedColor]}
-              tintColor={statusConnectedColor}
+              colors={[buttonPrimaryColor]}
+              tintColor={buttonPrimaryColor}
               title="Pull to refresh profile"
               titleColor={secondaryTextColor}
             />
@@ -230,11 +254,19 @@ export default function Home() {
               <TouchableOpacity style={styles.headerLeft} onPress={handleSettingsNavigate}>
                 <View style={styles.welcomeRow}>
                   <ThemedText
-                    style={[styles.welcomeText, { color: secondaryTextColor }]}
+                    style={styles.welcomeText}
+                    darkColor={Colors.dirtyWhite}
+                    lightColor={Colors.gray700}
                     numberOfLines={1}
                     ellipsizeMode="middle"
                   >
-                    {username ? `Welcome back, ${username} 👋` : 'Welcome back 👋'}
+                    {username ? (
+                      <>
+                        Welcome back, <ThemedText style={styles.welcomeNameBold}>{welcomeDisplayName}</ThemedText> 👋
+                      </>
+                    ) : (
+                      'Welcome back 👋'
+                    )}
                   </ThemedText>
                   <ConnectionStatusIndicator size={10} />
                 </View>
@@ -266,8 +298,8 @@ export default function Home() {
                         lightColor={Colors.gray900}
                         darkColor={Colors.almostWhite}
                       >
-                        <ThemedText>{truncatedUsername}</ThemedText>
-                        <ThemedText>@getportal.cc</ThemedText>
+                        <ThemedText style={styles.usernameBold}>{truncatedUsername}</ThemedText>
+                        <ThemedText style={styles.usernameBold}>@getportal.cc</ThemedText>
                       </ThemedText>
                     ) : null}
                     <ThemedText
@@ -310,7 +342,7 @@ export default function Home() {
                 </ThemedText>
 
                 <View style={styles.illustrationContainer}>
-                  <QrCode size={80} color={statusConnectedColor} style={styles.illustration} />
+                  <QrCode size={80} color={buttonPrimaryColor} style={styles.illustration} />
                 </View>
 
                 <ThemedText
@@ -522,5 +554,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  welcomeNameBold: {
+    fontWeight: '700',
+  },
+  usernameBold: {
+    fontWeight: '700',
   },
 });
