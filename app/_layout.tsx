@@ -11,8 +11,6 @@ import { ActivitiesProvider } from '@/context/ActivitiesContext';
 import { DatabaseProvider } from '@/services/database/DatabaseProvider';
 import { MnemonicProvider, useMnemonic } from '@/context/MnemonicContext';
 import NostrServiceProvider from '@/context/NostrServiceContext';
-import { AppLockProvider, useAppLock } from '@/context/AppLockContext';
-import { AppLockScreen } from '@/components/AppLockScreen';
 import { StatusBar } from 'expo-status-bar';
 import { Colors } from '@/constants/Colors';
 import { Asset } from 'expo-asset';
@@ -41,10 +39,11 @@ const preloadImages = async () => {
 // Status bar wrapper that respects theme
 const ThemedStatusBar = () => {
   const { currentTheme } = useTheme();
+
   return (
     <StatusBar
       style={currentTheme === 'light' ? 'dark' : 'light'}
-      backgroundColor={currentTheme === 'light' ? Colors.primaryWhite : Colors.darkerGray}
+      backgroundColor={currentTheme === 'light' ? Colors.light.background : Colors.dark.background}
     />
   );
 };
@@ -64,93 +63,47 @@ const LoadingScreenContent = () => {
   );
 };
 
-// App content with all data providers - only rendered after successful authentication
+// AuthenticatedAppContent renders the actual app content after authentication checks
 const AuthenticatedAppContent = () => {
+  const router = useRouter();
   const { isOnboardingComplete } = useOnboarding();
   const { mnemonic, walletUrl } = useMnemonic();
-  const backgroundColor = useThemeColor({}, 'background');
 
-  // Create screens array based on conditions
-  const screens = [
-    // Always include deeplink screen
-    <Stack.Screen key="deeplink" name="[...deeplink]" />,
-  ];
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      // If user hasn't completed onboarding, redirect to onboarding
+      if (!isOnboardingComplete) {
+        router.replace('/onboarding');
+        return;
+      }
 
-  // Add screens based on app state
-  if (!isOnboardingComplete) {
-    screens.push(<Stack.Screen key="onboarding" name="onboarding" />);
-  } else {
-    // User is onboarded - show all main screens
-    screens.push(
-      <Stack.Screen key="tabs" name="(tabs)" options={{ headerShown: false }} />,
-      <Stack.Screen key="wallet" name="wallet" options={{ presentation: 'modal' }} />,
-      <Stack.Screen key="qr" name="qr" options={{ presentation: 'fullScreenModal' }} />,
-      <Stack.Screen key="subscription" name="subscription" />,
-      <Stack.Screen key="activity" name="activity" />
-    );
-  }
+      // If user completed onboarding but has no mnemonic, redirect to onboarding
+      if (!mnemonic) {
+        router.replace('/onboarding');
+        return;
+      }
+    };
+
+    checkAuthStatus();
+  }, [isOnboardingComplete, mnemonic, router]);
 
   return (
-    <DatabaseProvider>
+    <UserProfileProvider>
       <NostrServiceProvider mnemonic={mnemonic || ''} walletUrl={walletUrl}>
-        <UserProfileProvider>
+        <PendingRequestsProvider>
           <ActivitiesProvider>
-            <PendingRequestsProvider>
-              <DeeplinkProvider>
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: {
-                      backgroundColor,
-                    },
-                  }}
-                >
-                  {screens}
-                </Stack>
-              </DeeplinkProvider>
-            </PendingRequestsProvider>
+            <DeeplinkProvider>
+              <Stack screenOptions={{ headerShown: false }} />
+            </DeeplinkProvider>
           </ActivitiesProvider>
-        </UserProfileProvider>
+        </PendingRequestsProvider>
       </NostrServiceProvider>
-    </DatabaseProvider>
-  );
-};
-
-// App content wrapper that handles app lock - only initializes data providers after authentication
-const AppContentWrapper = () => {
-  const { isLocked } = useAppLock();
-
-  if (isLocked) {
-    return <AppLockScreen />;
-  }
-
-  // Only initialize data providers after successful authentication
-  return (
-    <MnemonicProvider>
-      <OnboardingProvider>
-        <AuthenticatedAppContent />
-      </OnboardingProvider>
-    </MnemonicProvider>
-  );
-};
-
-// Themed root view wrapper - only contains minimal providers needed before authentication
-const ThemedRootView = () => {
-  const backgroundColor = useThemeColor({}, 'background');
-
-  return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor }}>
-      <ThemedStatusBar />
-      <AppLockProvider>
-        <AppContentWrapper />
-      </AppLockProvider>
-    </GestureHandlerRootView>
+    </UserProfileProvider>
   );
 };
 
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     async function prepare() {
@@ -180,8 +133,26 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider>
-      <ThemedRootView />
-    </ThemeProvider>
+    <DatabaseProvider>
+      <ThemeProvider>
+        <ThemedRootView />
+      </ThemeProvider>
+    </DatabaseProvider>
   );
 }
+
+// Themed root view wrapper
+const ThemedRootView = () => {
+  const backgroundColor = useThemeColor({}, 'background');
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor }}>
+      <ThemedStatusBar />
+      <MnemonicProvider>
+        <OnboardingProvider>
+          <AuthenticatedAppContent />
+        </OnboardingProvider>
+      </MnemonicProvider>
+    </GestureHandlerRootView>
+  );
+};

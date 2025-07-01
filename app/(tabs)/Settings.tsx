@@ -26,8 +26,6 @@ import { resetDatabase } from '@/services/database/DatabaseProvider';
 import { useNostrService } from '@/context/NostrServiceContext';
 import { showToast } from '@/utils/Toast';
 import { authenticateForSensitiveAction } from '@/services/BiometricAuthService';
-import { isAppLockEnabled, setAppLockEnabled, canEnableAppLock } from '@/services/AppLockService';
-import { useAppLock } from '@/context/AppLockContext';
 import { useTheme, ThemeMode } from '@/context/ThemeContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 
@@ -35,13 +33,10 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { resetOnboarding } = useOnboarding();
   const nostrService = useNostrService();
-  const { refreshLockStatus } = useAppLock();
   const { themeMode, setThemeMode } = useTheme();
   const [isWalletConnectedState, setIsWalletConnectedState] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [appLockEnabled, setAppLockEnabledState] = useState(false);
-  const [biometricAvailable, setBiometricAvailable] = useState(false);
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
@@ -58,7 +53,7 @@ export default function SettingsScreen() {
   // Get real NWC connection status
   const { nwcConnectionStatus } = nostrService;
 
-  // Initialize wallet connection status and app lock settings
+  // Initialize wallet connection status
   useEffect(() => {
     const checkWalletConnection = async () => {
       try {
@@ -72,21 +67,8 @@ export default function SettingsScreen() {
       }
     };
 
-    const checkAppLockSettings = async () => {
-      try {
-        const [lockEnabled, biometricEnabled] = await Promise.all([
-          isAppLockEnabled(),
-          canEnableAppLock(),
-        ]);
-        setAppLockEnabledState(lockEnabled);
-        setBiometricAvailable(biometricEnabled);
-      } catch (error) {
-        console.error('Error checking app lock settings:', error);
-      }
-    };
-
     const initializeSettings = async () => {
-      await Promise.all([checkWalletConnection(), checkAppLockSettings()]);
+      await checkWalletConnection();
       setIsLoading(false);
     };
 
@@ -117,13 +99,7 @@ export default function SettingsScreen() {
   };
 
   const handleNostrCardPress = () => {
-    // Navigate to nostr management page with proper source parameter
-    router.push({
-      pathname: '/relays',
-      params: {
-        source: 'settings',
-      },
-    });
+    router.push('/relays');
   };
 
   const handleExportMnemonic = () => {
@@ -151,47 +127,6 @@ export default function SettingsScreen() {
       // TODO: Implement app data export logic
       showToast('App data export not yet implemented', 'success');
     }, 'Authenticate to export app data');
-  };
-
-  const handleToggleAppLock = async (enabled: boolean) => {
-    if (enabled && !biometricAvailable) {
-      Alert.alert(
-        'Biometric Authentication Required',
-        'To enable app lock, you need to set up biometric authentication (fingerprint, face recognition, or PIN) on your device first.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
-
-    if (enabled) {
-      // When enabling, require authentication to confirm
-      authenticateForSensitiveAction(async () => {
-        try {
-          await setAppLockEnabled(true);
-          setAppLockEnabledState(true);
-          // Don't lock immediately when user is actively enabling it
-          await refreshLockStatus(false);
-          showToast('App lock enabled', 'success');
-        } catch (error) {
-          console.error('Error enabling app lock:', error);
-          showToast('Failed to enable app lock', 'error');
-        }
-      }, 'Authenticate to enable app lock');
-    } else {
-      // When disabling, require authentication to confirm
-      authenticateForSensitiveAction(async () => {
-        try {
-          await setAppLockEnabled(false);
-          setAppLockEnabledState(false);
-          // When disabling, unlock the app
-          await refreshLockStatus(false);
-          showToast('App lock disabled', 'success');
-        } catch (error) {
-          console.error('Error disabling app lock:', error);
-          showToast('Failed to disable app lock', 'error');
-        }
-      }, 'Authenticate to disable app lock');
-    }
   };
 
   const handleThemeChange = () => {
@@ -414,28 +349,26 @@ export default function SettingsScreen() {
               <View style={[styles.appLockOption, { backgroundColor: cardBackgroundColor }]}>
                 <View style={styles.appLockLeft}>
                   <View style={styles.appLockIconContainer}>
-                    <Shield size={24} color={primaryTextColor} />
+                    <Shield size={24} color={secondaryTextColor} />
                   </View>
                   <View style={styles.appLockTextContainer}>
-                    <ThemedText style={[styles.appLockTitle, { color: primaryTextColor }]}>
+                    <ThemedText style={[styles.appLockTitle, { color: secondaryTextColor }]}>
                       App Lock
                     </ThemedText>
                     <ThemedText style={[styles.appLockDescription, { color: secondaryTextColor }]}>
-                      {biometricAvailable
-                        ? 'Require biometric authentication to open the app'
-                        : 'Biometric authentication not available'}
+                      App lock feature has been disabled
                     </ThemedText>
                   </View>
                 </View>
                 <Switch
-                  value={appLockEnabled}
-                  onValueChange={handleToggleAppLock}
-                  disabled={!biometricAvailable}
+                  value={false}
+                  onValueChange={() => {}}
+                  disabled={true}
                   trackColor={{
                     false: inputBorderColor,
-                    true: buttonPrimaryColor,
+                    true: inputBorderColor,
                   }}
-                  thumbColor={appLockEnabled ? primaryTextColor : secondaryTextColor}
+                  thumbColor={inputBorderColor}
                   ios_backgroundColor={inputBorderColor}
                 />
               </View>

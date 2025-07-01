@@ -111,7 +111,6 @@ export default function IdentityList({ onManageIdentity }: IdentityListProps) {
       if (!result.canceled) {
         try {
           await setAvatarUri(result.assets[0].uri);
-          showToast('Avatar updated successfully', 'success');
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to set avatar';
           Alert.alert('Error', errorMessage);
