@@ -7,7 +7,6 @@ import {
   PaymentResponseContent,
   Profile,
   RecurringPaymentResponseContent,
-  PortalApp,
   Nwc,
   AuthChallengeListener,
   PaymentRequestListener,
@@ -18,6 +17,10 @@ import {
   AuthResponseStatus,
   CloseRecurringPaymentResponse,
   ClosedRecurringPaymentListener,
+  LogCallback,
+  LogEntry,
+  LogLevel,
+  initLogger,
 } from 'portal-app-lib';
 import { PendingRequest } from '@/models/PendingRequest';
 import { DatabaseService } from '@/services/database';
@@ -338,10 +341,6 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
                 setPendingRequests(prev => {
                   const newPendingRequests = { ...prev };
 
-                  if (prev[id]) {
-                    return prev
-                  }
-                  
                   newPendingRequests[id] = {
                     id,
                     metadata: event,
@@ -378,10 +377,6 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
                   setPendingRequests(prev => {
                     const newPendingRequests = { ...prev };
 
-                    if (prev[id]) {
-                      return prev
-                    }
-
                     newPendingRequests[id] = {
                       id,
                       metadata: event,
@@ -407,10 +402,6 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
                 return new Promise<RecurringPaymentResponseContent>(resolve => {
                   setPendingRequests(prev => {
                     const newPendingRequests = { ...prev };
-
-                    if (prev[id]) {
-                      return prev
-                    }
 
                     newPendingRequests[id] = {
                       id,
@@ -1063,7 +1054,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       }
     }
     try {
-      initLogger(new Logger(), LogLevel.Warn)
+      initLogger(new Logger(), LogLevel.Trace)
       console.log('Logger initialized');
     } catch (error) {
       console.error('Error initializing logger:', error);
