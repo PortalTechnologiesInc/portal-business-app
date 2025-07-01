@@ -66,11 +66,16 @@ const LoadingScreenContent = () => {
 // AuthenticatedAppContent renders the actual app content after authentication checks
 const AuthenticatedAppContent = () => {
   const router = useRouter();
-  const { isOnboardingComplete } = useOnboarding();
-  const { mnemonic, walletUrl } = useMnemonic();
+  const { isOnboardingComplete, isLoading: onboardingLoading } = useOnboarding();
+  const { mnemonic, walletUrl, isLoading: mnemonicLoading } = useMnemonic();
 
   useEffect(() => {
     const checkAuthStatus = async () => {
+      // Wait for both contexts to finish loading before making navigation decisions
+      if (onboardingLoading || mnemonicLoading) {
+        return;
+      }
+
       // If user hasn't completed onboarding, redirect to onboarding
       if (!isOnboardingComplete) {
         router.replace('/onboarding');
@@ -85,20 +90,20 @@ const AuthenticatedAppContent = () => {
     };
 
     checkAuthStatus();
-  }, [isOnboardingComplete, mnemonic, router]);
+  }, [isOnboardingComplete, mnemonic, onboardingLoading, mnemonicLoading, router]);
 
   return (
-    <UserProfileProvider>
-      <NostrServiceProvider mnemonic={mnemonic || ''} walletUrl={walletUrl}>
-        <PendingRequestsProvider>
-          <ActivitiesProvider>
+    <NostrServiceProvider mnemonic={mnemonic || ''} walletUrl={walletUrl}>
+      <UserProfileProvider>
+        <ActivitiesProvider>
+          <PendingRequestsProvider>
             <DeeplinkProvider>
               <Stack screenOptions={{ headerShown: false }} />
             </DeeplinkProvider>
-          </ActivitiesProvider>
-        </PendingRequestsProvider>
-      </NostrServiceProvider>
-    </UserProfileProvider>
+          </PendingRequestsProvider>
+        </ActivitiesProvider>
+      </UserProfileProvider>
+    </NostrServiceProvider>
   );
 };
 
