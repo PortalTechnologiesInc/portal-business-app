@@ -1,7 +1,7 @@
 import type { Timestamp } from 'react-native-reanimated/lib/typescript/commonTypes';
-import type { Currency } from './Activity';
+import type { Currency, Frequency } from '@/utils/types';
 
-export type Frequency = 'daily' | 'weekly' | 'monthly' | 'annually';
+export type { Frequency };
 
 interface RecurringPaymentsRequestContent {
   amount: number;

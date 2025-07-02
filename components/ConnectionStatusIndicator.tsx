@@ -11,11 +11,8 @@ import {
 import NetInfo from '@react-native-community/netinfo';
 import { useRouter } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
-import {
-  useNostrService,
-  type RelayInfo,
-  type ConnectionSummary,
-} from '@/context/NostrServiceContext';
+import { useNostrService } from '@/context/NostrServiceContext';
+import type { RelayInfo, ConnectionSummary } from '@/utils/types';
 import { Wifi, Wallet, X, CheckCircle, XCircle, AlertCircle } from 'lucide-react-native';
 import { useThemeColor } from '@/hooks/useThemeColor';
 

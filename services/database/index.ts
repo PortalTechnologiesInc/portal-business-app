@@ -1,6 +1,5 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
-import type { ActivityType, Currency } from '@/models/Activity';
-import type { UpcomingPayment } from '@/models/UpcomingPayment';
+import type { ActivityType, Currency, UpcomingPayment } from '@/utils/types';
 import uuid from 'react-native-uuid';
 
 // Timestamp utilities

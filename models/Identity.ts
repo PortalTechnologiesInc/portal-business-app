@@ -1,5 +1,2 @@
-export interface Identity {
-  name: string;
-  publicKey: string;
-  // Add other relevant properties as needed
-}
+// Note: Identity is now exported from centralized types
+export type { Identity } from '@/utils/types';

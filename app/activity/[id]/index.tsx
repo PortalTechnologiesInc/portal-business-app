@@ -11,7 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { formatDayAndDate } from '@/utils';
+import { formatDayAndDate, ActivityType } from '@/utils';
 import {
   Calendar,
   AlertCircle,
@@ -24,7 +24,6 @@ import {
   Info,
   Link,
 } from 'lucide-react-native';
-import { ActivityType } from '@/models/Activity';
 import { DatabaseService } from '@/services/database';
 import type { ActivityWithDates } from '@/services/database';
 import { useSQLiteContext } from 'expo-sqlite';

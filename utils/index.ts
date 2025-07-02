@@ -1,4 +1,4 @@
-import type { Frequency } from '../models/Subscription';
+import type { Frequency } from './types.d';
 
 // Convert cents to dollars by dividing by 100 and fix to 2 decimal places
 export function formatCentsToCurrency(cents: number): string {
@@ -323,3 +323,10 @@ export function formatAvatarUri(avatarUri: string | null, cacheKey?: number): st
   // For anything else, return as-is (might be a relative URL or other format)
   return avatarUri;
 }
+
+// =============================================================================
+// TYPE EXPORTS
+// =============================================================================
+
+// Export all common types from the centralized types file
+export * from './types.d';

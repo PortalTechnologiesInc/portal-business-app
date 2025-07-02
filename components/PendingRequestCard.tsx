@@ -2,13 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import type { FC } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import type { PendingRequest } from '../models/PendingRequest';
 import { usePendingRequests } from '../context/PendingRequestsContext';
 import { useNostrService } from '@/context/NostrServiceContext';
 import type { SinglePaymentRequest, RecurringPaymentRequest } from 'portal-app-lib';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { Colors } from '@/constants/Colors';
+import type { PendingRequest } from '@/utils/types';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Layout } from '@/constants/Layout';
 
@@ -56,7 +53,7 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({ request }) => 
   const shadowColor = useThemeColor({}, 'shadowColor');
 
   // Add debug logging when a card is rendered
-  console.log(`Rendering card ${id} of type ${type} with service key ${metadata.serviceKey}`);
+  console.log(`Rendering card ${id} of type ${type} with service key ${(metadata as SinglePaymentRequest).serviceKey}`);
 
   const calendarObj =
     type === 'subscription'
@@ -71,7 +68,7 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({ request }) => 
       
       try {
         setIsLoading(true);
-        const name = await nostrService.getServiceName(metadata.serviceKey);
+        const name = await nostrService.getServiceName((metadata as SinglePaymentRequest).serviceKey);
         
         if (isMounted.current) {
           setServiceName(name);
@@ -92,9 +89,9 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({ request }) => 
     return () => {
       isMounted.current = false;
     };
-  }, [metadata.serviceKey, nostrService]);
+  }, [(metadata as SinglePaymentRequest).serviceKey, nostrService]);
 
-  const recipientPubkey = metadata.recipient;
+  const recipientPubkey = (metadata as SinglePaymentRequest).recipient;
 
   // Extract payment information if this is a payment request
   const isPaymentRequest = type === 'payment';

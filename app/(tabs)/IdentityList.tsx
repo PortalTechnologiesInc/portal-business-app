@@ -11,7 +11,7 @@ import {
   RefreshControl 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import type { Identity } from '../../models/Identity';
+import type { Identity } from '@/utils/types';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useRouter } from 'expo-router';

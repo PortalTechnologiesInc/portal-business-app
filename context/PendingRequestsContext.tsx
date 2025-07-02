@@ -8,7 +8,6 @@ import {
   useMemo,
   useCallback,
 } from 'react';
-import type { PendingRequest, PendingRequestType } from '../models/PendingRequest';
 import type {
   KeyHandshakeUrl,
   RecurringPaymentRequest,
@@ -21,6 +20,12 @@ import type { ActivityWithDates, SubscriptionWithDates } from '@/services/databa
 import { useDatabaseStatus } from '@/services/database/DatabaseProvider';
 import { useActivities } from '@/context/ActivitiesContext';
 import { useNostrService } from '@/context/NostrServiceContext';
+import type { 
+  PendingRequest, 
+  PendingRequestType, 
+  PendingActivity, 
+  PendingSubscription 
+} from '@/utils/types';
 
 // Helper function to get service name with fallback
 const getServiceNameWithFallback = async (
@@ -35,9 +40,7 @@ const getServiceNameWithFallback = async (
     return 'Unknown Service';
   }
 };
-// Define a type for pending activities
-type PendingActivity = Omit<ActivityWithDates, 'id' | 'created_at'>;
-type PendingSubscription = Omit<SubscriptionWithDates, 'id' | 'created_at'>;
+// Note: PendingActivity and PendingSubscription are now imported from centralized types
 
 interface PendingRequestsContextType {
   getByType: (type: PendingRequestType) => PendingRequest[];
@@ -334,10 +337,10 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
           request.result(approvedAuthResponse);
 
           // Add an activity record directly via the database service
-                      getServiceNameWithFallback(nostrService, request.metadata.serviceKey).then(serviceName => {
+          getServiceNameWithFallback(nostrService, (request.metadata as SinglePaymentRequest).serviceKey).then(serviceName => {
               addActivityWithFallback({
                 type: 'auth',
-                service_key: request.metadata.serviceKey,
+                service_key: (request.metadata as SinglePaymentRequest).serviceKey,
                 detail: 'User approved login',
                 date: new Date(),
                 service_name: serviceName,
@@ -373,10 +376,10 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
               }
             }
 
-            getServiceNameWithFallback(nostrService, request.metadata.serviceKey).then(serviceName => {
+            getServiceNameWithFallback(nostrService, (request.metadata as SinglePaymentRequest).serviceKey).then(serviceName => {
               addActivityWithFallback({
                 type: 'pay',
-                service_key: request.metadata.serviceKey,
+                service_key: (request.metadata as SinglePaymentRequest).serviceKey,
                 service_name: serviceName,
                 detail: 'Payment approved',
                 date: new Date(),
@@ -404,12 +407,12 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
             // Extract currency symbol from the Currency object
             const currencyObj = req.content.currency;
 
-            getServiceNameWithFallback(nostrService, request.metadata.serviceKey)
+            getServiceNameWithFallback(nostrService, (request.metadata as RecurringPaymentRequest).serviceKey)
               .then(serviceName => {
                 return addSubscriptionWithFallback({
                   request_id: id,
                   service_name: serviceName,
-                  service_key: request.metadata.serviceKey,
+                  service_key: (request.metadata as RecurringPaymentRequest).serviceKey,
                   amount: Number(amount) / 1000,
                   currency: 'sats',
                   status: 'active',
@@ -468,10 +471,10 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
           request.result(deniedAuthResponse);
 
           // Add denied login activity to database
-          getServiceNameWithFallback(nostrService, request.metadata.serviceKey).then(serviceName => {
+          getServiceNameWithFallback(nostrService, (request.metadata as SinglePaymentRequest).serviceKey).then(serviceName => {
             addActivityWithFallback({
               type: 'auth',
-              service_key: request.metadata.serviceKey,
+              service_key: (request.metadata as SinglePaymentRequest).serviceKey,
               detail: 'User denied login',
               date: new Date(),
               service_name: serviceName,
@@ -508,10 +511,10 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
               }
             }
 
-            getServiceNameWithFallback(nostrService, request.metadata.serviceKey).then(serviceName => {
+            getServiceNameWithFallback(nostrService, (request.metadata as SinglePaymentRequest).serviceKey).then(serviceName => {
               addActivityWithFallback({
                 type: 'pay',
-                service_key: request.metadata.serviceKey,
+                service_key: (request.metadata as SinglePaymentRequest).serviceKey,
                 service_name: serviceName,
                 detail: 'Payment denied by user',
                 date: new Date(),
@@ -553,10 +556,10 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
               }
             }
 
-            getServiceNameWithFallback(nostrService, request.metadata.serviceKey).then(serviceName => {
+            getServiceNameWithFallback(nostrService, (request.metadata as RecurringPaymentRequest).serviceKey).then(serviceName => {
               addActivityWithFallback({
                 type: 'pay',
-                service_key: request.metadata.serviceKey,
+                service_key: (request.metadata as RecurringPaymentRequest).serviceKey,
                 service_name: serviceName,
                 detail: 'Subscription denied by user',
                 date: new Date(),
@@ -613,7 +616,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
   useEffect(() => {
     // Check for removing skeleton when we get the expected request
     for (const request of Object.values(nostrService.pendingRequests)) {
-      if (request.metadata.serviceKey === pendingUrl?.mainKey) {
+      if ((request.metadata as SinglePaymentRequest).serviceKey === pendingUrl?.mainKey) {
         // Clear timeout and reset loading states directly to avoid dependency issues
         if (timeoutId) {
           clearTimeout(timeoutId);
