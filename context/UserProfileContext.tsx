@@ -5,6 +5,7 @@ import * as FileSystem from 'expo-file-system';
 import { useNostrService } from './NostrServiceContext';
 import { formatAvatarUri, generateRandomGamertag } from '@/utils';
 import { keyToHex } from 'portal-app-lib';
+import type { ProfileSyncStatus } from '@/utils/types';
 
 // Helper function to validate image
 const validateImage = async (uri: string): Promise<{ isValid: boolean; error?: string }> => {
@@ -55,8 +56,6 @@ const isBase64String = (str: string): boolean => {
 const USERNAME_KEY = 'portal_username';
 const AVATAR_URI_KEY = 'portal_avatar_uri';
 const DISPLAY_NAME_KEY = 'portal_display_name';
-
-type ProfileSyncStatus = 'idle' | 'syncing' | 'completed' | 'failed';
 
 type UserProfileContextType = {
   username: string;

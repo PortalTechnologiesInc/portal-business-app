@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { View, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '../../components/ThemedText';
-import { ActivityType as ActivityTypeEnum } from '../../models/Activity';
 import { ThemedView } from '@/components/ThemedView';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ActivityWithDates } from '@/services/database';
@@ -10,6 +9,7 @@ import { ActivityRow } from '@/components/ActivityRow';
 import { router } from 'expo-router';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useFocusEffect } from '@react-navigation/native';
+import { ActivityType } from '@/utils';
 
 const ItemList: React.FC = () => {
   const { 
@@ -21,7 +21,7 @@ const ItemList: React.FC = () => {
     isLoadingMore,
     resetToFirstPage
   } = useActivities();
-  const [filter, setFilter] = useState<ActivityTypeEnum | null>(null);
+  const [filter, setFilter] = useState<ActivityType | null>(null);
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
@@ -92,8 +92,8 @@ const ItemList: React.FC = () => {
 
   // Memoize filter handlers
   const handleFilterAll = useCallback(() => setFilter(null), []);
-  const handleFilterPay = useCallback(() => setFilter(ActivityTypeEnum.Pay), []);
-  const handleFilterAuth = useCallback(() => setFilter(ActivityTypeEnum.Auth), []);
+  const handleFilterPay = useCallback(() => setFilter(ActivityType.Pay), []);
+  const handleFilterAuth = useCallback(() => setFilter(ActivityType.Auth), []);
 
   // Memoized list header and footer components
   const ListHeaderComponent = useMemo(() => <View style={{ height: 16 }} />, []);
@@ -200,7 +200,7 @@ const ItemList: React.FC = () => {
               styles.filterChip,
               {
                 backgroundColor:
-                  filter === ActivityTypeEnum.Pay ? buttonPrimaryColor : buttonSecondaryColor,
+                  filter === ActivityType.Pay ? buttonPrimaryColor : buttonSecondaryColor,
               },
             ]}
             onPress={handleFilterPay}
@@ -211,7 +211,7 @@ const ItemList: React.FC = () => {
                 styles.filterChipText,
                 {
                   color:
-                    filter === ActivityTypeEnum.Pay
+                    filter === ActivityType.Pay
                       ? buttonPrimaryTextColor
                       : buttonSecondaryTextColor,
                 },
@@ -225,7 +225,7 @@ const ItemList: React.FC = () => {
               styles.filterChip,
               {
                 backgroundColor:
-                  filter === ActivityTypeEnum.Auth ? buttonPrimaryColor : buttonSecondaryColor,
+                  filter === ActivityType.Auth ? buttonPrimaryColor : buttonSecondaryColor,
               },
             ]}
             onPress={handleFilterAuth}
@@ -236,7 +236,7 @@ const ItemList: React.FC = () => {
                 styles.filterChipText,
                 {
                   color:
-                    filter === ActivityTypeEnum.Auth
+                    filter === ActivityType.Auth
                       ? buttonPrimaryTextColor
                       : buttonSecondaryTextColor,
                 },

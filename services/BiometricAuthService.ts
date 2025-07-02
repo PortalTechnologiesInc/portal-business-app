@@ -1,10 +1,8 @@
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Alert } from 'react-native';
+import type { BiometricAuthResult } from '@/utils/types';
 
-export type BiometricAuthResult = {
-  success: boolean;
-  error?: string;
-};
+export type { BiometricAuthResult };
 
 /**
  * Check if biometric authentication is available on the device

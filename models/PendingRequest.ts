@@ -1,20 +1,2 @@
-import type {
-  AuthChallengeEvent,
-  PaymentResponseContent,
-  RecurringPaymentRequest,
-  RecurringPaymentResponseContent,
-  SinglePaymentRequest,
-  AuthResponseStatus,
-} from 'portal-app-lib';
-
-export type PendingRequestType = 'login' | 'payment' | 'certificate' | 'identity' | 'subscription';
-
-export interface PendingRequest {
-  id: string;
-  metadata: AuthChallengeEvent | RecurringPaymentRequest | SinglePaymentRequest;
-  type: PendingRequestType;
-  timestamp: Date;
-  result: (
-    value: AuthResponseStatus | PaymentResponseContent | RecurringPaymentResponseContent
-  ) => void;
-}
+// Note: PendingRequest and PendingRequestType are now exported from centralized types
+export type { PendingRequest, PendingRequestType } from '@/utils/types';

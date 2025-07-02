@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { ThemeMode } from '@/utils/types';
 
-export type ThemeMode = 'auto' | 'light' | 'dark';
+export type { ThemeMode };
 
 interface ThemeContextType {
   themeMode: ThemeMode;

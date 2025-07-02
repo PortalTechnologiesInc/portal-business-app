@@ -1,9 +1,2 @@
-import type { Currency } from './Activity';
-
-export interface UpcomingPayment {
-  id: string;
-  serviceName: string;
-  amount: number;
-  currency: string;
-  dueDate: Date;
-}
+// Note: UpcomingPayment is now exported from centralized types
+export type { UpcomingPayment } from '@/utils/types';

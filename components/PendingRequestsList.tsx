@@ -4,7 +4,7 @@ import { usePendingRequests } from '../context/PendingRequestsContext';
 import { PendingRequestCard } from './PendingRequestCard';
 import { PendingRequestSkeletonCard } from './PendingRequestSkeletonCard';
 import { FailedRequestCard } from './FailedRequestCard';
-import type { PendingRequest, PendingRequestType } from '../models/PendingRequest';
+import type { PendingRequest, PendingRequestType } from '@/utils/types';
 import type { AuthChallengeEvent, SinglePaymentRequest } from 'portal-app-lib';
 import { useNostrService } from '@/context/NostrServiceContext';
 import { ThemedText } from './ThemedText';
@@ -78,7 +78,7 @@ export const PendingRequestsList: React.FC = () => {
       .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
       const filteredRequests = await Promise.all(sortedRequests.map(async request => {
-        if (await db.isPendingRequestStored(request.metadata.eventId)) {
+        if (await db.isPendingRequestStored((request.metadata as SinglePaymentRequest).eventId)) {
           return null; // Request is stored, so filter it out
         }
         return request; // Request is not stored, so keep it
@@ -139,7 +139,7 @@ export const PendingRequestsList: React.FC = () => {
           horizontal
           showsHorizontalScrollIndicator={false}
           keyExtractor={item =>
-            item.id === 'skeleton' ? 'skeleton' : `${item.metadata.serviceKey}-${item.id}`
+            item.id === 'skeleton' ? 'skeleton' : `${(item.metadata as SinglePaymentRequest).serviceKey}-${item.id}`
           }
           renderItem={({ item, index }) => (
             <View style={styles.cardWrapper}>{renderCard(item)}</View>

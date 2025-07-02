@@ -1,6 +1,6 @@
 import React from 'react';
 import { CheckCircle, Clock, XCircle, AlertCircle } from 'lucide-react-native';
-import { ActivityType } from '@/models/Activity';
+import { ActivityType } from '@/utils';
 
 export type ActivityStatus = 'success' | 'failed' | 'pending';
 

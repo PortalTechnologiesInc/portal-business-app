@@ -17,15 +17,18 @@ import {
   AuthResponseStatus,
   CloseRecurringPaymentResponse,
   ClosedRecurringPaymentListener,
-  LogCallback,
-  LogEntry,
-  LogLevel,
-  initLogger,
 } from 'portal-app-lib';
-import { PendingRequest } from '@/models/PendingRequest';
 import { DatabaseService } from '@/services/database';
 import { useSQLiteContext } from 'expo-sqlite';
 import { PortalAppManager } from '@/services/PortalAppManager';
+import type { 
+  PendingRequest, 
+  RelayConnectionStatus, 
+  RelayInfo, 
+  ConnectionSummary, 
+  WalletInfo, 
+  WalletInfoState 
+} from '@/utils/types';
 
 // Constants and helper classes from original NostrService
 const DEFAULT_RELAYS = [
@@ -40,29 +43,7 @@ const getServiceNameFromProfile = (profile: any): string | null => {
   return profile?.nip05 || null;
 };
 
-// Types for connection management
-export type RelayConnectionStatus =
-  | 'Connected'
-  | 'Connecting'
-  | 'Pending'
-  | 'Initialized'
-  | 'Disconnected'
-  | 'Terminated'
-  | 'Banned'
-  | 'Unknown';
-
-export interface RelayInfo {
-  url: string;
-  status: RelayConnectionStatus;
-  connected: boolean;
-}
-
-export interface ConnectionSummary {
-  allRelaysConnected: boolean;
-  connectedCount: number;
-  totalCount: number;
-  relays: RelayInfo[];
-}
+// Note: RelayConnectionStatus, RelayInfo, and ConnectionSummary are now imported from centralized types
 
 // Map numeric RelayStatus values to string status names
 // Based on the actual Rust enum from portal-app-lib:
@@ -124,18 +105,7 @@ export class LocalPaymentRequestListener implements PaymentRequestListener {
   }
 }
 
-// Wallet Info types for getinfo data
-export interface WalletInfo {
-  alias?: string;
-  get_balance?: number;
-}
-
-export interface WalletInfoState {
-  data: WalletInfo | null;
-  isLoading: boolean;
-  error: string | null;
-  lastUpdated: Date | null;
-}
+// Note: WalletInfo and WalletInfoState are now imported from centralized types
 
 // Context type definition
 interface NostrServiceContextType {
@@ -346,12 +316,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
                     metadata: event,
                     timestamp: new Date(),
                     type: 'login',
-                    result: resolve as (
-                      value:
-                        | AuthResponseStatus
-                        | PaymentResponseContent
-                        | RecurringPaymentResponseContent
-                    ) => void,
+                    result: resolve,
                   };
                   console.log('Updated pending requests map:', pendingRequests);
 
@@ -382,12 +347,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
                       metadata: event,
                       timestamp: new Date(),
                       type: 'payment',
-                      result: resolve as (
-                        value:
-                          | AuthResponseStatus
-                          | PaymentResponseContent
-                          | RecurringPaymentResponseContent
-                      ) => void,
+                      result: resolve,
                     };
 
                     return newPendingRequests;
@@ -408,12 +368,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
                       metadata: event,
                       timestamp: new Date(),
                       type: 'subscription',
-                      result: resolve as (
-                        value:
-                          | AuthResponseStatus
-                          | PaymentResponseContent
-                          | RecurringPaymentResponseContent
-                      ) => void,
+                      result: resolve,
                     };
 
                     return newPendingRequests;
@@ -696,8 +651,8 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       try {
         const status = await portalApp.connectionStatus();
         setConnectionStatus(status);
-      } catch (error) {
-        console.error('NostrService: Error fetching connection status:', error);
+      } catch (error: any) {
+        console.error('NostrService: Error fetching connection status:', error.inner);
         setConnectionStatus(null);
       }
     }
@@ -821,7 +776,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
         cleanup();
         throw raceError;
       }
-    } catch (error) {
+    } catch (error: any) {
       // Always clear in-progress flag on error
       setNwcCheckInProgress(false);
 
@@ -838,7 +793,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
           setNwcTimeoutUntil(timeoutUntil);
         } else {
           // Log other errors normally (keep real errors)
-          console.error('NostrService: Error fetching NWC connection status:', error);
+          console.error('NostrService: Error fetching NWC connection status:', error.inner);
         }
       }
     }
@@ -858,8 +813,8 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       await refreshConnectionStatus();
 
               console.log('Force reconnect initiated');
-    } catch (error) {
-              console.error('Error during force reconnect:', error);
+    } catch (error: any) {
+              console.error('Error during force reconnect:', error.inner);
     }
   }, [portalApp, refreshConnectionStatus]);
 
@@ -931,8 +886,8 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
             if (refreshNwcConnectionStatusRef.current) {
               await refreshNwcConnectionStatusRef.current();
             }
-          } catch (error) {
-            console.error('Error refreshing connection status on app active:', error);
+          } catch (error: any) {
+            console.error('Error refreshing connection status on app active:', error.inner);
           }
         } else {
           console.log('⚠️ App became active but portalApp is null - will re-initialize');
@@ -999,8 +954,8 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       });
 
       return walletData;
-    } catch (error) {
-      console.error('Error fetching wallet info:', error);
+    } catch (error: any) {
+      console.error('Error fetching wallet info:', error.inner);
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch wallet info';
 
       setWalletInfo(prev => ({

@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Key, BanknoteIcon } from 'lucide-react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { ActivityType } from '@/models/Activity';
+import { ActivityType } from '@/utils';
 import { getStatusIcon, getStatusColor, getStatusText, getActivityDescription, formatSatsToUSD, type ActivityStatus } from '@/utils/activityHelpers';
 
 interface ActivityMainCardProps {
