@@ -136,9 +136,6 @@
           '';
           
           installPhase = ''
-            # See here for a mapping of gradle version and the respective cache paths:
-            # https://docs.gradle.org/8.4/userguide/dependency_resolution.html#sub:ephemeral-ci-cache
-
             mkdir -p $out/bin
             
             # Copy the release APK

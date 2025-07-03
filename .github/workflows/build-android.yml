@@ -23,7 +23,7 @@ jobs:
         
     - name: Build Android APK
       run: |
-        nix build .#android-bundle
+        nix build .#android-bundle --print-build-logs
         
     - name: Find APK file
       id: find-apk
@@ -40,10 +40,10 @@ jobs:
         file ${{ steps.find-apk.outputs.apk-file }}
         du -h ${{ steps.find-apk.outputs.apk-file }}
         
-    - name: Upload APK artifact
+    - name: Upload unsigned APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: portal-android-apk
+        name: portal-android-apk-unsigned
         path: ${{ steps.find-apk.outputs.apk-file }}
         retention-days: 30
         
