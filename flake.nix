@@ -104,10 +104,7 @@
 
           installPhase = ''
             mkdir -p $out
-            cp -r android $out/
-            cp -r node_modules $out/
-            cp package.json $out/
-            cp app.json $out/
+            cp -r * $out/
           '';
         };
 
@@ -147,7 +144,7 @@
           
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
-          outputHash = "sha256-CB6TCltANuAgp8VCZY55OcOINBV3GD8ELA4v88aGL2A=";
+          outputHash = "sha256-PADwFlhqgDtV7RmmQZuLAv6ZR/221h87w364MbXqPKk=";
         };
       in
       {

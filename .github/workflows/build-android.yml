@@ -9,18 +9,12 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: [ self-hosted, nixos ]
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      
-    - name: Install Nix
-      uses: DeterminateSystems/nix-installer-action@main
-        
-    - name: Setup Nix Magic Cache
-      uses: DeterminateSystems/magic-nix-cache-action@main
-        
+
     - name: Build Android APK
       run: |
         nix build .#android-bundle --print-build-logs
@@ -33,13 +27,7 @@ jobs:
         echo "apk-file=$APK_FILE" >> $GITHUB_OUTPUT
         echo "apk-name=$APK_NAME" >> $GITHUB_OUTPUT
         echo "Found APK: $APK_NAME"
-        
-    - name: Display APK info
-      run: |
-        ls -la result/bin/
-        file ${{ steps.find-apk.outputs.apk-file }}
-        du -h ${{ steps.find-apk.outputs.apk-file }}
-        
+
     - name: Upload unsigned APK artifact
       uses: actions/upload-artifact@v4
       with:
@@ -58,19 +46,14 @@ jobs:
         retention-days: 7
 
   sign:
-    runs-on: ubuntu-latest
+    runs-on: [ self-hosted, nixos ]
+
     needs: build
     if: github.event_name != 'pull_request'
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
-    - name: Install Nix
-      uses: DeterminateSystems/nix-installer-action@main
-
-    - name: Setup Nix Magic Cache
-      uses: DeterminateSystems/magic-nix-cache-action@main
 
     - name: Download unsigned APK
       uses: actions/download-artifact@v4
@@ -106,12 +89,6 @@ jobs:
     - name: Verify APK signature
       run: |
         nix run nixpkgs#apksigner -- verify --verbose ${{ steps.find-apk.outputs.signed-apk-name }}
-
-    - name: Display signed APK info
-      run: |
-        ls -la ${{ steps.find-apk.outputs.signed-apk-name }}
-        file ${{ steps.find-apk.outputs.signed-apk-name }}
-        du -h ${{ steps.find-apk.outputs.signed-apk-name }}
 
     - name: Upload signed APK artifact
       uses: actions/upload-artifact@v4
