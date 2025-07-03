@@ -1,0 +1,58 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ '*' ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install Nix
+      uses: DeterminateSystems/nix-installer-action@main
+        
+    - name: Setup Nix Magic Cache
+      uses: DeterminateSystems/magic-nix-cache-action@main
+        
+    - name: Build Android APK
+      run: |
+        nix build .#android-bundle
+        
+    - name: Find APK file
+      id: find-apk
+      run: |
+        APK_FILE=$(find result/bin -name "*.apk" | head -1)
+        APK_NAME=$(basename "$APK_FILE")
+        echo "apk-file=$APK_FILE" >> $GITHUB_OUTPUT
+        echo "apk-name=$APK_NAME" >> $GITHUB_OUTPUT
+        echo "Found APK: $APK_NAME"
+        
+    - name: Display APK info
+      run: |
+        ls -la result/bin/
+        file ${{ steps.find-apk.outputs.apk-file }}
+        du -h ${{ steps.find-apk.outputs.apk-file }}
+        
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: portal-android-apk
+        path: ${{ steps.find-apk.outputs.apk-file }}
+        retention-days: 30
+        
+    - name: Upload build logs
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: build-logs
+        path: |
+          **/*.log
+          **/gradle-daemon-*.log
+        retention-days: 7 
