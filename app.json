@@ -11,10 +11,10 @@
     "splash": {
       "image": "./assets/images/appLogo.png",
       "resizeMode": "contain",
-      "backgroundColor": "#000000"
+      "backgroundColor": "#141416"
     },
     "androidNavigationBar": {
-      "backgroundColor": "#000000"
+      "backgroundColor": "#141416"
     },
     "ios": {
       "supportsTablet": true,
@@ -27,7 +27,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/appLogo.png",
-        "backgroundColor": "#000000"
+        "backgroundColor": "#141416"
       },
       "package": "cc.getportal.portal",
       "userInterfaceStyle": "dark",
@@ -60,7 +60,7 @@
           "image": "./assets/images/appLogo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#000000"
+          "backgroundColor": "#141416"
         }
       ],
       "expo-secure-store",
