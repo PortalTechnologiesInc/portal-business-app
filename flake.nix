@@ -78,7 +78,7 @@
           version = packageJson.version;
           inherit src;
           
-          npmDepsHash = "sha256-TSFjyuWOX2rmeYufHS+t8YCgIOS7wQ7ohi9d1N41YUk=";
+          npmDepsHash = "sha256-0amHdb/FKAElkdc+TH7oOWMD9QfBlx7/YaRiZ+UCeBk=";
           
           nativeBuildInputs = with pkgs; [
             nodejs_23
@@ -106,6 +106,17 @@
         ANDROID_HOME = "${androidComposition.androidsdk}/libexec/android-sdk";
         GRADLE_JAVA_OPTS = "-Porg.gradle.java.installations.auto-detect=false -Porg.gradle.java.installations.auto-download=false -Porg.gradle.java.installations.paths=${pkgs.openjdk17.home}";
         GRADLE_OPTS = "-Dorg.gradle.project.android.aapt2FromMavenOverride=${ANDROID_HOME}/build-tools/${android.buildToolsVersion}/aapt2 ";
+
+        gradle-hack-files = self.packages.${system}.android-deps.overrideAttrs (oldAttrs: {
+          name = "portal-gradle-hack-files";
+
+          installPhase = ''
+            mkdir -p $out
+            cp -r .gradle/caches/modules-2/metadata-* $out/
+          '';
+
+          outputHash = "sha256-OhrqyOEty3m/bBTyF/q6M+VkdWQI8nicJpjR7juahPU=";
+        });
 
         # Inspired by https://rafael.ovh/posts/packaging-gradle-software-with-nix/
         android-deps = pkgs.stdenv.mkDerivation rec {
@@ -146,7 +157,7 @@
 
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
-          outputHash = "sha256-8CR5E4V8gM/K2Y79hJuNpH7jev087MpcHo0Dr6SSw0U=";
+          outputHash = "sha256-nMT3SpRaZw9oLIlv4Y6jwKH2cUN7EjfxB9GwFSjOrDA=";
         };
 
         android-bundle = pkgs.stdenv.mkDerivation rec {
@@ -195,7 +206,7 @@
       in
       {
         packages = {
-          inherit expo-prebuild android-deps android-bundle;
+          inherit expo-prebuild android-deps android-bundle gradle-hack-files;
         };
 
         devShells = {
