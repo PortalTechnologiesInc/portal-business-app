@@ -69,8 +69,9 @@ export default function QRScannerScreen() {
         });
       }
     } else {
-      // Replace navigation stack to return to tabs cleanly
-      router.replace('/(tabs)');
+      // Use back() instead of replace() to maintain proper navigation stack
+      // Since we came from homepage via push(), we should go back via back()
+      router.back();
     }
   };
 
@@ -151,7 +152,7 @@ export default function QRScannerScreen() {
 
       // Navigate back with clean history after a brief delay for UX
       setTimeout(() => {
-        router.replace('/(tabs)');
+        router.back();
       }, 300);
     }
   };

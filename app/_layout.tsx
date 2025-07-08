@@ -15,6 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Colors } from '@/constants/Colors';
 import { Asset } from 'expo-asset';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
+import { CurrencyProvider } from '@/context/CurrencyContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 
 // Prevent splash screen from auto-hiding
@@ -124,7 +125,9 @@ export default function RootLayout() {
   return (
     <DatabaseProvider>
       <ThemeProvider>
-        <ThemedRootView />
+        <CurrencyProvider>
+          <ThemedRootView />
+        </CurrencyProvider>
       </ThemeProvider>
     </DatabaseProvider>
   );

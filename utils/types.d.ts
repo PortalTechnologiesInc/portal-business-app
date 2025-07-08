@@ -72,14 +72,6 @@ export enum ActivityType {
 }
 
 /**
- * Supported currencies
- */
-export enum Currency {
-  Eur = '€',
-  USD = '$',
-}
-
-/**
  * Subscription/payment frequency options
  */
 export type Frequency = 'daily' | 'weekly' | 'monthly' | 'annually';

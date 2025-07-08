@@ -35,6 +35,7 @@ export default function Home() {
   const nostrService = useNostrService();
   const [isFirstLaunch, setIsFirstLaunch] = useState<boolean | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // For triggering immediate ConnectionStatusIndicator updates
   const isMounted = useRef(true);
 
   // Theme colors
@@ -76,6 +77,9 @@ export default function Home() {
   useFocusEffect(
     useCallback(() => {
       console.log('🏠 Entered Homepage: Starting connection monitoring');
+
+      // Trigger immediate ConnectionStatusIndicator update
+      setRefreshTrigger(prev => prev + 1);
 
       // Stable reference to the service
       const { refreshConnectionStatus } = nostrService;
@@ -131,6 +135,9 @@ export default function Home() {
       // Refresh connection status for both relays and NWC wallet
       await nostrService.refreshConnectionStatus();
       await nostrService.refreshNwcConnectionStatus();
+      
+      // Trigger ConnectionStatusIndicator update
+      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error refreshing connection status:', error);
     }
@@ -277,7 +284,7 @@ export default function Home() {
                       'Welcome back 👋'
                     )}
                   </ThemedText>
-                  <ConnectionStatusIndicator size={10} />
+                  <ConnectionStatusIndicator size={10} triggerRefresh={refreshTrigger} />
                 </View>
                 <View style={styles.userInfoContainer}>
                   {/* Profile Avatar */}

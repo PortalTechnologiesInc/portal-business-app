@@ -7,12 +7,14 @@ import {
   ScrollView,
   RefreshControl,
   Switch,
+  Modal,
+  FlatList,
 } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, ChevronRight, Fingerprint, Shield } from 'lucide-react-native';
+import { ArrowLeft, ChevronRight, Fingerprint, Shield, X, Check, Wallet, Wifi } from 'lucide-react-native';
 import { Moon, Sun, Smartphone } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOnboarding } from '@/context/OnboardingContext';
@@ -27,6 +29,8 @@ import { useNostrService } from '@/context/NostrServiceContext';
 import { showToast } from '@/utils/Toast';
 import { authenticateForSensitiveAction } from '@/services/BiometricAuthService';
 import { useTheme, ThemeMode } from '@/context/ThemeContext';
+import { useCurrency } from '@/context/CurrencyContext';
+import { Currency, CurrencyHelpers } from '@/utils/currency';
 import { useThemeColor } from '@/hooks/useThemeColor';
 
 export default function SettingsScreen() {
@@ -34,9 +38,16 @@ export default function SettingsScreen() {
   const { resetOnboarding } = useOnboarding();
   const nostrService = useNostrService();
   const { themeMode, setThemeMode } = useTheme();
+  const { 
+    preferredCurrency, 
+    setPreferredCurrency, 
+    getCurrentCurrencyDisplayName,
+    getCurrentCurrencySymbol 
+  } = useCurrency();
   const [isWalletConnectedState, setIsWalletConnectedState] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isCurrencyModalVisible, setIsCurrencyModalVisible] = useState(false);
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
@@ -143,6 +154,17 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleCurrencyChange = () => {
+    setIsCurrencyModalVisible(true);
+  };
+
+  const handleCurrencySelect = (currency: Currency) => {
+    setPreferredCurrency(currency);
+    setIsCurrencyModalVisible(false);
+  };
+
+  const currencies = Object.values(Currency);
+
   const onRefresh = async () => {
     setRefreshing(true);
     try {
@@ -211,6 +233,35 @@ export default function SettingsScreen() {
     );
   }
 
+  const renderCurrencyItem = ({ item }: { item: Currency }) => (
+    <TouchableOpacity
+      style={[styles.currencyItem, { backgroundColor: cardBackgroundColor }]}
+      onPress={() => handleCurrencySelect(item)}
+      activeOpacity={0.7}
+    >
+      <View style={styles.currencyItemContent}>
+        <View style={styles.currencyItemLeft}>
+          <View style={[styles.currencyItemSymbol, { backgroundColor: buttonPrimaryColor }]}>
+            <ThemedText style={[styles.currencyItemSymbolText, { color: buttonPrimaryTextColor }]}>
+              {CurrencyHelpers.getSymbol(item)}
+            </ThemedText>
+          </View>
+          <View style={styles.currencyItemText}>
+            <ThemedText style={[styles.currencyItemName, { color: primaryTextColor }]}>
+              {CurrencyHelpers.getName(item)}
+            </ThemedText>
+            <ThemedText style={[styles.currencyItemDisplayName, { color: secondaryTextColor }]}>
+              {CurrencyHelpers.getDisplayName(item)}
+            </ThemedText>
+          </View>
+        </View>
+        {preferredCurrency === item && (
+          <Check size={20} color={statusConnectedColor} />
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: backgroundColor }]} edges={['top']}>
       <ThemedView style={styles.container}>
@@ -254,14 +305,50 @@ export default function SettingsScreen() {
               >
                 <View style={styles.cardContent}>
                   <View style={styles.cardLeft}>
-                    <ThemedText style={[styles.cardTitle, { color: primaryTextColor }]}>
-                      Wallet Connect
-                    </ThemedText>
-                    <ThemedText style={[styles.cardStatus, { color: secondaryTextColor }]}>
-                      {isWalletConnectedState ? 'Connected' : 'Not connected'}
-                    </ThemedText>
+                    <View style={styles.cardHeader}>
+                      <View style={[styles.cardIcon, { backgroundColor: buttonPrimaryColor }]}>
+                        <Wallet size={20} color={buttonPrimaryTextColor} />
+                      </View>
+                      <View style={styles.cardText}>
+                        <ThemedText style={[styles.cardTitle, { color: primaryTextColor }]}>
+                          Wallet Connect
+                        </ThemedText>
+                        <View style={styles.cardStatusRow}>
+                          <ThemedText style={[styles.cardStatus, { color: secondaryTextColor }]}>
+                            {isWalletConnectedState ? 'Connected' : 'Not connected'}
+                          </ThemedText>
+                          <View style={[
+                            styles.statusIndicator, 
+                            { backgroundColor: isWalletConnectedState ? statusConnectedColor : secondaryTextColor }
+                          ]} />
+                        </View>
+                      </View>
+                    </View>
                   </View>
                   <ChevronRight size={24} color={secondaryTextColor} />
+                </View>
+              </TouchableOpacity>
+            </ThemedView>
+            <ThemedView style={styles.walletSection}>
+              <TouchableOpacity
+                style={[styles.card, { backgroundColor: cardBackgroundColor }]}
+                onPress={handleCurrencyChange}
+                activeOpacity={0.7}
+              >
+                <View style={styles.cardContent}>
+                  <View style={styles.cardLeft}>
+                    <ThemedText style={[styles.cardTitle, { color: primaryTextColor }]}>
+                      Preferred Currency
+                    </ThemedText>
+                    <ThemedText style={[styles.cardStatus, { color: secondaryTextColor }]}>
+                      {getCurrentCurrencyDisplayName()}
+                    </ThemedText>
+                  </View>
+                  <View style={[styles.currencyIndicator, { backgroundColor: buttonPrimaryColor }]}>
+                    <ThemedText style={[styles.currencySymbol, { color: buttonPrimaryTextColor }]}>
+                      {getCurrentCurrencySymbol()}
+                    </ThemedText>
+                  </View>
                 </View>
               </TouchableOpacity>
             </ThemedView>
@@ -269,6 +356,7 @@ export default function SettingsScreen() {
 
           {/* Nostr Section */}
           <ThemedView style={styles.section}>
+            <View style={[styles.sectionDivider, { backgroundColor: inputBorderColor }]} />
             <ThemedText style={[styles.sectionTitle, { color: primaryTextColor }]}>
               Relays
             </ThemedText>
@@ -280,12 +368,19 @@ export default function SettingsScreen() {
               >
                 <View style={styles.cardContent}>
                   <View style={styles.cardLeft}>
-                    <ThemedText style={[styles.cardTitle, { color: primaryTextColor }]}>
-                      Nostr relays
-                    </ThemedText>
-                    <ThemedText style={[styles.cardStatus, { color: secondaryTextColor }]}>
-                      Manage the Nostr relays your app connects to
-                    </ThemedText>
+                    <View style={styles.cardHeader}>
+                      <View style={[styles.cardIcon, { backgroundColor: buttonPrimaryColor }]}>
+                        <Wifi size={20} color={buttonPrimaryTextColor} />
+                      </View>
+                      <View style={styles.cardText}>
+                        <ThemedText style={[styles.cardTitle, { color: primaryTextColor }]}>
+                          Nostr relays
+                        </ThemedText>
+                        <ThemedText style={[styles.cardStatus, { color: secondaryTextColor }]}>
+                          Manage the Nostr relays your app connects to
+                        </ThemedText>
+                      </View>
+                    </View>
                   </View>
                   <ChevronRight size={24} color={secondaryTextColor} />
                 </View>
@@ -437,6 +532,51 @@ export default function SettingsScreen() {
           </ThemedView>
         </ScrollView>
       </ThemedView>
+
+      {/* Currency Selector Modal */}
+      <Modal
+        visible={isCurrencyModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsCurrencyModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsCurrencyModalVisible(false)}
+        >
+          <TouchableOpacity
+            style={[styles.modalContent, { backgroundColor: backgroundColor }]}
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.modalHeader}>
+              <ThemedText style={[styles.modalTitle, { color: primaryTextColor }]}>
+                Select Currency
+              </ThemedText>
+              <TouchableOpacity
+                onPress={() => setIsCurrencyModalVisible(false)}
+                style={styles.modalCloseButton}
+              >
+                <X size={24} color={secondaryTextColor} />
+              </TouchableOpacity>
+            </View>
+            {currencies.length > 0 ? (
+              <FlatList
+                data={currencies}
+                renderItem={renderCurrencyItem}
+                keyExtractor={(item) => item}
+                style={styles.currencyList}
+                showsVerticalScrollIndicator={false}
+              />
+            ) : (
+              <ThemedText style={[{ color: primaryTextColor, textAlign: 'center', padding: 20 }]}>
+                No currencies available
+              </ThemedText>
+            )}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -473,6 +613,11 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     width: '100%',
   },
+  sectionDivider: {
+    height: 1,
+    marginBottom: 16,
+    opacity: 0.3,
+  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -480,8 +625,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
+    marginBottom: 8,
   },
   walletSection: {
     paddingVertical: 12,
@@ -504,6 +650,21 @@ const styles = StyleSheet.create({
   cardLeft: {
     flex: 1,
   },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  cardText: {
+    flex: 1,
+  },
   cardTitle: {
     fontSize: 18,
     fontWeight: '600',
@@ -512,13 +673,24 @@ const styles = StyleSheet.create({
   cardStatus: {
     fontSize: 14,
   },
+  cardStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  statusIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
   exportSection: {
     paddingVertical: 6,
     width: '100%',
   },
   exportButton: {
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     width: '100%',
     maxWidth: 500,
     alignItems: 'center',
@@ -618,7 +790,7 @@ const styles = StyleSheet.create({
   },
   clearDataButton: {
     padding: 16,
-    borderRadius: 8,
+    borderRadius: 12,
     width: '100%',
     maxWidth: 500,
     alignItems: 'center',
@@ -643,5 +815,91 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     position: 'relative',
+  },
+  currencyIndicator: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    minWidth: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  currencySymbol: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    height: '80%',
+    minHeight: 400,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  currencyList: {
+    flex: 1,
+    paddingBottom: 20,
+    minHeight: 200,
+  },
+  // Currency item styles
+  currencyItem: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  currencyItemContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  currencyItemLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  currencyItemSymbol: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  currencyItemSymbolText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  currencyItemText: {
+    flex: 1,
+  },
+  currencyItemName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  currencyItemDisplayName: {
+    fontSize: 14,
   },
 });

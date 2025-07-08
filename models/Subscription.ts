@@ -1,5 +1,6 @@
 import type { Timestamp } from 'react-native-reanimated/lib/typescript/commonTypes';
-import type { Currency, Frequency } from '@/utils/types';
+import type { Frequency } from '@/utils/types';
+import type { Currency } from '@/utils/currency';
 
 export type { Frequency };
 

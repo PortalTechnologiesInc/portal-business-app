@@ -7,6 +7,7 @@ import {
   ScrollView,
   Animated,
   Dimensions,
+  AppState,
 } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { useRouter } from 'expo-router';
@@ -21,6 +22,7 @@ type ConnectionStatus = 'connected' | 'partial' | 'disconnected';
 interface ConnectionStatusIndicatorProps {
   size?: number;
   expandDuration?: number; // How long to show expanded state (ms)
+  triggerRefresh?: number; // When this value changes, trigger an immediate refresh
 }
 
 // Pure function for wallet status derivation - better performance and testability
@@ -43,6 +45,7 @@ const deriveWalletStatus = (
 export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps> = ({
   size = 12,
   expandDuration = 3000, // 3 seconds default
+  triggerRefresh,
 }) => {
   const pillHeight = size + 14; // Make pill taller - increased height
   const router = useRouter();
@@ -69,6 +72,8 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
     getConnectionSummary,
     nwcConnectionStatus,
     nwcConnectionError,
+    refreshConnectionStatus,
+    refreshNwcConnectionStatus,
   } = useNostrService();
 
   // Network connectivity detection
@@ -78,6 +83,39 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
     });
     return () => unsubscribe();
   }, []);
+
+  // Immediate update on mount and app state changes
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: string) => {
+      if (nextAppState === 'active') {
+        console.log('🔄 ConnectionStatusIndicator: App became active - refreshing status');
+        // Trigger immediate refresh when app becomes active
+        refreshConnectionStatus();
+        refreshNwcConnectionStatus();
+      }
+    };
+
+    // Initial immediate refresh on mount
+    console.log('🔄 ConnectionStatusIndicator: Component mounted - refreshing status');
+    refreshConnectionStatus();
+    refreshNwcConnectionStatus();
+
+    // Listen for app state changes
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [refreshConnectionStatus, refreshNwcConnectionStatus]);
+
+  // Handle external refresh triggers (e.g., from homepage focus)
+  useEffect(() => {
+    if (triggerRefresh !== undefined) {
+      console.log('🔄 ConnectionStatusIndicator: External refresh triggered');
+      refreshConnectionStatus();
+      refreshNwcConnectionStatus();
+    }
+  }, [triggerRefresh, refreshConnectionStatus, refreshNwcConnectionStatus]);
 
   // Memoized relay details from context
   const relayDetails: ConnectionSummary = useMemo(() => {
