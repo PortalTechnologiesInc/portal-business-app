@@ -78,7 +78,7 @@
           version = packageJson.version;
           inherit src;
           
-          npmDepsHash = "sha256-0amHdb/FKAElkdc+TH7oOWMD9QfBlx7/YaRiZ+UCeBk=";
+          npmDepsHash = "sha256-ZdkByDr8yh3J2WJOQyFW5hIX5jpaVAptootVipz/eCI=";
           
           nativeBuildInputs = with pkgs; [
             nodejs_23
@@ -115,7 +115,7 @@
             cp -r .gradle/caches/modules-2/metadata-* $out/
           '';
 
-          outputHash = "sha256-OhrqyOEty3m/bBTyF/q6M+VkdWQI8nicJpjR7juahPU=";
+          outputHash = "sha256-qr6RNZnWvfrFOwKSOBBUhsLJaIwWPvJI4HCRlzEVqd4=";
         });
 
         # Inspired by https://rafael.ovh/posts/packaging-gradle-software-with-nix/
@@ -157,7 +157,7 @@
 
           outputHashAlgo = "sha256";
           outputHashMode = "recursive";
-          outputHash = "sha256-nMT3SpRaZw9oLIlv4Y6jwKH2cUN7EjfxB9GwFSjOrDA=";
+          outputHash = "sha256-7RbtH8yevDF77xZOLX1IAWuFiURJGbvveqkzXs+LIcc=";
         };
 
         android-bundle = pkgs.stdenv.mkDerivation rec {
