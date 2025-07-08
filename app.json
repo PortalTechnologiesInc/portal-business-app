@@ -25,6 +25,7 @@
       ]
     },
     "android": {
+      "versionCode": 2,
       "signing": {
         "debug": {
           "storeFile": "./debug.keystore",
