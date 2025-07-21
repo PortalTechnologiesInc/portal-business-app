@@ -62,7 +62,11 @@
             "DEFAULT"
           ]
         }
-      ]
+      ],
+      "notification": {
+        "icon": "./assets/images/appLogo.png",
+        "color": "#023c69"
+      }
     },
     "web": {
       "bundler": "metro",

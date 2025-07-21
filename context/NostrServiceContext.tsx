@@ -17,6 +17,8 @@ import {
   AuthResponseStatus,
   CloseRecurringPaymentResponse,
   ClosedRecurringPaymentListener,
+  RelayStatusListener,
+  RelayStatusListenerImpl,
 } from 'portal-app-lib';
 import { DatabaseService } from '@/services/database';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -68,6 +70,13 @@ function mapNumericStatusToString(numericStatus: number): RelayConnectionStatus 
     default:
       console.warn(`🔍 NostrService: Unknown numeric RelayStatus: ${numericStatus}`);
       return 'Unknown';
+  }
+}
+
+class LocalRelayStatusListener implements RelayStatusListener {
+  onRelayStatusChange(relay_url: string, status: number): Promise<void> {
+    console.warn('Relay status changed:', relay_url, mapNumericStatusToString(status));
+    return Promise.resolve();
   }
 }
 
@@ -295,7 +304,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
           DEFAULT_RELAYS.forEach(relay => relays.push(relay));
           await DB.updateRelays(DEFAULT_RELAYS);
         }
-        const app = await PortalAppManager.getInstance(keypair, relays);
+        const app = await PortalAppManager.getInstance(keypair, relays, new LocalRelayStatusListener() );
 
         // Start listening and give it a moment to establish connections
         app.listen({ signal: abortController.signal });
