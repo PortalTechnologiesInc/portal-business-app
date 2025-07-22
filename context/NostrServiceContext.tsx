@@ -31,6 +31,7 @@ import type {
   WalletInfo,
   WalletInfoState,
 } from '@/utils/types';
+import { handleErrorWithToastAndReinit } from '@/utils/Toast';
 
 // Constants and helper classes from original NostrService
 const DEFAULT_RELAYS = [
@@ -254,6 +255,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   });
   const [relayStatuses, setRelayStatuses] = useState<RelayInfo[]>([]);
   const [keypair, setKeypair] = useState<KeypairInterface | null>(null);
+  const [reinitKey, setReinitKey] = useState(0);
 
   class LocalRelayStatusListener implements RelayStatusListener {
     onRelayStatusChange(relay_url: string, status: number): Promise<void> {
@@ -293,6 +295,14 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
 
   const sqliteContext = useSQLiteContext();
   const DB = new DatabaseService(sqliteContext);
+
+  // Add reinit logic
+  const triggerReinit = useCallback(() => {
+    setIsInitialized(false);
+    setPortalApp(null);
+    setPublicKey(null);
+    setReinitKey(k => k + 1);
+  }, []);
 
   // Initialize the NostrService
   useEffect(() => {
@@ -366,7 +376,10 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
           )
           .catch(e => {
             console.error('Error listening for auth challenge', e);
-            // TODO: re-initialize the app
+            handleErrorWithToastAndReinit(
+              'Failed to listen for authentication challenge. Retrying...',
+              triggerReinit
+            );
           });
 
         app
@@ -418,7 +431,10 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
           )
           .catch(e => {
             console.error('Error listening for payment request', e);
-            // TODO: re-initialize the app
+            handleErrorWithToastAndReinit(
+              'Failed to listen for payment request. Retrying...',
+              triggerReinit
+            );
           });
 
         // Listen for closed recurring payments
@@ -462,7 +478,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       console.log('Aborting NostrService initialization');
       abortController.abort();
     };
-  }, [mnemonic, appIsActive]);
+  }, [mnemonic, appIsActive, reinitKey]);
 
   useEffect(() => {
     console.log('Updated pending requests:', pendingRequests);
