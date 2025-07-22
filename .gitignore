@@ -42,7 +42,7 @@ debug.keystore
 .envrc
 
 # local env files
-.env*
+.env.local
 .local
 
 # typescript
