@@ -18,8 +18,14 @@ import {
   CloseRecurringPaymentResponse,
   ClosedRecurringPaymentListener,
   RelayStatusListener,
-  Keypair,
   KeypairInterface,
+  parseCashuToken,
+  CashuDirectContentWithKey,
+  CashuDirectListener,
+  CashuRequestListener,
+  CashuRequestContent,
+  CashuRequestContentWithKey,
+  CashuResponseStatus,
 } from 'portal-app-lib';
 import { DatabaseService } from '@/services/database';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -32,6 +38,7 @@ import type {
   WalletInfoState,
 } from '@/utils/types';
 import { handleErrorWithToastAndReinit } from '@/utils/Toast';
+import { useECash } from './ECashContext';
 
 // Constants and helper classes from original NostrService
 const DEFAULT_RELAYS = [
@@ -70,6 +77,30 @@ function mapNumericStatusToString(numericStatus: number): RelayConnectionStatus 
     default:
       console.warn(`🔍 NostrService: Unknown numeric RelayStatus: ${numericStatus}`);
       return 'Unknown';
+  }
+}
+
+export class LocalCashuDirectListener implements CashuDirectListener {
+  private callback: (event: CashuDirectContentWithKey) => Promise<void>;
+
+  constructor(callback: (event: CashuDirectContentWithKey) => Promise<void>) {
+    this.callback = callback;
+  }
+
+  onCashuDirect(event: CashuDirectContentWithKey): Promise<void> {
+    return this.callback(event);
+  }
+}
+
+export class LocalCashuRequestListener implements CashuRequestListener {
+  private callback: (event: CashuRequestContentWithKey) => Promise<CashuResponseStatus>;
+
+  constructor(callback: (event: CashuRequestContentWithKey) => Promise<CashuResponseStatus>) {
+    this.callback = callback;
+  }
+
+  onCashuRequest(event: CashuRequestContentWithKey): Promise<CashuResponseStatus> {
+    return this.callback(event);
   }
 }
 
@@ -257,6 +288,9 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   const [keypair, setKeypair] = useState<KeypairInterface | null>(null);
   const [reinitKey, setReinitKey] = useState(0);
 
+  // Remove the in-memory deduplication system
+  // const processedCashuTokens = useRef<Set<string>>(new Set());
+
   class LocalRelayStatusListener implements RelayStatusListener {
     onRelayStatusChange(relay_url: string, status: number): Promise<void> {
       setRelayStatuses(prev => {
@@ -293,6 +327,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   const portalAppRef = useRef<PortalAppInterface | null>(null);
   const refreshNwcConnectionStatusRef = useRef<(() => Promise<void>) | null>(null);
 
+  const eCashContext = useECash();
   const sqliteContext = useSQLiteContext();
   const DB = new DatabaseService(sqliteContext);
 
@@ -350,6 +385,177 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
         console.log('PortalApp listening started...');
 
         app
+          .listenCashuDirect(
+            new LocalCashuDirectListener(async (event: CashuDirectContentWithKey) => {
+              console.log('Cashu direct token received', event);
+
+              try {
+                // Auto-process the Cashu token (receiving tokens)
+                const token = event.inner.token;
+
+                // Check if we've already processed this token
+                const isProcessed = await DB.isCashuTokenProcessed(token);
+                if (isProcessed) {
+                  console.log('Cashu token already processed, skipping');
+                  return;
+                }
+
+                const tokenInfo = await parseCashuToken(token);
+                const wallet = await eCashContext.addWallet(tokenInfo.mintUrl, tokenInfo.unit);
+                await wallet.receiveToken(token);
+
+                // Mark token as processed after successful processing
+                await DB.markCashuTokenAsProcessed(
+                  token,
+                  tokenInfo.mintUrl,
+                  tokenInfo.unit,
+                  tokenInfo.amount ? Number(tokenInfo.amount) : 0
+                );
+
+                console.log('Cashu token processed successfully');
+
+                // Emit event to notify that wallet balances have changed
+                const { globalEvents } = await import('@/utils/index');
+                globalEvents.emit('walletBalancesChanged', {
+                  mintUrl: tokenInfo.mintUrl,
+                  unit: tokenInfo.unit,
+                });
+                console.log('walletBalancesChanged event emitted');
+
+                // Record activity for token receipt
+                try {
+                  // For Cashu direct, use mint URL as service identifier
+                  const serviceKey = tokenInfo.mintUrl;
+                  const ticketTitle = wallet.unit(); // Use the wallet unit as ticket title
+
+                  // Add activity to database using ActivitiesContext directly
+                  const activity = {
+                    type: 'ticket_received' as const,
+                    service_key: serviceKey,
+                    service_name: ticketTitle, // Use ticket title as service name
+                    detail: ticketTitle, // Use ticket title as detail
+                    date: new Date(),
+                    amount: tokenInfo.amount ? Number(tokenInfo.amount) / 1000 : null,
+                    currency: 'sats' as const,
+                    request_id: `cashu-direct-${Date.now()}`,
+                    subscription_id: null,
+                  };
+
+                  // Import and use ActivitiesContext directly
+                  const { useActivities } = await import('@/context/ActivitiesContext');
+                  // Note: We can't use hooks inside event listeners, so we'll use the database directly
+                  // but also emit the event for UI updates
+                  const activityId = await DB.addActivity(activity);
+                  console.log('Activity added to database with ID:', activityId);
+
+                  // Emit event for UI updates
+                  globalEvents.emit('activityAdded', activity);
+                  console.log('activityAdded event emitted');
+                  console.log('Cashu direct activity recorded successfully');
+                } catch (activityError) {
+                  console.error('Error recording Cashu direct activity:', activityError);
+                }
+              } catch (error: any) {
+                console.error('Error processing Cashu token:', error.inner);
+              }
+
+              // Return void for direct processing
+              return;
+            })
+          )
+          .catch(e => {
+            console.error('Error listening for Cashu direct', e);
+            handleErrorWithToastAndReinit(
+              'Failed to listen for Cashu direct. Retrying...',
+              triggerReinit
+            );
+          });
+
+        app.listenCashuRequests(
+          new LocalCashuRequestListener(async (event: CashuRequestContentWithKey) => {
+            const id = `cashu-request-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+            console.log(`Cashu request with id ${id} received`, event);
+
+            // Check if we have the required unit before creating pending request
+            try {
+              const requiredMintUrl = event.inner.mintUrl;
+              const requiredUnit = event.inner.unit;
+              const requiredAmount = event.inner.amount;
+
+              console.log(
+                `Checking if we have unit: ${requiredUnit} from mint: ${requiredMintUrl} with amount: ${requiredAmount}`
+              );
+              console.log(`Available wallets:`, Object.keys(eCashContext.wallets));
+              console.log(`Looking for wallet key: ${requiredMintUrl}-${requiredUnit}`);
+
+              // Check if we have a wallet for this mint and unit
+              let wallet = await eCashContext.getWallet(requiredMintUrl, requiredUnit);
+              console.log(`Wallet found in ECashContext:`, !!wallet);
+
+              // If wallet not found in ECashContext, try to create it
+              if (!wallet) {
+                console.log(`Wallet not found in ECashContext, trying to create it...`);
+                try {
+                  wallet = await eCashContext.addWallet(requiredMintUrl, requiredUnit);
+                  console.log(`Successfully created wallet for ${requiredMintUrl}-${requiredUnit}`);
+                } catch (error) {
+                  console.error(
+                    `Error creating wallet for ${requiredMintUrl}-${requiredUnit}:`,
+                    error
+                  );
+                }
+              }
+
+              if (!wallet) {
+                console.log(
+                  `No wallet found for mint: ${requiredMintUrl}, unit: ${requiredUnit} - auto-rejecting`
+                );
+                return new CashuResponseStatus.InsufficientFunds();
+              }
+
+              // Check if we have sufficient balance
+              const balance = await wallet.getBalance();
+              if (balance < requiredAmount) {
+                console.log(
+                  `Insufficient balance: ${balance} < ${requiredAmount} - auto-rejecting`
+                );
+                return new CashuResponseStatus.InsufficientFunds();
+              }
+
+              console.log(
+                `Wallet found with sufficient balance: ${balance} >= ${requiredAmount} - creating pending request`
+              );
+            } catch (error) {
+              console.error('Error checking wallet availability:', error);
+              return new CashuResponseStatus.InsufficientFunds();
+            }
+
+            return new Promise<CashuResponseStatus>(resolve => {
+              const newRequest: PendingRequest = {
+                id,
+                metadata: event,
+                timestamp: new Date(),
+                type: 'ticket',
+                result: resolve,
+              };
+
+              setPendingRequests(prev => {
+                const newPendingRequests = { ...prev };
+                newPendingRequests[id] = newRequest;
+                console.log('Updated pending requests map:', newPendingRequests);
+                return newPendingRequests;
+              });
+            });
+          })
+        );
+
+        /**
+         * these logic go inside the new listeners that will be implemented
+         */
+        // end
+
+        app
           .listenForAuthChallenge(
             new LocalAuthChallengeListener((event: AuthChallengeEvent) => {
               const id = event.eventId;
@@ -357,18 +563,18 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
               console.log(`Auth challenge with id ${id} received`, event);
 
               return new Promise<AuthResponseStatus>(resolve => {
+                const newRequest: PendingRequest = {
+                  id,
+                  metadata: event,
+                  timestamp: new Date(),
+                  type: 'login',
+                  result: resolve,
+                };
+
                 setPendingRequests(prev => {
                   const newPendingRequests = { ...prev };
-
-                  newPendingRequests[id] = {
-                    id,
-                    metadata: event,
-                    timestamp: new Date(),
-                    type: 'login',
-                    result: resolve,
-                  };
-                  console.log('Updated pending requests map:', pendingRequests);
-
+                  newPendingRequests[id] = newRequest;
+                  console.log('Updated pending requests map:', newPendingRequests);
                   return newPendingRequests;
                 });
               });
@@ -391,17 +597,17 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
                 console.log(`Single payment request with id ${id} received`, event);
 
                 return new Promise<PaymentResponseContent>(resolve => {
+                  const newRequest: PendingRequest = {
+                    id,
+                    metadata: event,
+                    timestamp: new Date(),
+                    type: 'payment',
+                    result: resolve,
+                  };
+
                   setPendingRequests(prev => {
                     const newPendingRequests = { ...prev };
-
-                    newPendingRequests[id] = {
-                      id,
-                      metadata: event,
-                      timestamp: new Date(),
-                      type: 'payment',
-                      result: resolve,
-                    };
-
+                    newPendingRequests[id] = newRequest;
                     return newPendingRequests;
                   });
                 });
@@ -412,17 +618,17 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
                 console.log(`Recurring payment request with id ${id} received`, event);
 
                 return new Promise<RecurringPaymentResponseContent>(resolve => {
+                  const newRequest: PendingRequest = {
+                    id,
+                    metadata: event,
+                    timestamp: new Date(),
+                    type: 'subscription',
+                    result: resolve,
+                  };
+
                   setPendingRequests(prev => {
                     const newPendingRequests = { ...prev };
-
-                    newPendingRequests[id] = {
-                      id,
-                      metadata: event,
-                      timestamp: new Date(),
-                      type: 'subscription',
-                      result: resolve,
-                    };
-
+                    newPendingRequests[id] = newRequest;
                     return newPendingRequests;
                   });
                 });

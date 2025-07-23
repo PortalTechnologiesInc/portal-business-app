@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Text, View, SafeAreaView } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import React, { useEffect, useState, useRef } from 'react';
+import { Text, View, SafeAreaView, Button, Platform } from 'react-native';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { OnboardingProvider, useOnboarding } from '@/context/OnboardingContext';
@@ -10,16 +10,65 @@ import { DeeplinkProvider } from '@/context/DeeplinkContext';
 import { ActivitiesProvider } from '@/context/ActivitiesContext';
 import { DatabaseProvider } from '@/services/database/DatabaseProvider';
 import { MnemonicProvider, useMnemonic } from '@/context/MnemonicContext';
-import NostrServiceProvider from '@/context/NostrServiceContext';
+import NostrServiceProvider, { useNostrService } from '@/context/NostrServiceContext';
 import { StatusBar } from 'expo-status-bar';
 import { Colors } from '@/constants/Colors';
 import { Asset } from 'expo-asset';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { CurrencyProvider } from '@/context/CurrencyContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import registerPubkeysForPushNotificationsAsync from '@/services/NotificationService'
+import * as TaskManager from 'expo-task-manager';
+import { keyToHex } from 'portal-app-lib';
+import * as Notifications from 'expo-notifications';
+
+import { ECashProvider } from '@/context/ECashContext';
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
+
+const BACKGROUND_NOTIFICATION_TASK = 'BACKGROUND-NOTIFICATION-TASK';
+
+TaskManager.defineTask<Notifications.NotificationTaskPayload>(BACKGROUND_NOTIFICATION_TASK, async ({ data, error, executionInfo }) => {
+  console.log('Received a notification task payload!');
+  console.error('error: ', error);
+  const isNotificationResponse = 'actionIdentifier' in data;
+  if (isNotificationResponse) {
+    // Do something with the notification response from user
+  } else {
+    // Do something with the data from notification that was received
+  }
+});
+
+
+const NotificationConfigurator = () => {
+  const { publicKey } = useNostrService();
+
+  useEffect(() => {
+    if (publicKey) {
+      console.log('sto per registrarmi');
+      registerPubkeysForPushNotificationsAsync([keyToHex(publicKey)]).catch((error: any) => {
+        console.error('Error registering for push notifications:', error);
+      });
+      Notifications.registerTaskAsync(BACKGROUND_NOTIFICATION_TASK);
+    }
+
+    const notificationListener = Notifications.addNotificationReceivedListener(notification => {
+      console.log('Notification received:', notification);
+    });
+
+    const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log('Notification response received:', response);
+    });
+
+    return () => {
+      notificationListener.remove();
+      responseListener.remove();
+    };
+  }, [publicKey]);
+
+  return null;
+};
 
 // Function to preload images for performance
 const preloadImages = async () => {
@@ -76,17 +125,20 @@ const AuthenticatedAppContent = () => {
   }
 
   return (
-    <NostrServiceProvider mnemonic={mnemonic || ''} walletUrl={walletUrl}>
-      <UserProfileProvider>
-        <ActivitiesProvider>
-          <PendingRequestsProvider>
-            <DeeplinkProvider>
-              <Stack screenOptions={{ headerShown: false }} />
-            </DeeplinkProvider>
-          </PendingRequestsProvider>
-        </ActivitiesProvider>
-      </UserProfileProvider>
-    </NostrServiceProvider>
+    <ECashProvider mnemonic={mnemonic || ''}>
+      <NostrServiceProvider mnemonic={mnemonic || ''} walletUrl={walletUrl}>
+        <UserProfileProvider>
+          <ActivitiesProvider>
+            <PendingRequestsProvider>
+              <DeeplinkProvider>
+                <NotificationConfigurator />
+                <Stack screenOptions={{ headerShown: false }} />
+              </DeeplinkProvider>
+            </PendingRequestsProvider>
+          </ActivitiesProvider>
+        </UserProfileProvider>
+      </NostrServiceProvider>
+    </ECashProvider>
   );
 };
 

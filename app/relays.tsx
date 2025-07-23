@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, TouchableOpacity, Alert, TextInput, View, ToastAndroid } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { Colors } from '@/constants/Colors';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, X } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
