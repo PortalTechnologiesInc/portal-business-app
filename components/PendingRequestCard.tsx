@@ -79,45 +79,17 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({ request }) => 
   const serviceKey = getServiceKey();
 
   useEffect(() => {
+    if (type === 'ticket' && request.ticketTitle) {
+      setServiceName(request.ticketTitle);
+      setIsLoading(false);
+      return;
+    }
+
     const fetchServiceName = async () => {
       if (!isMounted.current) return;
-
-      // For ticket requests, get ticket title from wallet unit
-      if (type === 'ticket') {
-        try {
-          const cashuEvent = metadata as any;
-          console.log('Ticket request metadata:', cashuEvent);
-          console.log('Available wallets:', Object.keys(wallets));
-
-          if (cashuEvent.inner?.mintUrl && cashuEvent.inner?.unit) {
-            console.log('Looking for wallet with mintUrl:', cashuEvent.inner.mintUrl);
-            // Get the wallet to get the unit name (ticket title)
-            const wallet = wallets[cashuEvent.inner.mintUrl];
-            if (wallet) {
-              const ticketTitle = wallet.unit();
-              console.log('Found wallet, ticket title:', ticketTitle);
-              setServiceName(ticketTitle);
-            } else {
-              console.log('Wallet not found, using unit:', cashuEvent.inner.unit);
-              setServiceName(cashuEvent.inner.unit || 'Unknown Ticket');
-            }
-          } else {
-            console.log('Missing mintUrl or unit in cashuEvent');
-            setServiceName('Unknown Ticket');
-          }
-          setIsLoading(false);
-        } catch (error) {
-          console.error('Error getting ticket title:', error);
-          setServiceName('Unknown Ticket');
-          setIsLoading(false);
-        }
-        return;
-      }
-
       try {
         setIsLoading(true);
         const name = await nostrService.getServiceName(serviceKey);
-
         if (isMounted.current) {
           setServiceName(name);
           setIsLoading(false);
@@ -130,14 +102,11 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({ request }) => 
         }
       }
     };
-
     fetchServiceName();
-
-    // Cleanup function to prevent state updates after unmount
     return () => {
       isMounted.current = false;
     };
-  }, [serviceKey, nostrService, type, metadata, wallets]);
+  }, [serviceKey, nostrService, type, metadata, wallets, request.ticketTitle]);
 
   const recipientPubkey = (metadata as SinglePaymentRequest).recipient;
 

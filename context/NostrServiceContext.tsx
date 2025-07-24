@@ -426,14 +426,15 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
                 try {
                   // For Cashu direct, use mint URL as service identifier
                   const serviceKey = tokenInfo.mintUrl;
-                  const ticketTitle = wallet.unit(); // Use the wallet unit as ticket title
+                  const unitInfo = await wallet.getUnitInfo();
+                  const ticketTitle = unitInfo?.title || wallet.unit();
 
                   // Add activity to database using ActivitiesContext directly
                   const activity = {
                     type: 'ticket_received' as const,
                     service_key: serviceKey,
-                    service_name: ticketTitle, // Use ticket title as service name
-                    detail: ticketTitle, // Use ticket title as detail
+                    service_name: ticketTitle, // Always use ticket title
+                    detail: ticketTitle, // Always use ticket title
                     date: new Date(),
                     amount: tokenInfo.amount ? Number(tokenInfo.amount) / 1000 : null,
                     currency: 'sats' as const,
@@ -477,6 +478,8 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
 
             console.log(`Cashu request with id ${id} received`, event);
 
+            // Declare wallet in outer scope
+            let wallet;
             // Check if we have the required unit before creating pending request
             try {
               const requiredMintUrl = event.inner.mintUrl;
@@ -490,7 +493,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
               console.log(`Looking for wallet key: ${requiredMintUrl}-${requiredUnit}`);
 
               // Check if we have a wallet for this mint and unit
-              let wallet = await eCashContext.getWallet(requiredMintUrl, requiredUnit);
+              wallet = await eCashContext.getWallet(requiredMintUrl, requiredUnit);
               console.log(`Wallet found in ECashContext:`, !!wallet);
 
               // If wallet not found in ECashContext, try to create it
@@ -531,6 +534,17 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
               return new CashuResponseStatus.InsufficientFunds();
             }
 
+            // Get the ticket title for pending requests
+            let ticketTitle = 'Unknown Ticket';
+            if (wallet) {
+              let unitInfo;
+              try {
+                unitInfo = wallet.getUnitInfo ? await wallet.getUnitInfo() : undefined;
+              } catch (e) {
+                unitInfo = undefined;
+              }
+              ticketTitle = unitInfo?.title || wallet.unit();
+            }
             return new Promise<CashuResponseStatus>(resolve => {
               const newRequest: PendingRequest = {
                 id,
@@ -538,8 +552,8 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
                 timestamp: new Date(),
                 type: 'ticket',
                 result: resolve,
+                ticketTitle, // Set the ticket name for UI
               };
-
               setPendingRequests(prev => {
                 const newPendingRequests = { ...prev };
                 newPendingRequests[id] = newRequest;

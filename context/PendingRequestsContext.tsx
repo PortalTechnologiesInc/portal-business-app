@@ -540,9 +540,13 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
               }
 
               console.log('Found wallet:', !!ticketWallet);
-              const ticketTitle = ticketWallet
-                ? ticketWallet.unit()
-                : cashuEvent.inner.unit || 'Unknown Ticket';
+              const unitInfo =
+                ticketWallet && ticketWallet.getUnitInfo
+                  ? await ticketWallet.getUnitInfo()
+                  : undefined;
+              const ticketTitle =
+                unitInfo?.title ||
+                (ticketWallet ? ticketWallet.unit() : cashuEvent.inner.unit || 'Unknown Ticket');
               console.log('Ticket title for approved:', ticketTitle);
 
               addActivityWithFallback({
@@ -580,7 +584,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
   );
 
   const deny = useCallback(
-    (id: string) => {
+    async (id: string) => {
       console.log('Deny', id);
 
       const request = getById(id);
@@ -740,16 +744,20 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
               }
 
               console.log('Found wallet:', !!ticketWallet);
-              const ticketTitle = ticketWallet
-                ? ticketWallet.unit()
-                : cashuEvent.inner.unit || 'Unknown Ticket';
-              console.log('Ticket title for denied:', ticketTitle);
+              const deniedUnitInfo =
+                ticketWallet && ticketWallet.getUnitInfo
+                  ? await ticketWallet.getUnitInfo()
+                  : undefined;
+              const deniedTicketTitle =
+                deniedUnitInfo?.title ||
+                (ticketWallet ? ticketWallet.unit() : cashuEvent.inner.unit || 'Unknown Ticket');
+              console.log('Ticket title for denied:', deniedTicketTitle);
 
               addActivityWithFallback({
                 type: 'ticket_denied',
                 service_key: cashuEvent.serviceKey || 'Unknown Service',
-                service_name: ticketTitle, // Use ticket title as service name
-                detail: ticketTitle, // Use ticket title as detail
+                service_name: deniedTicketTitle, // Use ticket title as service name
+                detail: deniedTicketTitle, // Use ticket title as detail
                 date: new Date(),
                 amount: Number(cashuEvent.inner.amount) / 1000,
                 currency: 'sats',

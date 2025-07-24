@@ -158,6 +158,7 @@ export interface PendingRequest {
   type: PendingRequestType;
   timestamp: Date;
   result: (value: any) => void; // Portal-app-lib response types (AuthResponseStatus | PaymentResponseContent | RecurringPaymentResponseContent)
+  ticketTitle?: string; // Always set for ticket requests, for consistent UI
 }
 
 // =============================================================================
