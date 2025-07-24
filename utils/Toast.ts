@@ -1,6 +1,16 @@
 import { Platform, ToastAndroid, Alert } from 'react-native';
 import { router } from 'expo-router';
 
+export const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+  if (Platform.OS === 'android') {
+    ToastAndroid.showWithGravity(message, ToastAndroid.SHORT, ToastAndroid.BOTTOM);
+  } else {
+    // For iOS, use Alert as a fallback
+    const title = type === 'success' ? '✅ Success' : '❌ Error';
+    Alert.alert(title, message);
+  }
+};
+
 export const showErrorToast = (message: string) => {
   if (Platform.OS === 'android') {
     ToastAndroid.showWithGravity(message, ToastAndroid.SHORT, ToastAndroid.BOTTOM);
