@@ -26,6 +26,7 @@ import {
   CashuRequestContent,
   CashuRequestContentWithKey,
   CashuResponseStatus,
+  PaymentStatusNotifier,
 } from 'portal-app-lib';
 import { DatabaseService } from '@/services/database';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -117,19 +118,22 @@ export class LocalAuthChallengeListener implements AuthChallengeListener {
 }
 
 export class LocalPaymentRequestListener implements PaymentRequestListener {
-  private singleCb: (event: SinglePaymentRequest) => Promise<PaymentResponseContent>;
+  private singleCb: (event: SinglePaymentRequest, notifier: PaymentStatusNotifier) => Promise<void>;
   private recurringCb: (event: RecurringPaymentRequest) => Promise<RecurringPaymentResponseContent>;
 
   constructor(
-    singleCb: (event: SinglePaymentRequest) => Promise<PaymentResponseContent>,
+    singleCb: (event: SinglePaymentRequest, notifier: PaymentStatusNotifier) => Promise<void>,
     recurringCb: (event: RecurringPaymentRequest) => Promise<RecurringPaymentResponseContent>
   ) {
     this.singleCb = singleCb;
     this.recurringCb = recurringCb;
   }
 
-  onSinglePaymentRequest(event: SinglePaymentRequest): Promise<PaymentResponseContent> {
-    return this.singleCb(event);
+  onSinglePaymentRequest(
+    event: SinglePaymentRequest,
+    notifier: PaymentStatusNotifier
+  ): Promise<void> {
+    return this.singleCb(event, notifier);
   }
 
   onRecurringPaymentRequest(
@@ -612,18 +616,23 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
         app
           .listenForPaymentRequest(
             new LocalPaymentRequestListener(
-              (event: SinglePaymentRequest) => {
+              (event: SinglePaymentRequest, notifier: PaymentStatusNotifier) => {
                 const id = event.eventId;
 
                 console.log(`Single payment request with id ${id} received`, event);
 
-                return new Promise<PaymentResponseContent>(resolve => {
+                return new Promise<void>(resolve => {
+                  // Immediately resolve the promise, we use the notifier to notify the payment status
+                  resolve();
+
+                  // TODO: validate amount against the invoice. If it doesn't match, reject immediately
+
                   const newRequest: PendingRequest = {
                     id,
                     metadata: event,
                     timestamp: new Date(),
                     type: 'payment',
-                    result: resolve,
+                    result: notifier.notify,
                   };
 
                   setPendingRequests(prev => {

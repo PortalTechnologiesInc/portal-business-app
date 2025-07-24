@@ -10,6 +10,7 @@ import {
 } from 'react';
 import type {
   KeyHandshakeUrl,
+  PaymentResponseContent,
   RecurringPaymentRequest,
   SinglePaymentRequest,
 } from 'portal-app-lib';
@@ -262,26 +263,39 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
           }
           console.log('Subscription found!');
 
-          // TODO: check amount
+          // We don't need to check the amount here, it will be validated inside the listener
+          if (BigInt(subscription.amount) !== paymentRequest.content.amount) {
+            request.result({
+              status: new PaymentStatus.Rejected({
+                reason: 'Subscription amount mismatch',
+              }),
+              requestId: paymentRequest.content.requestId,
+            });
+            return;
+          }
+
+          console.log('Amount matches, processing payment');
 
           request.result({
-            status: new PaymentStatus.Pending(),
+            status: new PaymentStatus.Approved(),
             requestId: paymentRequest.content.requestId,
           });
 
-          let preimage: string | null = null;
           try {
-            preimage = await nostrService.payInvoice(paymentRequest.content.invoice);
-            if (!preimage) {
-              // TODO: save failed payment??
-              // TODO: notify user??
-              return;
-            }
+            // TODO: we should save that we are processing the payment to avoid double payments
+
+            const preimage = await nostrService.payInvoice(paymentRequest.content.invoice);
+            request.result({
+              status: new PaymentStatus.Success({
+                preimage,
+              }),
+              requestId: paymentRequest.content.requestId,
+            });
           } catch (error) {
             console.error('Error paying invoice:', error);
             request.result({
               status: new PaymentStatus.Failed({
-                reason: 'Payment failed',
+                reason: 'Payment failed: ' + error,
               }),
               requestId: paymentRequest.content.requestId,
             });
@@ -289,7 +303,6 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
             // TODO: notify user??
             return;
           }
-          console.log('Preimage: ', preimage);
 
           // Update the subscription last payment date
           await db!.updateSubscriptionLastPayment(subscription.id, new Date());
@@ -365,10 +378,14 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
           });
           break;
         case 'payment':
-          request.result({
-            status: new PaymentStatus.Pending(),
+          const notifier = request.result as (status: PaymentResponseContent) => void;
+
+          // Notify the approval
+          notifier({
+            status: new PaymentStatus.Approved(),
             requestId: (request.metadata as SinglePaymentRequest).content.requestId,
           });
+
           // Add payment activity
           try {
             // Convert BigInt to number if needed
@@ -408,7 +425,26 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
           } catch (err) {
             console.log('Error adding payment activity:', err);
           }
-          nostrService.payInvoice((request?.metadata as SinglePaymentRequest).content.invoice);
+          try {
+            const preimage = await nostrService.payInvoice((request?.metadata as SinglePaymentRequest).content.invoice);
+
+            notifier({
+              status: new PaymentStatus.Success({
+                preimage,
+              }),
+              requestId: (request.metadata as SinglePaymentRequest).content.requestId,
+            });
+
+          } catch (err) {
+            console.log('Error paying invoice:', err);
+
+            notifier({
+              status: new PaymentStatus.Failed({
+                reason: 'Payment failed: ' + err,
+              }),
+              requestId: (request.metadata as SinglePaymentRequest).content.requestId,
+            });
+          }
           break;
         case 'subscription':
           // Add subscription activity
