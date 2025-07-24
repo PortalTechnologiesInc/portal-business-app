@@ -348,9 +348,9 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       return;
     }
 
-    // Only initialize when app is active
-    if (!appIsActive) {
-      console.log('App not active, skipping initialization');
+    // Prevent re-initialization if already initialized
+    if (isInitialized && portalApp) {
+      console.log('NostrService already initialized, skipping re-initialization');
       return;
     }
 
@@ -555,6 +555,11 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
                 ticketTitle, // Set the ticket name for UI
               };
               setPendingRequests(prev => {
+                // Check if request already exists to prevent duplicates
+                if (prev[id]) {
+                  console.log(`Request ${id} already exists, skipping duplicate`);
+                  return prev;
+                }
                 const newPendingRequests = { ...prev };
                 newPendingRequests[id] = newRequest;
                 console.log('Updated pending requests map:', newPendingRequests);
@@ -586,6 +591,11 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
                 };
 
                 setPendingRequests(prev => {
+                  // Check if request already exists to prevent duplicates
+                  if (prev[id]) {
+                    console.log(`Request ${id} already exists, skipping duplicate`);
+                    return prev;
+                  }
                   const newPendingRequests = { ...prev };
                   newPendingRequests[id] = newRequest;
                   console.log('Updated pending requests map:', newPendingRequests);
@@ -620,6 +630,11 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
                   };
 
                   setPendingRequests(prev => {
+                    // Check if request already exists to prevent duplicates
+                    if (prev[id]) {
+                      console.log(`Request ${id} already exists, skipping duplicate`);
+                      return prev;
+                    }
                     const newPendingRequests = { ...prev };
                     newPendingRequests[id] = newRequest;
                     return newPendingRequests;
@@ -641,6 +656,11 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
                   };
 
                   setPendingRequests(prev => {
+                    // Check if request already exists to prevent duplicates
+                    if (prev[id]) {
+                      console.log(`Request ${id} already exists, skipping duplicate`);
+                      return prev;
+                    }
                     const newPendingRequests = { ...prev };
                     newPendingRequests[id] = newRequest;
                     return newPendingRequests;
@@ -698,7 +718,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       console.log('Aborting NostrService initialization');
       abortController.abort();
     };
-  }, [mnemonic, appIsActive, reinitKey]);
+  }, [mnemonic, reinitKey]);
 
   useEffect(() => {
     console.log('Updated pending requests:', pendingRequests);

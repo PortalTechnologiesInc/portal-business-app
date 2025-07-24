@@ -834,7 +834,6 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
   }, [nostrService.pendingRequests, pendingUrl, timeoutId]);
 
   // Memoize the context value to prevent recreation on every render
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   const contextValue = useMemo(
     () => ({
       getByType,

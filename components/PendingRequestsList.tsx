@@ -1,4 +1,4 @@
-import type React from 'react';
+import React from 'react';
 import { View, StyleSheet, FlatList } from 'react-native';
 import { usePendingRequests } from '../context/PendingRequestsContext';
 import { PendingRequestCard } from './PendingRequestCard';
@@ -24,7 +24,7 @@ const createSkeletonRequest = (): PendingRequest => ({
   result: () => {},
 });
 
-export const PendingRequestsList: React.FC = () => {
+export const PendingRequestsList: React.FC = React.memo(() => {
   const { isLoadingRequest, requestFailed, pendingUrl, showSkeletonLoader, setRequestFailed } =
     usePendingRequests();
   const nostrService = useNostrService();
@@ -56,7 +56,8 @@ export const PendingRequestsList: React.FC = () => {
   useEffect(() => {
     const db = new DatabaseService(sqliteContext);
 
-    (async () => {
+    // Debounce the data processing to prevent excessive re-renders
+    const timeoutId = setTimeout(async () => {
       // Get sorted requests
       const sortedRequests = Object.values(nostrService.pendingRequests)
         .filter(request => {
@@ -73,8 +74,8 @@ export const PendingRequestsList: React.FC = () => {
       const filteredRequests = await Promise.all(
         sortedRequests.map(async request => {
           // Handle different request types
-          if (request.type === 'cashu') {
-            // Cashu requests don't have eventId, so we can't check if they're stored
+          if (request.type === 'ticket') {
+            // Ticket requests don't have eventId, so we can't check if they're stored
             // For now, always show them
             return request;
           }
@@ -97,7 +98,9 @@ export const PendingRequestsList: React.FC = () => {
           : nonStoredRequests;
 
       setData(finalData);
-    })();
+    }, 100); // 100ms debounce
+
+    return () => clearTimeout(timeoutId);
   }, [
     nostrService.pendingRequests,
     isLoadingRequest,
@@ -152,7 +155,7 @@ export const PendingRequestsList: React.FC = () => {
 
             // Handle different request types for service key extraction
             let serviceKey = '';
-            if (item.type === 'cashu') {
+            if (item.type === 'ticket') {
               serviceKey = (item.metadata as any)?.serviceKey || 'unknown';
             } else {
               serviceKey = (item.metadata as SinglePaymentRequest).serviceKey;
@@ -176,7 +179,7 @@ export const PendingRequestsList: React.FC = () => {
       )}
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
