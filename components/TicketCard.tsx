@@ -20,6 +20,15 @@ const TicketCard: React.FC<{
     ? { uri: ticket.frontCardBackground }
     : require('@/assets/images/ticketCoverMockup.png');
 
+  // Format ticket title with quantity if balance > 1
+  const formatTicketTitle = () => {
+    const balance = Number(ticket.balance);
+    if (balance > 1) {
+      return `${ticket.title} x ${balance}`;
+    }
+    return ticket.title;
+  };
+
   if (isFocused) {
     // Focused card with info overlay
     return (
@@ -34,7 +43,7 @@ const TicketCard: React.FC<{
               <View style={styles.focusedTopSection}>
                 {/* Title at top like front card */}
                 <View style={styles.focusedTitleContainer}>
-                  <ThemedText style={styles.focusedTitleText}>{ticket.title}</ThemedText>
+                  <ThemedText style={styles.focusedTitleText}>{formatTicketTitle()}</ThemedText>
                 </View>
 
                 {/* Description right under title */}
@@ -84,7 +93,7 @@ const TicketCard: React.FC<{
         <View style={styles.coverContainer}>
           <Image source={cardImageSource} style={styles.coverImage} resizeMode="cover" />
           <View style={styles.titleOverlay}>
-            <ThemedText style={styles.titleOverlayText}>{ticket.title}</ThemedText>
+            <ThemedText style={styles.titleOverlayText}>{formatTicketTitle()}</ThemedText>
           </View>
         </View>
       </TouchableOpacity>

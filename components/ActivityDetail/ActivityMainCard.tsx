@@ -62,6 +62,14 @@ export const ActivityMainCard: React.FC<ActivityMainCardProps> = ({
     return isAuth ? statusConnectedColor : buttonSecondaryColor;
   };
 
+  // Format ticket title with quantity if amount > 1
+  const formatTicketTitle = () => {
+    if (isTicket && amount && amount > 1) {
+      return `${detail} x ${amount}`;
+    }
+    return detail;
+  };
+
   return (
     <View style={[styles.mainCard, { backgroundColor: surfaceSecondaryColor }]}>
       <View style={[styles.activityIconContainer, { backgroundColor: getIconBackgroundColor() }]}>
@@ -75,7 +83,7 @@ export const ActivityMainCard: React.FC<ActivityMainCardProps> = ({
       </View>
 
       <ThemedText type="title" style={[styles.serviceName, { color: primaryTextColor }]}>
-        {isTicket ? detail : serviceName}
+        {isTicket ? formatTicketTitle() : serviceName}
       </ThemedText>
 
       <View style={[styles.statusContainer, { backgroundColor: surfaceSecondaryColor }]}>

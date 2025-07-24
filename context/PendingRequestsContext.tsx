@@ -555,7 +555,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
                 service_name: ticketTitle, // Use ticket title as service name
                 detail: ticketTitle, // Use ticket title as detail
                 date: new Date(),
-                amount: Number(amount) / 1000,
+                amount: Number(amount), // Store actual number of tickets, not divided by 1000
                 currency: 'sats',
                 request_id: id,
                 subscription_id: null,
@@ -759,7 +759,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
                 service_name: deniedTicketTitle, // Use ticket title as service name
                 detail: deniedTicketTitle, // Use ticket title as detail
                 date: new Date(),
-                amount: Number(cashuEvent.inner.amount) / 1000,
+                amount: Number(cashuEvent.inner.amount), // Store actual number of tickets, not divided by 1000
                 currency: 'sats',
                 request_id: id,
                 subscription_id: null,

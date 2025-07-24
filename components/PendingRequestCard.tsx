@@ -124,6 +124,15 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({ request }) => 
   const isTicketSending =
     isTicketRequest && (metadata as any)?.inner?.mintUrl && (metadata as any)?.inner?.amount;
 
+  // Format service name with quantity for ticket requests
+  const formatServiceName = () => {
+    if (isTicketRequest && amount && Number(amount) > 1) {
+      const ticketAmount = Number(amount);
+      return `${serviceName || 'Unknown Service'} x ${ticketAmount}`;
+    }
+    return serviceName || 'Unknown Service';
+  };
+
   return (
     <View style={[styles.card, { backgroundColor: cardBackgroundColor, shadowColor }]}>
       <Text style={[styles.requestType, { color: secondaryTextColor }]}>
@@ -137,7 +146,7 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = ({ request }) => 
           !serviceName && styles.unknownService,
         ]}
       >
-        {serviceName || 'Unknown Service'}
+        {formatServiceName()}
       </Text>
 
       <Text style={[styles.serviceInfo, { color: secondaryTextColor }]}>

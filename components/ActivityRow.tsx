@@ -72,6 +72,22 @@ export const ActivityRow: React.FC<ActivityRowProps> = ({ activity }) => {
     }
   };
 
+  // Format ticket title with quantity if amount > 1
+  const formatTicketTitle = () => {
+    if (
+      activity.type === 'ticket' ||
+      activity.type === 'ticket_approved' ||
+      activity.type === 'ticket_denied' ||
+      activity.type === 'ticket_received'
+    ) {
+      const amount = activity.amount;
+      if (amount && amount > 1) {
+        return `${activity.detail} x ${amount}`;
+      }
+    }
+    return activity.detail;
+  };
+
   return (
     <TouchableOpacity
       style={[
@@ -98,6 +114,16 @@ export const ActivityRow: React.FC<ActivityRowProps> = ({ activity }) => {
             {activity.amount} sats
           </ThemedText>
         )}
+        {(activity.type === 'ticket' ||
+          activity.type === 'ticket_approved' ||
+          activity.type === 'ticket_denied' ||
+          activity.type === 'ticket_received') &&
+          activity.amount !== null &&
+          activity.amount > 1 && (
+            <ThemedText style={[styles.amount, { color: primaryTextColor }]}>
+              x {activity.amount}
+            </ThemedText>
+          )}
         <ThemedText style={[styles.timeAgo, { color: secondaryTextColor }]}>
           {formatRelativeTime(activity.date)}
         </ThemedText>

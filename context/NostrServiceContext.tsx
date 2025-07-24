@@ -436,7 +436,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
                     service_name: ticketTitle, // Always use ticket title
                     detail: ticketTitle, // Always use ticket title
                     date: new Date(),
-                    amount: tokenInfo.amount ? Number(tokenInfo.amount) / 1000 : null,
+                    amount: tokenInfo.amount ? Number(tokenInfo.amount) : null, // Store actual number of tickets, not divided by 1000
                     currency: 'sats' as const,
                     request_id: `cashu-direct-${Date.now()}`,
                     subscription_id: null,
