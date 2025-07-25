@@ -59,7 +59,7 @@ export const DatabaseProvider = ({ children }: DatabaseProviderProps) => {
   const migrateDbIfNeeded = useCallback(async (db: SQLiteDatabase) => {
     console.log('Database initialization started');
     setIsDbInitializing(true);
-    const DATABASE_VERSION = 11;
+    const DATABASE_VERSION = 12;
 
     try {
       let { user_version: currentDbVersion } = (await db.getFirstAsync<{
@@ -383,6 +383,26 @@ export const DatabaseProvider = ({ children }: DatabaseProviderProps) => {
         `);
         currentDbVersion = 11;
         console.log('Created processed_cashu_tokens table - now at version 11');
+      }
+
+      if (currentDbVersion <= 11) {
+        await db.execAsync(`
+          CREATE TABLE IF NOT EXISTS payment_status (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            invoice TEXT NOT NULL,
+            action_type TEXT NOT NULL CHECK (action_type IN ('payment_started', 'payment_completed', 'payment_failed')),
+            created_at INTEGER NOT NULL -- Unix timestamp
+          );
+          CREATE INDEX IF NOT EXISTS idx_payment_status_invoice ON payment_status(invoice);
+          CREATE INDEX IF NOT EXISTS idx_payment_status_action_type ON payment_status(action_type);
+          CREATE INDEX IF NOT EXISTS idx_payment_status_created_at ON payment_status(created_at);
+          
+          -- Add status column to activities table
+          ALTER TABLE activities ADD COLUMN status TEXT DEFAULT 'neutral' CHECK (status IN ('neutral', 'positive', 'negative', 'pending'));
+          CREATE INDEX IF NOT EXISTS idx_activities_status ON activities(status);
+        `);
+        currentDbVersion = 12;
+        console.log('Created payment_status table and added status column to activities - now at version 12');
       }
 
       await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);

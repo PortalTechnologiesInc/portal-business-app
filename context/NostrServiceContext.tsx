@@ -4,7 +4,6 @@ import {
   AuthChallengeEvent,
   KeyHandshakeUrl,
   Mnemonic,
-  PaymentResponseContent,
   Profile,
   RecurringPaymentResponseContent,
   Nwc,
@@ -23,10 +22,10 @@ import {
   CashuDirectContentWithKey,
   CashuDirectListener,
   CashuRequestListener,
-  CashuRequestContent,
   CashuRequestContentWithKey,
   CashuResponseStatus,
   PaymentStatusNotifier,
+  PaymentStatus
 } from 'portal-app-lib';
 import { DatabaseService } from '@/services/database';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -441,6 +440,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
                     currency: 'sats' as const,
                     request_id: `cashu-direct-${Date.now()}`,
                     subscription_id: null,
+                    status: 'neutral' as 'neutral',
                   };
 
                   // Import and use ActivitiesContext directly
@@ -632,7 +632,12 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
                     metadata: event,
                     timestamp: new Date(),
                     type: 'payment',
-                    result: notifier.notify,
+                    result: async (status: PaymentStatus) => {
+                      await notifier.notify({
+                        status,
+                        requestId: event.content.requestId,
+                      });
+                    },
                   };
 
                   setPendingRequests(prev => {

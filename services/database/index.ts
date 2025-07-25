@@ -26,6 +26,7 @@ export interface ActivityRecord {
   request_id: string;
   created_at: number; // Unix timestamp in seconds
   subscription_id: string | null;
+  status: 'neutral' | 'positive' | 'negative' | 'pending';
 }
 
 export interface SubscriptionRecord {
@@ -130,8 +131,8 @@ export class DatabaseService {
       try {
         await this.db.runAsync(
           `INSERT INTO activities (
-            id, type, service_name, service_key, detail, date, amount, currency, request_id, created_at, subscription_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            id, type, service_name, service_key, detail, date, amount, currency, request_id, created_at, subscription_id, status
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             id,
             activity.type,
@@ -144,6 +145,7 @@ export class DatabaseService {
             activity.request_id,
             now,
             activity.subscription_id,
+            activity.status || 'neutral',
           ]
         );
 
@@ -172,6 +174,18 @@ export class DatabaseService {
       date: fromUnixSeconds(record.date),
       created_at: fromUnixSeconds(record.created_at),
     };
+  }
+
+  async updateActivityStatus(id: string, status: 'neutral' | 'positive' | 'negative' | 'pending'): Promise<void> {
+    try {
+      await this.db.runAsync(
+        'UPDATE activities SET status = ? WHERE id = ?',
+        [status, id]
+      );
+    } catch (error) {
+      console.error('Error updating activity status:', error);
+      throw error;
+    }
   }
 
   async getActivities(
@@ -925,6 +939,79 @@ export class DatabaseService {
       console.error('Error marking Cashu token as processed:', error);
       // Don't throw - this is not critical for the app to function
       return false;
+    }
+  }
+
+  // Payment status log methods
+  async addPaymentStatusEntry(
+    invoice: string,
+    actionType: 'payment_started' | 'payment_completed' | 'payment_failed'
+  ): Promise<number> {
+    try {
+      const now = toUnixSeconds(Date.now());
+      const result = await this.db.runAsync(
+        `INSERT INTO payment_status (
+          invoice, action_type, created_at
+        ) VALUES (?, ?, ?)`,
+        [invoice, actionType, now]
+      );
+      return result.lastInsertRowId;
+    } catch (error) {
+      console.error('Error adding payment status entry:', error);
+      throw error;
+    }
+  }
+
+  async getPaymentStatusEntries(invoice: string): Promise<Array<{
+    id: number;
+    invoice: string;
+    action_type: 'payment_started' | 'payment_completed' | 'payment_failed';
+    created_at: Date;
+  }>> {
+    try {
+      const records = await this.db.getAllAsync<{
+        id: number;
+        invoice: string;
+        action_type: string;
+        created_at: number;
+      }>(
+        `SELECT * FROM payment_status WHERE invoice = ? ORDER BY created_at ASC`,
+        [invoice]
+      );
+
+      return records.map(record => ({
+        ...record,
+        action_type: record.action_type as 'payment_started' | 'payment_completed' | 'payment_failed',
+        created_at: fromUnixSeconds(record.created_at),
+      }));
+    } catch (error) {
+      console.error('Error getting payment status entries:', error);
+      return [];
+    }
+  }
+
+  async getPendingPayments(): Promise<Array<{
+    id: string;
+    invoice: string;
+    action_type: 'payment_started' | 'payment_completed' | 'payment_failed';
+    created_at: Date;
+  }>> {
+    try {
+      const records = await this.db.getAllAsync<ActivityRecord>(
+        `SELECT * FROM activities 
+         WHERE type = 'pay' AND status = 'pending'
+         ORDER BY created_at ASC`
+      );
+
+      return records.map(record => ({
+        id: record.id,
+        invoice: record.request_id, // Assuming request_id contains the invoice
+        action_type: 'payment_started' as const, // All pending payments are started
+        created_at: fromUnixSeconds(record.created_at),
+      }));
+    } catch (error) {
+      console.error('Error getting pending payments:', error);
+      return [];
     }
   }
 }

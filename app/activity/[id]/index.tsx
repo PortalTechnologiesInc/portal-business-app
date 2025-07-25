@@ -108,7 +108,7 @@ export default function ActivityDetailScreen() {
 
     const shareContent = {
       title: 'Activity Details',
-      message: `Activity ID: ${activity.id}\nType: ${activity.type}\nStatus: ${getActivityStatus(activity.detail)}`,
+      message: `Activity ID: ${activity.id}\nType: ${activity.type}\nStatus: ${getActivityStatus(activity)}`,
       url: `myapp://activity/${activity.id}`, // Deep link to the activity
     };
 
@@ -208,7 +208,7 @@ export default function ActivityDetailScreen() {
     );
   }
 
-  const activityStatus = getActivityStatus(activity.detail, activity.type);
+  const activityStatus = getActivityStatus(activity);
   const isPayment = activity.type === ActivityType.Pay;
   const isAuth = activity.type === ActivityType.Auth;
   const isTicket =
