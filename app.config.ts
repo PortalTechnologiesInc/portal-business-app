@@ -85,6 +85,12 @@ export default {
           enableBackgroundRemoteNotifications: true,
         },
       ],
+      [
+        "react-native-nfc-manager",
+        {
+          "nfcPermission": "Portal uses NFC for contactless interactions",
+        }
+      ]
     ],
     experiments: {
       typedRoutes: true,
