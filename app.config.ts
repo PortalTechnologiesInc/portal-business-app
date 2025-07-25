@@ -89,6 +89,7 @@ export default {
         "react-native-nfc-manager",
         {
           "nfcPermission": "Portal uses NFC for contactless interactions",
+          "includeNdefEntitlement": false,
         }
       ]
     ],
