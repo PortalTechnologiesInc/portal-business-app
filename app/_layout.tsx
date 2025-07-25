@@ -40,13 +40,14 @@ TaskManager.defineTask<Notifications.NotificationTaskPayload>(BACKGROUND_NOTIFIC
   }
 });
 
-
 const NotificationConfigurator = () => {
+  // Disable notifications for now
+  return;
+
   const { publicKey } = useNostrService();
 
   useEffect(() => {
     if (publicKey) {
-      console.log('sto per registrarmi');
       registerPubkeysForPushNotificationsAsync([keyToHex(publicKey)]).catch((error: any) => {
         console.error('Error registering for push notifications:', error);
       });
