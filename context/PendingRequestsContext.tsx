@@ -284,6 +284,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
             request_id: paymentRequest.content.requestId,
             subscription_id: subscription.id,
             status: 'pending',
+            invoice: paymentRequest.content.invoice,
           });
 
           // Insert into payment_status table
@@ -423,6 +424,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
               request_id: id,
               subscription_id: null,
               status: 'pending',
+              invoice: metadata.content.invoice,
             });
 
             // Notify the approval
@@ -729,6 +731,7 @@ export const PendingRequestsProvider: React.FC<{ children: ReactNode }> = ({ chi
                   request_id: id,
                   subscription_id: null,
                   status: 'negative',
+                  invoice: (request.metadata as SinglePaymentRequest).content.invoice,
                 });
               })
             ]);

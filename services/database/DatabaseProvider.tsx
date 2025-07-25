@@ -59,7 +59,7 @@ export const DatabaseProvider = ({ children }: DatabaseProviderProps) => {
   const migrateDbIfNeeded = useCallback(async (db: SQLiteDatabase) => {
     console.log('Database initialization started');
     setIsDbInitializing(true);
-    const DATABASE_VERSION = 12;
+    const DATABASE_VERSION = 13;
 
     try {
       let { user_version: currentDbVersion } = (await db.getFirstAsync<{
@@ -403,6 +403,16 @@ export const DatabaseProvider = ({ children }: DatabaseProviderProps) => {
         `);
         currentDbVersion = 12;
         console.log('Created payment_status table and added status column to activities - now at version 12');
+      }
+
+      if (currentDbVersion <= 12) {
+        await db.execAsync(`
+          -- Add invoice column to activities table for payment activities
+          ALTER TABLE activities ADD COLUMN invoice TEXT;
+          CREATE INDEX IF NOT EXISTS idx_activities_invoice ON activities(invoice);
+        `);
+        currentDbVersion = 13;
+        console.log('Added invoice column to activities table - now at version 13');
       }
 
       await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);

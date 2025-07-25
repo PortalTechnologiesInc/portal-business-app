@@ -27,6 +27,7 @@ export interface ActivityRecord {
   created_at: number; // Unix timestamp in seconds
   subscription_id: string | null;
   status: 'neutral' | 'positive' | 'negative' | 'pending';
+  invoice?: string | null; // Invoice for payment activities (optional)
 }
 
 export interface SubscriptionRecord {
@@ -131,8 +132,8 @@ export class DatabaseService {
       try {
         await this.db.runAsync(
           `INSERT INTO activities (
-            id, type, service_name, service_key, detail, date, amount, currency, request_id, created_at, subscription_id, status
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            id, type, service_name, service_key, detail, date, amount, currency, request_id, created_at, subscription_id, status, invoice
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             id,
             activity.type,
@@ -146,6 +147,7 @@ export class DatabaseService {
             now,
             activity.subscription_id,
             activity.status || 'neutral',
+            activity.invoice || null,
           ]
         );
 
