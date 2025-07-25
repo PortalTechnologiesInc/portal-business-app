@@ -56,8 +56,7 @@ export const PendingRequestsList: React.FC = React.memo(() => {
   useEffect(() => {
     const db = new DatabaseService(sqliteContext);
 
-    // Debounce the data processing to prevent excessive re-renders
-    const timeoutId = setTimeout(async () => {
+    const processData = async () => {
       // Get sorted requests
       const sortedRequests = Object.values(nostrService.pendingRequests)
         .filter(request => {
@@ -98,9 +97,9 @@ export const PendingRequestsList: React.FC = React.memo(() => {
           : nonStoredRequests;
 
       setData(finalData);
-    }, 100); // 100ms debounce
+    };
 
-    return () => clearTimeout(timeoutId);
+    processData();
   }, [
     nostrService.pendingRequests,
     isLoadingRequest,

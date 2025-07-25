@@ -86,8 +86,7 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = React.memo(
         return;
       }
 
-      // Debounce service name fetching to prevent excessive API calls
-      const timeoutId = setTimeout(async () => {
+      const fetchServiceName = async () => {
         if (!isMounted.current) return;
         try {
           setIsLoading(true);
@@ -103,10 +102,11 @@ export const PendingRequestCard: FC<PendingRequestCardProps> = React.memo(
             setIsLoading(false);
           }
         }
-      }, 200); // 200ms debounce
+      };
+
+      fetchServiceName();
 
       return () => {
-        clearTimeout(timeoutId);
         isMounted.current = false;
       };
     }, [serviceKey, nostrService, type, metadata, wallets, request.ticketTitle]);
