@@ -25,6 +25,9 @@ export default {
       infoPlist: {
         NSCameraUsageDescription: 'Portal uses your camera to scan for QR codes',
       },
+      config: {
+        usesNonExemptEncryption: false,
+      },
       icon: {
         dark: './assets/images/iosDark.png',
         light: './assets/images/iosLight.png',
