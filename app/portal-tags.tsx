@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, TouchableOpacity, Alert, TextInput, View, ToastAndroid, Modal } from 'react-native';
+import { StyleSheet, TouchableOpacity, Alert, TextInput, View, ToastAndroid, Modal, ScrollView } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useRouter } from 'expo-router';
@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { DatabaseService, Tag, toUnixSeconds } from '@/services/database';
 import { useSQLiteContext } from 'expo-sqlite';
+import { useNostrService } from '@/context/NostrServiceContext';
 
 export default function PortalTagsManagementScreen() {
   const router = useRouter();
@@ -71,6 +72,7 @@ export default function PortalTagsManagementScreen() {
 
   const sqliteContext = useSQLiteContext();
   const DB = new DatabaseService(sqliteContext);
+  const nostrService = useNostrService();
 
   useEffect(() => {
     try {
@@ -102,7 +104,10 @@ export default function PortalTagsManagementScreen() {
       return;
     }
 
-    if (tags.map(tag => tag.token).includes(newTagToken.trim())) {
+    // Encode the token to handle spaces
+    const encodedToken = encodeURIComponent(newTagToken.trim());
+
+    if (tags.map(tag => tag.token).includes(encodedToken)) {
       ToastAndroid.showWithGravity(
         'Tag with this name already exists',
         ToastAndroid.LONG,
@@ -113,10 +118,10 @@ export default function PortalTagsManagementScreen() {
 
     const newTag = {
       id: '', // The database will assign an ID
-      token: newTagToken.trim(),
+      token: encodedToken, // Store encoded token
       description: newTagDescription.trim() || null,
       // portal://npub1ek206p7gwgqzgc6s7sfedmlu87cz9894jzzq0283t72lhz3uuxwsgn9stz?relays=wss%3A%2F%2Frelay.getportal.cc&token=alekos
-      url: `portal://npub?relays=wss%3A%2F%2Frelay.getportal.cc&token=${newTagToken.trim()}`,
+      url: `portal://${nostrService.publicKey}?relays=wss%3A%2F%2Frelay.getportal.cc&token=${encodedToken}`,
       icon: newTagIcon === "" ? 'tag' : newTagIcon,
       created_at: 0,
     };
@@ -125,7 +130,7 @@ export default function PortalTagsManagementScreen() {
       // Add to database
       await DB.addTag(newTag.token, newTag.description, newTag.url, newTagIcon);
 
-      setTags([...tags, newTag]);
+      setTags([newTag, ...tags]);
 
       setNewTagToken('');
       setNewTagDescription('');
@@ -149,7 +154,7 @@ export default function PortalTagsManagementScreen() {
   const deleteTag = async (tagToken: string) => {
     Alert.alert(
       'Delete Tag',
-      `Are you sure you want to delete the tag "${tagToken}"?`,
+      `Are you sure you want to delete the tag "${decodeURIComponent(tagToken)}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -211,7 +216,11 @@ export default function PortalTagsManagementScreen() {
           </ThemedText>
         </ThemedView>
 
-        <ThemedView style={styles.content}>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           <ThemedText style={[styles.description, { color: secondaryTextColor }]}>
             Create and manage NFC tags for your Portal business. These tags can be used to trigger
             specific actions, payments, or information displays when customers scan them.
@@ -312,7 +321,7 @@ export default function PortalTagsManagementScreen() {
                       </View>
                       <View style={styles.tagText}>
                         <ThemedText style={[styles.tagName, { color: primaryTextColor }]}>
-                          {tag.token}
+                          {decodeURIComponent(tag.token)}
                         </ThemedText>
                         <ThemedText style={[styles.tagStatus, { color: secondaryTextColor }]}>
                           {tag.description ? tag.description : 'Ready to use'}
@@ -344,7 +353,7 @@ export default function PortalTagsManagementScreen() {
               </ThemedText>
             </View>
           )}
-        </ThemedView>
+        </ScrollView>
       </ThemedView>
 
       <Modal
@@ -599,5 +608,12 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40, // Add extra padding at bottom for better scrolling
   },
 }); 

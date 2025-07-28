@@ -1059,7 +1059,7 @@ export class DatabaseService {
     try {
       const records = await this.db.getAllAsync<Tag>(
         `SELECT * FROM tags 
-         ORDER BY created_at ASC`
+         ORDER BY created_at DESC`
       );
 
       return records.map(record => ({
