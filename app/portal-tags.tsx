@@ -9,7 +9,9 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { DatabaseService, Tag, toUnixSeconds } from '@/services/database';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useNostrService } from '@/context/NostrServiceContext';
-import NfcManager from 'react-native-nfc-manager';
+import NfcManager, { Ndef } from 'react-native-nfc-manager';
+import { NfcTech } from 'react-native-nfc-manager';
+import NFCScanUI from './nfc/NFCScanUI';
 
 export default function PortalTagsManagementScreen() {
   const router = useRouter();
@@ -90,13 +92,41 @@ export default function PortalTagsManagementScreen() {
     }
   };
 
+  const writeNdef = async (url: string) => {
+    let result = false;
+
+    try {
+      // STEP 1
+      await NfcManager.requestTechnology(NfcTech.Ndef);
+
+      const bytes = Ndef.encodeMessage([Ndef.uriRecord(url)]);
+
+      if (bytes) {
+        await NfcManager.ndefHandler // STEP 2
+          .writeNdefMessage(bytes); // STEP 3
+        result = true;
+      }
+    } catch (ex) {
+      console.warn(ex);
+    } finally {
+      // STEP 4
+      NfcManager.cancelTechnologyRequest();
+    }
+
+    return result;
+  }
+
   useEffect(() => {
     try {
       const initializeScreen = async () => {
         // Check NFC status first
         const nfcEnabled = await checkNFCStatus();
         setIsNfcEnabled(nfcEnabled);
-        
+
+        if (nfcEnabled) {
+          NfcManager.start();
+        }
+
         // Load tags
         let tags = await DB.getTags();
         setTags(tags);
@@ -148,6 +178,22 @@ export default function PortalTagsManagementScreen() {
     };
 
     try {
+      // Check if NFC is enabled before proceeding
+      if (!isNfcEnabled) {
+        ToastAndroid.showWithGravity(
+          'NFC is not enabled. Please enable NFC to write tags.',
+          ToastAndroid.LONG,
+          ToastAndroid.CENTER
+        );
+        return;
+      }
+
+      let x = await writeNdef(newTag.url);
+      console.warn('the writing is: ', x);
+      if (!x) {
+        console.error('eh no bro');
+        return;
+      }
       // Add to database
       await DB.addTag(newTag.token, newTag.description, newTag.url, newTagIcon);
 
@@ -158,14 +204,14 @@ export default function PortalTagsManagementScreen() {
       setNewTagIcon('');
 
       ToastAndroid.showWithGravity(
-        'Tag created successfully',
+        'Tag created successfully (NFC writing coming soon)',
         ToastAndroid.SHORT,
         ToastAndroid.CENTER
       );
     } catch (error) {
-      console.error('Error creating tag:', error);
+      console.error('Error with NFC tag:', error);
       ToastAndroid.showWithGravity(
-        'Failed to create tag',
+        'Failed to interact with NFC tag. Please try again.',
         ToastAndroid.LONG,
         ToastAndroid.CENTER
       );
@@ -257,7 +303,7 @@ export default function PortalTagsManagementScreen() {
               Portal Tags
             </ThemedText>
           </ThemedView>
-          
+
           <View style={styles.content}>
             <View style={[styles.nfcCourtesyContainer, { backgroundColor: surfaceSecondaryColor }]}>
               <WifiOff size={64} color={secondaryTextColor} />
@@ -267,7 +313,7 @@ export default function PortalTagsManagementScreen() {
               <ThemedText style={[styles.nfcCourtesyDescription, { color: secondaryTextColor }]}>
                 NFC is not enabled on your device. To use Portal tags, you need to enable NFC in your device settings.
               </ThemedText>
-              
+
               <View style={styles.nfcInstructions}>
                 <ThemedText style={[styles.nfcInstructionsTitle, { color: primaryTextColor }]}>
                   How to enable NFC:
@@ -291,7 +337,7 @@ export default function PortalTagsManagementScreen() {
                   </ThemedText>
                 </View>
               </View>
-              
+
               <TouchableOpacity
                 style={[styles.nfcRetryButton, { backgroundColor: buttonPrimaryColor }]}
                 onPress={async () => {
@@ -329,7 +375,7 @@ export default function PortalTagsManagementScreen() {
           </ThemedText>
         </ThemedView>
 
-        <ScrollView 
+        <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
