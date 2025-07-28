@@ -76,6 +76,15 @@ export interface StoredPendingRequestWithDates extends Omit<StoredPendingRequest
   created_at: Date;
 }
 
+export interface Tag {
+  id: string;
+  token: string;
+  description: string | null;
+  url: string;
+  icon: string;
+  created_at: number; // Unix timestamp in seconds
+}
+
 export interface SubscriptionWithDates
   extends Omit<
     SubscriptionRecord,
@@ -97,7 +106,7 @@ export interface NostrRelayWithDates extends Omit<NostrRelay, 'created_at'> {
 }
 
 export class DatabaseService {
-  constructor(private db: SQLiteDatabase) {}
+  constructor(private db: SQLiteDatabase) { }
 
   // Database reset method
   async dropAllTables(): Promise<void> {
@@ -524,7 +533,7 @@ export class DatabaseService {
       ) VALUES (?, ?, ?, ?)`,
         [id, eventId, approved ? '1' : '0', now]
       );
-    } catch (e) {}
+    } catch (e) { }
 
     return id;
   }
@@ -1013,6 +1022,56 @@ export class DatabaseService {
       }));
     } catch (error) {
       console.error('Error getting pending payments:', error);
+      return [];
+    }
+  }
+
+  async addTag(token: string, description: string | null, url: string, icon: string) {
+    try {
+      const now = toUnixSeconds(Date.now());
+      const result = await this.db.runAsync(
+        `INSERT INTO tags (
+          token, description, url, icon, created_at
+        ) VALUES (?, ?, ?, ?, ?)`,
+        [token, description, url, icon, now]
+      );
+      return result.lastInsertRowId;
+    } catch (error) {
+      console.error('Error adding a new tag:', error);
+      throw error;
+    }
+  }
+
+  async deleteTag(token: string) {
+    try {
+      const result = await this.db.runAsync(
+        `DELETE FROM tags WHERE token = ?`,
+        [token]
+      );
+      return result.changes;
+    } catch (error) {
+      console.error('Error deleting tag:', error);
+      throw error;
+    }
+  }
+
+  async getTags(): Promise<Array<Tag>> {
+    try {
+      const records = await this.db.getAllAsync<Tag>(
+        `SELECT * FROM tags 
+         ORDER BY created_at ASC`
+      );
+
+      return records.map(record => ({
+        id: record.id,
+        token: record.token,
+        description: record.description,
+        url: record.url,
+        icon: record.icon,
+        created_at: record.created_at,
+      }));
+    } catch (error) {
+      console.error('Error getting the tags:', error);
       return [];
     }
   }

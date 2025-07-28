@@ -23,6 +23,7 @@ import {
   Check,
   Wallet,
   Wifi,
+  Tag,
 } from 'lucide-react-native';
 import { Moon, Sun, Smartphone } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -125,6 +126,10 @@ export default function SettingsScreen() {
 
   const handleNostrCardPress = () => {
     router.push('/relays');
+  };
+
+  const handlePortalTagsCardPress = () => {
+    router.push('/portal-tags');
   };
 
   const handleExportMnemonic = () => {
@@ -404,6 +409,35 @@ export default function SettingsScreen() {
                     </ThemedText>
                     <ThemedText style={[styles.cardStatus, { color: secondaryTextColor }]}>
                       Manage the Nostr relays your app connects to
+                    </ThemedText>
+                  </View>
+                </View>
+              </View>
+              <ChevronRight size={24} color={secondaryTextColor} />
+            </View>
+          </TouchableOpacity>
+
+          {/* Portal Tags Section */}
+          <ThemedText style={[styles.sectionTitle, { color: primaryTextColor }]}>
+            Portal Tags
+          </ThemedText>
+          <TouchableOpacity
+            style={[styles.card, { backgroundColor: cardBackgroundColor }]}
+            onPress={handlePortalTagsCardPress}
+            activeOpacity={0.7}
+          >
+            <View style={styles.cardContent}>
+              <View style={styles.cardLeft}>
+                <View style={styles.cardHeader}>
+                  <View style={[styles.cardIcon, { backgroundColor: buttonPrimaryColor }]}>
+                    <Tag size={20} color={buttonPrimaryTextColor} />
+                  </View>
+                  <View style={styles.cardText}>
+                    <ThemedText style={[styles.cardTitle, { color: primaryTextColor }]}>
+                      Portal Tags
+                    </ThemedText>
+                    <ThemedText style={[styles.cardStatus, { color: secondaryTextColor }]}>
+                      Create new or manage NFC tags
                     </ThemedText>
                   </View>
                 </View>
