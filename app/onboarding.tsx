@@ -16,7 +16,7 @@ import { useMnemonic } from '@/context/MnemonicContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { generateMnemonic, Mnemonic } from 'portal-app-lib';
+import { generateMnemonic, Mnemonic } from 'portal-business-app-lib';
 import * as SecureStore from 'expo-secure-store';
 
 // Preload all required assets
@@ -80,7 +80,7 @@ export default function Onboarding() {
     }
 
     try {
-      // Use portal-app-lib's Mnemonic class for validation
+      // Use portal-business-app-lib's Mnemonic class for validation
       // If the mnemonic is invalid, the constructor will throw an error
       new Mnemonic(trimmedPhrase);
       return { isValid: true };

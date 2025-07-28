@@ -6,7 +6,7 @@ import { ThemedText } from './ThemedText';
 import type { UpcomingPayment } from '@/utils/types';
 import { formatRelativeTime } from '@/utils';
 import { useActivities } from '@/context/ActivitiesContext';
-import { parseCalendar } from 'portal-app-lib';
+import { parseCalendar } from 'portal-business-app-lib';
 import { fromUnixSeconds } from '@/services/database';
 import { BanknoteIcon } from 'lucide-react-native';
 import { useThemeColor } from '@/hooks/useThemeColor';

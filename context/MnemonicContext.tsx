@@ -11,7 +11,7 @@ import {
   walletUrlEvents,
   isWalletConnected,
 } from '@/services/SecureStorageService';
-import { generateMnemonic } from 'portal-app-lib';
+import { generateMnemonic } from 'portal-business-app-lib';
 
 type MnemonicContextType = {
   mnemonic: string | null;

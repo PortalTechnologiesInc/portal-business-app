@@ -2,7 +2,7 @@ import { createContext, useContext, useCallback, type ReactNode, useRef } from '
 import { useEffect } from 'react';
 import * as Linking from 'expo-linking';
 import * as SecureStore from 'expo-secure-store';
-import { parseKeyHandshakeUrl } from 'portal-app-lib';
+import { parseKeyHandshakeUrl } from 'portal-business-app-lib';
 import { usePendingRequests } from '@/context/PendingRequestsContext';
 import { useNostrService } from '@/context/NostrServiceContext';
 import { router } from 'expo-router';
@@ -32,7 +32,6 @@ export const DeeplinkProvider = ({ children }: { children: ReactNode }) => {
   // Handle deeplink URLs
   const handleDeepLink = useCallback(
     (url: string) => {
-
       // Implement a cooldown period (3 seconds) to prevent multiple rapid processing
       const now = Date.now();
       const lastTime = lastProcessTime.current[url] || 0;
@@ -92,7 +91,7 @@ export const DeeplinkProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // Don't handle initial URL here - let [...deeplink].tsx handle cold start deeplinks
     // This prevents double navigation when app is opened with deeplink
-    
+
     // Only add event listener for URL events that happen while the app is running
     const subscription = Linking.addEventListener('url', event => {
       console.log('Got URL event while app running:', event.url);

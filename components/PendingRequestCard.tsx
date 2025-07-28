@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { usePendingRequests } from '../context/PendingRequestsContext';
 import { useNostrService } from '@/context/NostrServiceContext';
 import { useECash } from '@/context/ECashContext';
-import type { SinglePaymentRequest, RecurringPaymentRequest } from 'portal-app-lib';
+import type { SinglePaymentRequest, RecurringPaymentRequest } from 'portal-business-app-lib';
 import type { PendingRequest } from '@/utils/types';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Layout } from '@/constants/Layout';

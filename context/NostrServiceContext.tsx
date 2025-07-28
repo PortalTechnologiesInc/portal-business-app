@@ -24,6 +24,7 @@ import {
   PaymentStatusNotifier,
   PaymentStatus,
   PortalBusiness,
+  PortalBusinessInterface,
 } from 'portal-business-app-lib';
 import { DatabaseService } from '@/services/database';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -54,7 +55,7 @@ const getServiceNameFromProfile = (profile: any): string | null => {
 // Note: RelayConnectionStatus, RelayInfo, and ConnectionSummary are now imported from centralized types
 
 // Map numeric RelayStatus values to string status names
-// Based on the actual Rust enum from portal-app-lib:
+// Based on the actual Rust enum from portal-business-app-lib:
 // pub enum RelayStatus { Initialized, Pending, Connecting, Connected, Disconnected, Terminated, Banned }
 function mapNumericStatusToString(numericStatus: number): RelayConnectionStatus {
   switch (numericStatus) {
@@ -123,7 +124,6 @@ interface NostrServiceContextType {
   isInitialized: boolean;
   isWalletConnected: boolean;
   publicKey: string | null;
-  portalApp: PortalBusiness | null;
   nwcWallet: Nwc | null;
   pendingRequests: { [key: string]: PendingRequest };
   payInvoice: (invoice: string) => Promise<string>;
@@ -242,7 +242,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   walletUrl,
   children,
 }) => {
-  const [portalApp, setPortalApp] = useState<PortalBusiness | null>(null);
+  const [portalApp, setPortalApp] = useState<PortalBusinessInterface | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [pendingRequests, setPendingRequests] = useState<{ [key: string]: PendingRequest }>({});
@@ -299,7 +299,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   const connectedCount = relayStatuses.filter(r => r.connected).length;
 
   // Refs to store current values for stable AppState listener
-  const portalAppRef = useRef<PortalBusiness | null>(null);
+  const portalAppRef = useRef<PortalBusinessInterface | null>(null);
   const refreshNwcConnectionStatusRef = useRef<(() => Promise<void>) | null>(null);
 
   const eCashContext = useECash();
@@ -988,7 +988,6 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     isInitialized,
     isWalletConnected: nwcWallet !== null,
     publicKey,
-    portalApp,
     nwcWallet,
     pendingRequests,
     payInvoice,

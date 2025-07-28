@@ -5,7 +5,7 @@ import {
   ProofInfo,
   CashuWalletInterface,
   Mnemonic,
-} from 'portal-app-lib';
+} from 'portal-business-app-lib';
 import { useSQLiteContext } from 'expo-sqlite';
 import { DatabaseService } from '@/services/database';
 

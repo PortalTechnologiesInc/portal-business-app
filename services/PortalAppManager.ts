@@ -1,12 +1,12 @@
-import { RelayConnectionStatus } from '@/utils';
 import {
   KeypairInterface,
-  PortalApp,
-  PortalAppInterface,
+  PortalBusiness,
+  PortalBusinessInterface,
   RelayStatusListener,
-} from 'portal-app-lib';
+} from 'portal-business-app-lib';
+
 export class PortalAppManager {
-  static instance: PortalAppInterface;
+  static instance: PortalBusinessInterface;
 
   private constructor() {}
 
@@ -17,7 +17,7 @@ export class PortalAppManager {
   ) {
     if (!PortalAppManager.instance) {
       console.warn('Initializing the lib!');
-      PortalAppManager.instance = await PortalApp.create(keypair, relays, relayStatusCallback);
+      this.instance = await PortalBusiness.create(keypair, relays, relayStatusCallback);
     }
 
     return this.instance;

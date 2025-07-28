@@ -4,7 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as FileSystem from 'expo-file-system';
 import { useNostrService } from './NostrServiceContext';
 import { formatAvatarUri, generateRandomGamertag } from '@/utils';
-import { keyToHex } from 'portal-app-lib';
+import { keyToHex } from 'portal-business-app-lib';
 import type { ProfileSyncStatus } from '@/utils/types';
 
 // Helper function to validate image

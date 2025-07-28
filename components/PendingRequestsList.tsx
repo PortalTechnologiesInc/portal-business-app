@@ -5,7 +5,7 @@ import { PendingRequestCard } from './PendingRequestCard';
 import { PendingRequestSkeletonCard } from './PendingRequestSkeletonCard';
 import { FailedRequestCard } from './FailedRequestCard';
 import type { PendingRequest, PendingRequestType } from '@/utils/types';
-import type { AuthChallengeEvent, SinglePaymentRequest } from 'portal-app-lib';
+import type { AuthChallengeEvent, SinglePaymentRequest } from 'portal-business-app-lib';
 import { useNostrService } from '@/context/NostrServiceContext';
 import { ThemedText } from './ThemedText';
 import { useEffect, useState } from 'react';

@@ -154,10 +154,10 @@ export interface Ticket {
  */
 export interface PendingRequest {
   id: string;
-  metadata: unknown; // Portal-app-lib types (AuthChallengeEvent | RecurringPaymentRequest | SinglePaymentRequest)
+  metadata: unknown; // portal-business-app-lib types (AuthChallengeEvent | RecurringPaymentRequest | SinglePaymentRequest)
   type: PendingRequestType;
   timestamp: Date;
-  result: (value: any) => void; // Portal-app-lib response types (AuthResponseStatus | PaymentResponseContent | RecurringPaymentResponseContent)
+  result: (value: any) => void; // portal-business-app-lib response types (AuthResponseStatus | PaymentResponseContent | RecurringPaymentResponseContent)
   ticketTitle?: string; // Always set for ticket requests, for consistent UI
 }
 

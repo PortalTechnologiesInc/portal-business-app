@@ -20,7 +20,7 @@ import { CurrencyProvider } from '@/context/CurrencyContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import registerPubkeysForPushNotificationsAsync from '@/services/NotificationService';
 import * as TaskManager from 'expo-task-manager';
-import { keyToHex } from 'portal-app-lib';
+import { keyToHex } from 'portal-business-app-lib';
 import * as Notifications from 'expo-notifications';
 
 import { ECashProvider } from '@/context/ECashContext';

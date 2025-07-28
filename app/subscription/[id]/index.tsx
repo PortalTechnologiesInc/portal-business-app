@@ -15,7 +15,7 @@ import { Colors } from '@/constants/Colors';
 import { formatDayAndDate } from '@/utils';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useActivities } from '@/context/ActivitiesContext';
-import { parseCalendar } from 'portal-app-lib';
+import { parseCalendar } from 'portal-business-app-lib';
 import { useSQLiteContext } from 'expo-sqlite';
 import { DatabaseService, fromUnixSeconds, type SubscriptionWithDates } from '@/services/database';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -100,7 +100,10 @@ export default function SubscriptionDetailScreen() {
             try {
               await DB.updateSubscriptionStatus(subscription.id, 'cancelled');
               refreshData();
-              PortalAppManager.tryGetInstance().closeRecurringPayment(subscription.service_key, subscription.id);
+              PortalAppManager.tryGetInstance().closeRecurringPayment(
+                subscription.service_key,
+                subscription.id
+              );
             } catch (error) {
               console.error(error);
             }
@@ -231,7 +234,7 @@ export default function SubscriptionDetailScreen() {
               {subscription.status === 'expired' && (
                 <ThemedText style={[styles.detail, { color: orangeColor }]}>
                   <View style={[styles.iconContainer]}>
-                  <Hourglass size={20} color={orangeColor} />
+                    <Hourglass size={20} color={orangeColor} />
                   </View>
                   Subscription expired
                 </ThemedText>
