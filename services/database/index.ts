@@ -106,7 +106,7 @@ export interface NostrRelayWithDates extends Omit<NostrRelay, 'created_at'> {
 }
 
 export class DatabaseService {
-  constructor(private db: SQLiteDatabase) { }
+  constructor(private db: SQLiteDatabase) {}
 
   // Database reset method
   async dropAllTables(): Promise<void> {
@@ -187,12 +187,12 @@ export class DatabaseService {
     };
   }
 
-  async updateActivityStatus(id: string, status: 'neutral' | 'positive' | 'negative' | 'pending'): Promise<void> {
+  async updateActivityStatus(
+    id: string,
+    status: 'neutral' | 'positive' | 'negative' | 'pending'
+  ): Promise<void> {
     try {
-      await this.db.runAsync(
-        'UPDATE activities SET status = ? WHERE id = ?',
-        [status, id]
-      );
+      await this.db.runAsync('UPDATE activities SET status = ? WHERE id = ?', [status, id]);
     } catch (error) {
       console.error('Error updating activity status:', error);
       throw error;
@@ -533,7 +533,7 @@ export class DatabaseService {
       ) VALUES (?, ?, ?, ?)`,
         [id, eventId, approved ? '1' : '0', now]
       );
-    } catch (e) { }
+    } catch (e) {}
 
     return id;
   }
@@ -695,11 +695,13 @@ export class DatabaseService {
         metadata: string | null;
       }>('SELECT * FROM cashu_transactions WHERE id = ?', [transactionId]);
 
-      return tx ? JSON.stringify({
-        ...tx,
-        ys: JSON.parse(tx.ys),
-        metadata: tx.metadata ? JSON.parse(tx.metadata) : null,
-      }) : undefined;
+      return tx
+        ? JSON.stringify({
+            ...tx,
+            ys: JSON.parse(tx.ys),
+            metadata: tx.metadata ? JSON.parse(tx.metadata) : null,
+          })
+        : undefined;
     } catch (error) {
       console.error('[DatabaseService] Error getting transaction:', error);
       return undefined;
@@ -729,11 +731,13 @@ export class DatabaseService {
       }
 
       const transactions = await this.db.getAllAsync(query, params);
-      return transactions.map(tx => JSON.stringify({
-        ...tx,
-        ys: JSON.parse(tx.ys),
-        metadata: tx.metadata ? JSON.parse(tx.metadata) : null,
-      }));
+      return transactions.map(tx =>
+        JSON.stringify({
+          ...tx,
+          ys: JSON.parse(tx.ys),
+          metadata: tx.metadata ? JSON.parse(tx.metadata) : null,
+        })
+      );
     } catch (error) {
       console.error('[DatabaseService] Error listing transactions:', error);
       return [];
@@ -973,26 +977,28 @@ export class DatabaseService {
     }
   }
 
-  async getPaymentStatusEntries(invoice: string): Promise<Array<{
-    id: number;
-    invoice: string;
-    action_type: 'payment_started' | 'payment_completed' | 'payment_failed';
-    created_at: Date;
-  }>> {
+  async getPaymentStatusEntries(invoice: string): Promise<
+    Array<{
+      id: number;
+      invoice: string;
+      action_type: 'payment_started' | 'payment_completed' | 'payment_failed';
+      created_at: Date;
+    }>
+  > {
     try {
       const records = await this.db.getAllAsync<{
         id: number;
         invoice: string;
         action_type: string;
         created_at: number;
-      }>(
-        `SELECT * FROM payment_status WHERE invoice = ? ORDER BY created_at ASC`,
-        [invoice]
-      );
+      }>(`SELECT * FROM payment_status WHERE invoice = ? ORDER BY created_at ASC`, [invoice]);
 
       return records.map(record => ({
         ...record,
-        action_type: record.action_type as 'payment_started' | 'payment_completed' | 'payment_failed',
+        action_type: record.action_type as
+          | 'payment_started'
+          | 'payment_completed'
+          | 'payment_failed',
         created_at: fromUnixSeconds(record.created_at),
       }));
     } catch (error) {
@@ -1001,12 +1007,14 @@ export class DatabaseService {
     }
   }
 
-  async getPendingPayments(): Promise<Array<{
-    id: string;
-    invoice: string;
-    action_type: 'payment_started' | 'payment_completed' | 'payment_failed';
-    created_at: Date;
-  }>> {
+  async getPendingPayments(): Promise<
+    Array<{
+      id: string;
+      invoice: string;
+      action_type: 'payment_started' | 'payment_completed' | 'payment_failed';
+      created_at: Date;
+    }>
+  > {
     try {
       const records = await this.db.getAllAsync<ActivityRecord>(
         `SELECT * FROM activities 
@@ -1044,10 +1052,7 @@ export class DatabaseService {
 
   async deleteTag(token: string) {
     try {
-      const result = await this.db.runAsync(
-        `DELETE FROM tags WHERE token = ?`,
-        [token]
-      );
+      const result = await this.db.runAsync(`DELETE FROM tags WHERE token = ?`, [token]);
       return result.changes;
     } catch (error) {
       console.error('Error deleting tag:', error);

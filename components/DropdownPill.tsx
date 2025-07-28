@@ -1,55 +1,66 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Modal, FlatList } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { ChevronDown, Table, User, DoorOpen, ChefHat, X } from 'lucide-react-native';
-
-interface DropdownItem {
-  id: string;
-  label: string;
-  icon: React.ComponentType<any>;
-}
+import { ChevronDown, X, Star, Tag as TagIcon } from 'lucide-react-native';
+import { useSQLiteContext } from 'expo-sqlite';
+import { DatabaseService, type Tag } from '@/services/database';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface DropdownPillProps {
-  selectedItem?: DropdownItem;
-  onItemSelect?: (item: DropdownItem) => void;
+  selectedItem?: Tag;
+  onItemSelect?: (item: Tag) => void;
 }
-
-const MOCK_ITEMS: DropdownItem[] = [
-  {
-    id: 'table1',
-    label: 'Table 1',
-    icon: Table,
-  },
-  {
-    id: 'table2',
-    label: 'Table 2',
-    icon: Table,
-  },
-  {
-    id: 'cashier',
-    label: 'Cashier',
-    icon: User,
-  },
-  {
-    id: 'mainDoor',
-    label: 'Main Door',
-    icon: DoorOpen,
-  },
-  {
-    id: 'kitchen',
-    label: 'Kitchen',
-    icon: ChefHat,
-  },
-];
 
 export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPillProps) {
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [favoriteTagId, setFavoriteTagId] = useState<string | null>(null);
+  const [internalSelectedItem, setInternalSelectedItem] = useState<Tag | null>(null);
 
-  // Use first item as default if no selection provided
-  const currentItem = selectedItem || MOCK_ITEMS[0];
-  const IconComponent = currentItem.icon;
+  // Database setup
+  const sqliteContext = useSQLiteContext();
+  const DB = new DatabaseService(sqliteContext);
+
+  // Load favorite tag from AsyncStorage
+  useEffect(() => {
+    const loadFavoriteTag = async () => {
+      try {
+        const favoriteId = await AsyncStorage.getItem('favorite_tag_id');
+        setFavoriteTagId(favoriteId);
+      } catch (error) {
+        console.error('Error loading favorite tag:', error);
+      }
+    };
+
+    loadFavoriteTag();
+  }, []);
+
+  // Fetch tags from database
+  useEffect(() => {
+    const fetchTags = async () => {
+      try {
+        const fetchedTags = await DB.getTags();
+        setTags(fetchedTags);
+      } catch (error) {
+        console.error('Error fetching tags:', error);
+        setTags([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTags();
+  }, [DB]);
+
+  // Use selected item, then internal selected item, then favorite tag, then first item
+  const currentItem =
+    selectedItem ||
+    internalSelectedItem ||
+    (favoriteTagId ? tags.find(tag => String(tag.id) === favoriteTagId) : null) ||
+    (tags.length > 0 ? tags[0] : null);
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'cardBackground');
@@ -60,14 +71,33 @@ export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPil
   const buttonPrimaryColor = useThemeColor({}, 'buttonPrimary');
   const buttonPrimaryTextColor = useThemeColor({}, 'buttonPrimaryText');
 
-  const handleItemSelect = (item: DropdownItem) => {
+  const handleItemSelect = (item: Tag) => {
     setIsModalVisible(false);
+    setInternalSelectedItem(item);
     onItemSelect?.(item);
   };
 
-  const renderDropdownItem = ({ item }: { item: DropdownItem }) => {
-    const ItemIcon = item.icon;
-    const isSelected = item.id === currentItem.id;
+  const handleStarPress = async (item: Tag, event: any) => {
+    event.stopPropagation();
+    try {
+      const isFavorite = String(item.id) === favoriteTagId;
+      const newFavoriteId = isFavorite ? null : item.id;
+
+      if (newFavoriteId) {
+        await AsyncStorage.setItem('favorite_tag_id', String(newFavoriteId));
+        setFavoriteTagId(String(newFavoriteId));
+      } else {
+        await AsyncStorage.removeItem('favorite_tag_id');
+        setFavoriteTagId(null);
+      }
+    } catch (error) {
+      console.error('Error setting favorite tag:', error);
+    }
+  };
+
+  const renderDropdownItem = ({ item }: { item: Tag }) => {
+    const isSelected = item.id === currentItem?.id;
+    const isFavorite = String(item.id) === favoriteTagId;
 
     return (
       <TouchableOpacity
@@ -79,8 +109,8 @@ export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPil
         activeOpacity={0.7}
       >
         <View style={styles.dropdownItemContent}>
-          <ItemIcon
-            size={20}
+          <TagIcon
+            size={16}
             color={isSelected ? buttonPrimaryTextColor : primaryTextColor}
             style={styles.dropdownItemIcon}
           />
@@ -90,17 +120,58 @@ export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPil
               { color: isSelected ? buttonPrimaryTextColor : primaryTextColor },
             ]}
           >
-            {item.label}
+            {item.description || item.token}
           </ThemedText>
         </View>
-        {isSelected && (
-          <ThemedText style={[styles.selectedIndicator, { color: buttonPrimaryTextColor }]}>
-            ✓
-          </ThemedText>
-        )}
+        <View style={styles.dropdownItemActions}>
+          {isSelected && (
+            <ThemedText style={[styles.selectedIndicator, { color: buttonPrimaryTextColor }]}>
+              ✓
+            </ThemedText>
+          )}
+          <TouchableOpacity
+            onPress={event => handleStarPress(item, event)}
+            style={styles.starButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Star size={20} color="white" fill={isFavorite ? 'white' : 'transparent'} />
+          </TouchableOpacity>
+        </View>
       </TouchableOpacity>
     );
   };
+
+  if (isLoading) {
+    return (
+      <TouchableOpacity
+        style={[styles.container, { backgroundColor, borderColor }]}
+        activeOpacity={0.7}
+        disabled={true}
+      >
+        <View style={styles.content}>
+          <ThemedText style={[styles.label, { color: primaryTextColor }]}>Loading...</ThemedText>
+        </View>
+        <ChevronDown size={20} color={secondaryTextColor} />
+      </TouchableOpacity>
+    );
+  }
+
+  if (!currentItem) {
+    return (
+      <TouchableOpacity
+        style={[styles.container, { backgroundColor, borderColor }]}
+        activeOpacity={0.7}
+        disabled={true}
+      >
+        <View style={styles.content}>
+          <ThemedText style={[styles.label, { color: primaryTextColor }]}>
+            No tags available
+          </ThemedText>
+        </View>
+        <ChevronDown size={20} color={secondaryTextColor} />
+      </TouchableOpacity>
+    );
+  }
 
   return (
     <>
@@ -110,9 +181,9 @@ export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPil
         activeOpacity={0.7}
       >
         <View style={styles.content}>
-          <IconComponent size={20} color={primaryTextColor} style={styles.icon} />
+          <TagIcon size={16} color={primaryTextColor} style={styles.icon} />
           <ThemedText style={[styles.label, { color: primaryTextColor }]}>
-            {currentItem.label}
+            {currentItem.description || currentItem.token}
           </ThemedText>
         </View>
         <ChevronDown size={20} color={secondaryTextColor} />
@@ -136,7 +207,7 @@ export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPil
           >
             <View style={styles.modalHeader}>
               <ThemedText style={[styles.modalTitle, { color: primaryTextColor }]}>
-                Select Location
+                Select Tag
               </ThemedText>
               <TouchableOpacity
                 onPress={() => setIsModalVisible(false)}
@@ -146,7 +217,7 @@ export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPil
               </TouchableOpacity>
             </View>
             <FlatList
-              data={MOCK_ITEMS}
+              data={tags}
               renderItem={renderDropdownItem}
               keyExtractor={item => item.id}
               style={styles.dropdownList}
@@ -174,7 +245,7 @@ const styles = StyleSheet.create({
   content: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     flex: 1,
   },
   icon: {
@@ -242,5 +313,13 @@ const styles = StyleSheet.create({
   selectedIndicator: {
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  dropdownItemActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  starButton: {
+    padding: 4,
   },
 });

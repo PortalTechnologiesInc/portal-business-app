@@ -402,7 +402,9 @@ export const DatabaseProvider = ({ children }: DatabaseProviderProps) => {
           CREATE INDEX IF NOT EXISTS idx_activities_status ON activities(status);
         `);
         currentDbVersion = 12;
-        console.log('Created payment_status table and added status column to activities - now at version 12');
+        console.log(
+          'Created payment_status table and added status column to activities - now at version 12'
+        );
       }
 
       if (currentDbVersion <= 12) {
@@ -427,7 +429,9 @@ export const DatabaseProvider = ({ children }: DatabaseProviderProps) => {
           );
         `);
         currentDbVersion = 14;
-        console.log('Created payment_status table and added status column to activities - now at version 12');
+        console.log(
+          'Created payment_status table and added status column to activities - now at version 12'
+        );
       }
 
       await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
