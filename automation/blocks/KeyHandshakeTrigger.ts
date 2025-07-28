@@ -42,6 +42,17 @@ export class KeyHandshakeTrigger implements BlockType {
   getHeight(): number {
     return 80;
   }
+
+  async run(inputs: Promise<any>[]): Promise<any[]> {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        console.log('Key handshake trigger');
+        resolve({
+          'main-key': '1234567890'
+        });
+      }, 1000);
+    });
+  }
 }
 
 export const keyHandshakeTrigger = new KeyHandshakeTrigger(); 

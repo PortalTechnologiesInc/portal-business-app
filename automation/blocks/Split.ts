@@ -1,4 +1,4 @@
-import { BlockType, BlockParameter, ConnectionPoint, DataField } from '../types';
+import { BlockType, BlockParameter, ConnectionPoint, DataField, BlockConfig } from '../types';
 
 export const split: BlockType = {
   id: 'split',
@@ -6,6 +6,14 @@ export const split: BlockType = {
   
   getSettings(): BlockParameter[] {
     return [
+      {
+        id: 'split_ratio',
+        name: 'Split Ratio',
+        type: 'number',
+        required: false,
+        placeholder: '0.5 (default: 50/50)',
+        defaultValue: 0.5
+      }
     ];
   },
 
@@ -50,5 +58,19 @@ export const split: BlockType = {
   },
 
   getWidth(): number { return 120; },
-  getHeight(): number { return 80; }
+  getHeight(): number { return 80; },
+
+  async run(inputs: Promise<any>[], config?: BlockConfig): Promise<any> {
+    // Await all input promises
+    const resolvedInputs = await Promise.all(inputs);
+    
+    console.log(resolvedInputs);
+    // Get the input value
+    const inputValue = resolvedInputs[0]['input-value'];
+    
+    return {
+      'output-left': inputValue,
+      'output-right': inputValue
+    };
+  }
 }; 

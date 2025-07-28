@@ -6,10 +6,10 @@ import { ThemedView } from '@/components/ThemedView';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Colors } from '@/constants/Colors';
-import { Workflow, Circle, Settings, ArrowLeft, Edit3, Save, Plus, Trash2 } from 'lucide-react-native';
+import { Workflow, Circle, Settings, ArrowLeft, Edit3, Save, Plus, Trash2, Play } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import BlockSettings from '@/components/BlockSettings';
-import { BlockConfig, Block, ConnectionPoint, Connection } from '@/automation/types';
+import { BlockConfig, Block, ConnectionPoint, Connection, BlockType } from '@/automation/types';
 import { blockRegistry } from '@/automation/BlockRegistry';
 import { useSQLiteContext } from 'expo-sqlite';
 import { DatabaseService, type WorkflowWithDates } from '@/services/database';
@@ -241,6 +241,53 @@ export default function WorkflowEditorScreen() {
     setShowBlockPalette(false);
   };
 
+  const recurse = async (block: Block) => {
+    console.log('Recursing block:', block.id);
+    const blockTypeData = blockRegistry.getBlock(block.type);
+    const blockConfig = blockConfigs.find(c => c.blockId === block.id);
+    const toBlock = connections.filter(conn => conn.toBlockId === block.id);
+
+    const incomingPromises = await Promise.all(toBlock.map(conn => {
+      const blockId = conn.fromBlockId;
+      const block = blocks.find(b => b.id === blockId);
+      if (block) {
+        return recurse(block)
+          .then(value => {
+            if (!value[conn.fromOutputId]) {
+              throw new Error(`Block ${block.id} output ${conn.fromOutputId} not found`);
+            } 
+
+            const obj: any = {};
+            obj[conn.toInputId] = value[conn.fromOutputId];
+            return obj;
+          })
+      } else {
+          return Promise.resolve(null);
+      }
+    }));
+
+    const mergedPromises = incomingPromises.reduce((acc, curr) => {
+      return { ...acc, ...curr };
+    }, {});
+
+    console.log('Block', block.id, 'Incoming promises:', mergedPromises);
+    const results = await blockTypeData?.run([mergedPromises], blockConfig);
+    console.log('results', results);
+    return results;
+  }
+
+  const runWorkflow = async () => {
+    // Find leaf blocks with no outputs connections
+    const leafBlocks = blocks.filter(block => {
+      const fromConnections = connections.filter(conn => conn.fromBlockId === block.id);
+      return fromConnections.length === 0;
+    });
+
+    console.log('Leaf blocks:', leafBlocks);
+    const results = await Promise.any(leafBlocks.map(block => recurse(block)));
+    console.log('Run completed', results);
+  }
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
       <ThemedView style={styles.container}>
@@ -274,15 +321,23 @@ export default function WorkflowEditorScreen() {
                 </TouchableOpacity>
               </View>
             )}
-          </View>
-                            <TouchableOpacity
-                    style={[styles.addBlockButton, { backgroundColor: Colors.primary }]}
-                    onPress={() => setShowBlockPalette(true)}
-                  >
-            <Plus size={20} color="white" />
-            <ThemedText style={styles.addBlockButtonText}>Add Block</ThemedText>
-          </TouchableOpacity>
-        </View>
+                           </View>
+                 <View style={styles.headerButtons}>
+                   <TouchableOpacity
+                     style={[styles.runWorkflowButton, { backgroundColor: Colors.success }]}
+                     onPress={runWorkflow}
+                   >
+                     <Play size={20} color="white" />
+                     <ThemedText style={styles.runWorkflowButtonText}>Run</ThemedText>
+                   </TouchableOpacity>
+                   <TouchableOpacity
+                     style={[styles.addBlockButton, { backgroundColor: Colors.primary }]}
+                     onPress={() => setShowBlockPalette(true)}
+                   >
+                     <Plus size={20} color="white" />
+                   </TouchableOpacity>
+                 </View>
+               </View>
 
         {/* Canvas */}
         <TouchableOpacity
@@ -609,20 +664,33 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     padding: 4,
   },
-  addBlockButton: {
+  headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    gap: 8,
+  },
+  runWorkflowButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    marginBottom: 12,
-    alignSelf: 'flex-start',
+    minHeight: 36,
   },
-  addBlockButtonText: {
+  runWorkflowButtonText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
-    marginLeft: 8,
+    marginLeft: 6,
+  },
+  addBlockButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minHeight: 36,
   },
   canvasContainer: {
     flex: 1,

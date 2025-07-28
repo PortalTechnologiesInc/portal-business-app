@@ -1,4 +1,4 @@
-import { BlockType, BlockParameter, ConnectionPoint, DataField } from '../types';
+import { BlockType, BlockParameter, ConnectionPoint, DataField, BlockConfig } from '../types';
 
 export const ticketRequest: BlockType = {
   id: 'ticket_request',
@@ -57,10 +57,7 @@ export const ticketRequest: BlockType = {
         y: 72,
         label: 'Success',
         dataFields: [
-          { name: 'ticket_id', type: 'string', description: 'Ticket request ID' },
-          { name: 'key', type: 'string', description: 'Request key' },
-          { name: 'amount', type: 'number', description: 'Requested amount' },
-          { name: 'status', type: 'string', description: 'Ticket status' }
+          { name: 'num_tickets', type: 'number', description: 'Number of tickets requested' }
         ]
       },
       {
@@ -71,13 +68,36 @@ export const ticketRequest: BlockType = {
         label: 'Failure',
         dataFields: [
           { name: 'error', type: 'string', description: 'Error message' },
-          { name: 'key', type: 'string', description: 'Request key' },
-          { name: 'amount', type: 'number', description: 'Requested amount' }
         ]
       }
     ];
   },
 
   getWidth(): number { return 155; },
-  getHeight(): number { return 80; }
+  getHeight(): number { return 80; },
+
+  async run(inputs: Promise<any>[], config?: BlockConfig): Promise<any> {
+    // TODO: request the ticket
+    console.log(inputs);
+    const key = inputs[0]['input-key'];
+    const amount = inputs[0]['input-amount'];
+
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        if (Math.random() < 0.5) {
+          resolve({
+            'output-success': {
+              'num_tickets': amount,
+            },
+          })
+        } else {
+          resolve({
+            'output-failure': {
+              'error': 'Failed to request ticket',
+            }
+          })
+        }
+      }, 3000)
+    })
+ }
 }; 

@@ -1,4 +1,4 @@
-import { BlockType, BlockParameter, ConnectionPoint, DataField } from '../types';
+import { BlockType, BlockParameter, ConnectionPoint, DataField, BlockConfig } from '../types';
 
 export const constant: BlockType = {
   id: 'constant',
@@ -34,7 +34,7 @@ export const constant: BlockType = {
         id: 'output-value',
         type: 'output',
         x: 90,
-        y: 52,
+        y: 45,
         label: 'Value',
         dataFields: [
           { name: 'value', type: 'string', description: 'Constant value' },
@@ -45,5 +45,23 @@ export const constant: BlockType = {
   },
 
   getWidth(): number { return 120; },
-  getHeight(): number { return 60; }
+  getHeight(): number { return 60; },
+
+  async run(inputs: Promise<any>[], config?: BlockConfig): Promise<any> {
+    const constantValue = config?.parameters?.value as string;
+    const constantType = config?.parameters?.type as string;
+
+    let value: any = constantValue;
+    if (constantType === 'number') {
+      value = parseFloat(constantValue);
+    } else if (constantType === 'boolean') {
+      value = constantValue === 'true';
+    } else if (constantType === 'object') {
+      value = JSON.parse(constantValue);
+    }
+    
+    return {
+      'output-value': value
+    };
+  }
 }; 
