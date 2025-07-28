@@ -3,12 +3,13 @@ import { StyleSheet, TouchableOpacity, Alert, TextInput, View, ToastAndroid, Mod
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, X, Plus, Tag as TagIcon, Home, User, Settings, Star, Heart, ShoppingCart, CreditCard, Gift, Coffee, Utensils, Car, Bike, Footprints, Phone, Mail, Calendar, Clock, MapPin, Camera } from 'lucide-react-native';
+import { ArrowLeft, X, Plus, Tag as TagIcon, Home, User, Settings, Star, Heart, ShoppingCart, CreditCard, Gift, Coffee, Utensils, Car, Bike, Footprints, Phone, Mail, Calendar, Clock, MapPin, Camera, WifiOff } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { DatabaseService, Tag, toUnixSeconds } from '@/services/database';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useNostrService } from '@/context/NostrServiceContext';
+import NfcManager from 'react-native-nfc-manager';
 
 export default function PortalTagsManagementScreen() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function PortalTagsManagementScreen() {
   const [newTagIcon, setNewTagIcon] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isIconModalVisible, setIsIconModalVisible] = useState(false);
+  const [isNfcEnabled, setIsNfcEnabled] = useState<boolean | null>(null);
 
   // Available icons for selection
   const availableIcons = [
@@ -74,15 +76,34 @@ export default function PortalTagsManagementScreen() {
   const DB = new DatabaseService(sqliteContext);
   const nostrService = useNostrService();
 
+  // NFC Status Checking
+  const checkNFCStatus = async (): Promise<boolean> => {
+    try {
+      const isStarted = await NfcManager.isSupported();
+      if (!isStarted) {
+        return false;
+      }
+      const isEnabled = await NfcManager.isEnabled();
+      return isEnabled;
+    } catch {
+      return false;
+    }
+  };
+
   useEffect(() => {
     try {
-      const getTags = async () => {
+      const initializeScreen = async () => {
+        // Check NFC status first
+        const nfcEnabled = await checkNFCStatus();
+        setIsNfcEnabled(nfcEnabled);
+        
+        // Load tags
         let tags = await DB.getTags();
-        setTags(tags)
+        setTags(tags);
       }
-      getTags();
+      initializeScreen();
     } catch (error) {
-      console.error('Error loading relays data:', error);
+      console.error('Error loading data:', error);
     } finally {
       setIsLoading(false);
     }
@@ -199,6 +220,98 @@ export default function PortalTagsManagementScreen() {
           <ThemedView style={styles.content}>
             <ThemedText style={{ color: primaryTextColor }}>Loading...</ThemedText>
           </ThemedView>
+        </ThemedView>
+      </SafeAreaView>
+    );
+  }
+
+  if (isNfcEnabled === null) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
+        <ThemedView style={styles.container}>
+          <ThemedView style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <ArrowLeft size={20} color={primaryTextColor} />
+            </TouchableOpacity>
+            <ThemedText style={[styles.headerText, { color: primaryTextColor }]}>
+              Portal Tags
+            </ThemedText>
+          </ThemedView>
+          <ThemedView style={styles.content}>
+            <ThemedText style={{ color: primaryTextColor }}>Checking NFC status...</ThemedText>
+          </ThemedView>
+        </ThemedView>
+      </SafeAreaView>
+    );
+  }
+
+  if (!isNfcEnabled) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
+        <ThemedView style={styles.container}>
+          <ThemedView style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <ArrowLeft size={20} color={primaryTextColor} />
+            </TouchableOpacity>
+            <ThemedText style={[styles.headerText, { color: primaryTextColor }]}>
+              Portal Tags
+            </ThemedText>
+          </ThemedView>
+          
+          <View style={styles.content}>
+            <View style={[styles.nfcCourtesyContainer, { backgroundColor: surfaceSecondaryColor }]}>
+              <WifiOff size={64} color={secondaryTextColor} />
+              <ThemedText style={[styles.nfcCourtesyTitle, { color: primaryTextColor }]}>
+                NFC Not Available
+              </ThemedText>
+              <ThemedText style={[styles.nfcCourtesyDescription, { color: secondaryTextColor }]}>
+                NFC is not enabled on your device. To use Portal tags, you need to enable NFC in your device settings.
+              </ThemedText>
+              
+              <View style={styles.nfcInstructions}>
+                <ThemedText style={[styles.nfcInstructionsTitle, { color: primaryTextColor }]}>
+                  How to enable NFC:
+                </ThemedText>
+                <View style={styles.nfcInstructionItem}>
+                  <ThemedText style={[styles.nfcInstructionNumber, { color: buttonPrimaryColor }]}>1</ThemedText>
+                  <ThemedText style={[styles.nfcInstructionText, { color: secondaryTextColor }]}>
+                    Go to your device Settings
+                  </ThemedText>
+                </View>
+                <View style={styles.nfcInstructionItem}>
+                  <ThemedText style={[styles.nfcInstructionNumber, { color: buttonPrimaryColor }]}>2</ThemedText>
+                  <ThemedText style={[styles.nfcInstructionText, { color: secondaryTextColor }]}>
+                    Find "Connections" or "Connected devices"
+                  </ThemedText>
+                </View>
+                <View style={styles.nfcInstructionItem}>
+                  <ThemedText style={[styles.nfcInstructionNumber, { color: buttonPrimaryColor }]}>3</ThemedText>
+                  <ThemedText style={[styles.nfcInstructionText, { color: secondaryTextColor }]}>
+                    Enable "NFC" or "Near Field Communication"
+                  </ThemedText>
+                </View>
+              </View>
+              
+              <TouchableOpacity
+                style={[styles.nfcRetryButton, { backgroundColor: buttonPrimaryColor }]}
+                onPress={async () => {
+                  const nfcEnabled = await checkNFCStatus();
+                  setIsNfcEnabled(nfcEnabled);
+                  if (!nfcEnabled) {
+                    Alert.alert(
+                      'NFC Still Disabled',
+                      'NFC is still not enabled. Please check your device settings and try again.',
+                      [{ text: 'OK' }]
+                    );
+                  }
+                }}
+              >
+                <ThemedText style={[styles.nfcRetryButtonText, { color: buttonPrimaryTextColor }]}>
+                  Check Again
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
         </ThemedView>
       </SafeAreaView>
     );
@@ -615,5 +728,57 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     paddingBottom: 40, // Add extra padding at bottom for better scrolling
+  },
+  nfcCourtesyContainer: {
+    alignItems: 'center',
+    padding: 20,
+    borderRadius: 12,
+    marginTop: 20,
+  },
+  nfcCourtesyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  nfcCourtesyDescription: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  nfcInstructions: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  nfcInstructionsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  nfcInstructionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  nfcInstructionNumber: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginRight: 8,
+  },
+  nfcInstructionText: {
+    fontSize: 14,
+  },
+  nfcRetryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  nfcRetryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 }); 
