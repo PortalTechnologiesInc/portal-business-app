@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, TouchableOpacity, Alert, TextInput, View, ToastAndroid, Modal, ScrollView } from 'react-native';
+import { StyleSheet, TouchableOpacity, Alert, TextInput, View, ToastAndroid, Modal, ScrollView, Platform, BackHandler } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useRouter } from 'expo-router';
@@ -19,9 +19,10 @@ export default function PortalTagsManagementScreen() {
   const [newTagToken, setNewTagToken] = useState<string>('');
   const [newTagDescription, setNewTagDescription] = useState<string>('');
   const [newTagIcon, setNewTagIcon] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isIconModalVisible, setIsIconModalVisible] = useState(false);
   const [isNfcEnabled, setIsNfcEnabled] = useState<boolean | null>(null);
+  const [isWriting, setIsWriting] = useState<boolean>(false);
 
   // Available icons for selection
   const availableIcons = [
@@ -93,6 +94,7 @@ export default function PortalTagsManagementScreen() {
   };
 
   const writeNdef = async (url: string) => {
+    setIsWriting(true);
     let result = false;
 
     try {
@@ -113,11 +115,13 @@ export default function PortalTagsManagementScreen() {
       NfcManager.cancelTechnologyRequest();
     }
 
+    setIsWriting(false);
     return result;
   }
 
   useEffect(() => {
     try {
+      setIsLoading(true);
       const initializeScreen = async () => {
         // Check NFC status first
         const nfcEnabled = await checkNFCStatus();
@@ -188,10 +192,8 @@ export default function PortalTagsManagementScreen() {
         return;
       }
 
-      let x = await writeNdef(newTag.url);
-      console.warn('the writing is: ', x);
-      if (!x) {
-        console.error('eh no bro');
+      let isWritten = await writeNdef(newTag.url);
+      if (!isWritten) {
         return;
       }
       // Add to database
@@ -204,17 +206,29 @@ export default function PortalTagsManagementScreen() {
       setNewTagIcon('');
 
       ToastAndroid.showWithGravity(
-        'Tag created successfully (NFC writing coming soon)',
+        'Tag created successfully',
         ToastAndroid.SHORT,
         ToastAndroid.CENTER
       );
     } catch (error) {
       console.error('Error with NFC tag:', error);
+
+      clearNfc()
+
       ToastAndroid.showWithGravity(
         'Failed to interact with NFC tag. Please try again.',
         ToastAndroid.LONG,
         ToastAndroid.CENTER
       );
+    }
+  }
+  const clearNfc = async () => {
+    // Clean up NFC session on error
+    try {
+      await NfcManager.cancelTechnologyRequest();
+      await NfcManager.unregisterTagEvent();
+    } catch (cleanupError) {
+      console.error('Error cleaning up NFC session:', cleanupError);
     }
   }
 
@@ -360,6 +374,19 @@ export default function PortalTagsManagementScreen() {
           </View>
         </ThemedView>
       </SafeAreaView>
+    );
+  }
+
+  if (isWriting) {
+    return (
+      <NFCScanUI
+        isNFCEnabled={isNfcEnabled}
+        scanState='scanning'
+        onBackPress={() => {
+          setIsWriting(false)
+          clearNfc();
+        }}
+      />
     );
   }
 
