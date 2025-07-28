@@ -1,12 +1,12 @@
 export default {
   expo: {
-    name: 'Portal',
-    slug: 'portal',
+    name: 'Portal Business',
+    slug: 'portal-business',
     version: '1.0.3',
     orientation: 'portrait',
     owner: 'portaltechnologiesinc',
     icon: './assets/images/appLogo.png',
-    scheme: 'portal',
+    scheme: 'portal-business',
     userInterfaceStyle: 'dark',
     newArchEnabled: true,
     splash: {
@@ -20,8 +20,8 @@ export default {
     ios: {
       supportsTablet: true,
       userInterfaceStyle: 'dark',
-      bundleIdentifier: 'cc.getportal.portal',
-      associatedDomains: ['applinks:portal.app'],
+      bundleIdentifier: 'cc.getportal.portalbusiness',
+      associatedDomains: ['applinks:portal-business.app'],
       infoPlist: {
         NSCameraUsageDescription: 'Portal uses your camera to scan for QR codes',
       },
@@ -41,7 +41,7 @@ export default {
         foregroundImage: './assets/images/appLogo.png',
         backgroundColor: '#141416',
       },
-      package: 'cc.getportal.portal',
+      package: 'cc.getportal.portalbusiness',
       userInterfaceStyle: 'dark',
       intentFilters: [
         {
@@ -49,7 +49,7 @@ export default {
           autoVerify: true,
           data: [
             {
-              scheme: 'portal',
+              scheme: 'portal-business',
             },
           ],
           category: ['BROWSABLE', 'DEFAULT'],
@@ -89,12 +89,12 @@ export default {
         },
       ],
       [
-        "react-native-nfc-manager",
+        'react-native-nfc-manager',
         {
-          "nfcPermission": "Portal uses NFC for contactless interactions",
-          "includeNdefEntitlement": false,
-        }
-      ]
+          nfcPermission: 'Portal uses NFC for contactless interactions',
+          includeNdefEntitlement: false,
+        },
+      ],
     ],
     experiments: {
       typedRoutes: true,

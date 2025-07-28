@@ -174,7 +174,7 @@ export default function Onboarding() {
         {currentPage === 'intro' && (
           <View style={styles.pageContainer}>
             <ThemedText type="title" style={styles.mainTitle}>
-              Your identity in your inventory
+              Your business identity, secured
             </ThemedText>
 
             <View style={styles.buttonGroup}>

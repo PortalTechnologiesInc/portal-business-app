@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Tabs } from 'expo-router';
-import { Home, List, Receipt, Ticket, UserSquare2, Settings } from 'lucide-react-native';
+import { Calculator, Ticket, Settings } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { View, Platform, ToastAndroid } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,21 +8,11 @@ import { HapticTab } from '@/components/HapticTab';
 import { useThemeColor } from '@/hooks/useThemeColor';
 
 // Memoized tab icons to prevent unnecessary re-rendering
-const HomeIcon = React.memo(({ color }: { color: string }) => <Home size={24} color={color} />);
-
-const ActivityIcon = React.memo(({ color }: { color: string }) => <List size={24} color={color} />);
-
-const SubscriptionIcon = React.memo(({ color }: { color: string }) => (
-  <Receipt size={24} color={color} />
+const KeypadIcon = React.memo(({ color }: { color: string }) => (
+  <Calculator size={24} color={color} />
 ));
 
-const TicketIcon = React.memo(({ color }: { color: string }) => (
-  <Ticket size={24} color={color} />
-));
-
-const IdentityIcon = React.memo(({ color }: { color: string }) => (
-  <UserSquare2 size={24} color={color} />
-));
+const TicketIcon = React.memo(({ color }: { color: string }) => <Ticket size={24} color={color} />);
 
 const SettingsIcon = React.memo(({ color }: { color: string }) => (
   <Settings size={24} color={color} />
@@ -91,22 +81,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <HomeIcon color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="ActivityList"
-        options={{
-          title: 'Activities',
-          tabBarIcon: ({ color }) => <ActivityIcon color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="Subscriptions"
-        options={{
-          title: 'Subscriptions',
-          tabBarIcon: ({ color }) => <SubscriptionIcon color={color} />,
+          title: 'Keypad',
+          tabBarIcon: ({ color }) => <KeypadIcon color={color} />,
         }}
       />
       <Tabs.Screen
@@ -123,20 +99,41 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <SettingsIcon color={color} />,
         }}
       />
+      {/* Hide all other screens from tab bar */}
+      <Tabs.Screen
+        name="Keypad"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="OldTickets"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="ActivityList"
+        options={{
+          href: null,
+        }}
+      />
       <Tabs.Screen
         name="Certificates"
         options={{
-          title: 'Certificates',
-          tabBarIcon: ({ color }) => <IdentityIcon color={color} />,
-          href: null, // This hides the tab from the tab bar
+          href: null,
         }}
       />
       <Tabs.Screen
         name="IdentityList"
         options={{
-          title: 'Identities',
-          tabBarIcon: ({ color }) => <IdentityIcon color={color} />,
-          href: null, // This hides the tab from the tab bar
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="Subscriptions"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

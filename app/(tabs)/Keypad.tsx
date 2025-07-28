@@ -4,38 +4,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { useCurrency } from '@/context/CurrencyContext';
-import { Send, ArrowLeft } from 'lucide-react-native';
-import DropdownPill from '@/components/DropdownPill';
 
-export default function Home() {
+export default function KeypadScreen() {
   const [display, setDisplay] = useState('');
-  const { getCurrentCurrencySymbol } = useCurrency();
 
-  // Currency formatting function
-  const formatCurrency = (numStr: string) => {
+  // Simple number formatting function
+  const formatNumber = (numStr: string) => {
     if (numStr === '') return '';
-
-    const currencySymbol = getCurrentCurrencySymbol();
-
-    // Handle decimal input
-    if (numStr.includes('.')) {
-      const parts = numStr.split('.');
-      const wholePart = parts[0] || '0';
-      const decimalPart = parts[1] || '';
-
-      // Format whole part with commas
-      const formattedWhole = wholePart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
-      // Limit decimal to 2 places for currency
-      const limitedDecimal = decimalPart.slice(0, 2);
-
-      return `${formattedWhole}${limitedDecimal ? '.' + limitedDecimal : ''} ${currencySymbol}`;
-    } else {
-      // Format whole numbers
-      const formatted = numStr.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-      return `${formatted} ${currencySymbol}`;
-    }
+    // Remove any existing dots first
+    const cleanNum = numStr.replace(/\./g, '');
+    // Add dots every 3 digits from right
+    return cleanNum.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   };
 
   // Theme colors
@@ -64,7 +43,18 @@ export default function Home() {
       }
 
       // Add the new number
-      return prev + number;
+      const newValue = prev + number;
+
+      // Simple formatting: add dots every 3 digits from right
+      if (!newValue.includes('.')) {
+        // Format whole numbers
+        return formatNumber(newValue);
+      } else {
+        // Handle decimal numbers
+        const parts = newValue.split('.');
+        const wholePart = formatNumber(parts[0]);
+        return wholePart + '.' + parts[1];
+      }
     });
   };
 
@@ -78,8 +68,7 @@ export default function Home() {
 
   const handleSubmit = () => {
     // Handle keypad submission logic here
-    const numericValue = parseFloat(display || '0');
-    console.log('Keypad submitted:', formatCurrency(display), 'Numeric value:', numericValue);
+    console.log('Keypad submitted:', display);
     setDisplay('');
   };
 
@@ -93,15 +82,11 @@ export default function Home() {
       ]}
       onPress={() => {
         if (type === 'action') {
-          if (key === '⌫') handleDelete();
+          if (key === 'C') handleClear();
+          else if (key === '⌫') handleDelete();
           else if (key === '✓') handleSubmit();
         } else {
           handleNumberPress(key);
-        }
-      }}
-      onLongPress={() => {
-        if (key === '⌫') {
-          handleClear();
         }
       }}
       activeOpacity={0.7}
@@ -120,9 +105,10 @@ export default function Home() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor }]} edges={['top']}>
       <ThemedView style={styles.container}>
-        <View style={styles.dropdownContainer}>
-          <DropdownPill />
-        </View>
+        <ThemedView style={styles.header}>
+          <ThemedText style={[styles.headerText, { color: primaryTextColor }]}>Keypad</ThemedText>
+        </ThemedView>
+
         <View style={styles.content}>
           <View style={styles.displayContainer}>
             <ThemedView
@@ -132,7 +118,7 @@ export default function Home() {
               ]}
             >
               <ThemedText style={[styles.displayText, { color: primaryTextColor }]}>
-                {display ? formatCurrency(display) : `0 ${getCurrentCurrencySymbol()}`}
+                {display || '0'}
               </ThemedText>
             </ThemedView>
           </View>
@@ -155,33 +141,21 @@ export default function Home() {
                 {renderKey('9')}
               </View>
               <View style={styles.row}>
-                <View style={styles.emptySpace} />
+                {renderKey('C', 'action')}
                 {renderKey('0')}
-                <View style={styles.emptySpace} />
+                {renderKey('.')}
               </View>
+              <View style={styles.row}>{renderKey('⌫', 'action')}</View>
             </View>
 
-            <View style={styles.buttonContainer}>
+            <View style={styles.okButtonContainer}>
               <TouchableOpacity
-                style={[styles.deleteButton, { backgroundColor: buttonSecondaryColor }]}
-                onPress={handleDelete}
-                onLongPress={handleClear}
-                activeOpacity={0.7}
-              >
-                <ArrowLeft size={20} color={buttonSecondaryTextColor} style={styles.buttonIcon} />
-                <ThemedText style={[styles.buttonText, { color: buttonSecondaryTextColor }]}>
-                  Delete
-                </ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.chargeButton, { backgroundColor: buttonPrimaryColor }]}
+                style={[styles.okButton, { backgroundColor: buttonPrimaryColor }]}
                 onPress={handleSubmit}
                 activeOpacity={0.7}
               >
-                <Send size={20} color={buttonPrimaryTextColor} style={styles.buttonIcon} />
-                <ThemedText style={[styles.buttonText, { color: buttonPrimaryTextColor }]}>
-                  Charge
+                <ThemedText style={[styles.okButtonText, { color: buttonPrimaryTextColor }]}>
+                  OK
                 </ThemedText>
               </TouchableOpacity>
             </View>
@@ -200,8 +174,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 0,
   },
-  dropdownContainer: {
-    alignItems: 'center',
+  header: {
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 16,
@@ -216,7 +189,6 @@ const styles = StyleSheet.create({
   },
   displayContainer: {
     marginBottom: 32,
-    margin: 20,
   },
   display: {
     borderRadius: 12,
@@ -236,18 +208,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-evenly',
     paddingHorizontal: 0,
-    margin: 20,
   },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  okButtonContainer: {
     marginTop: 20,
-    gap: 12,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 24,
   },
   key: {
     width: 95,
@@ -261,33 +229,16 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '600',
   },
-  deleteButton: {
-    flex: 1,
+  okButton: {
+    width: '100%',
     height: 56,
     borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    flexDirection: 'row',
   },
-  chargeButton: {
-    flex: 1,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    flexDirection: 'row',
-  },
-  buttonText: {
-    fontSize: 20,
+  okButtonText: {
+    fontSize: 12,
     fontWeight: '600',
-  },
-  buttonIcon: {
-    marginRight: 8,
-  },
-  emptySpace: {
-    width: 95,
-    height: 95,
   },
 });
