@@ -85,6 +85,15 @@ export interface Tag {
   created_at: number; // Unix timestamp in seconds
 }
 
+export interface Ticket {
+  id: string;
+  mint_url: string;
+  unit: string;
+  price: number;
+  currency: string;
+  created_at: number; // Unix timestamp in seconds
+}
+
 export interface SubscriptionWithDates
   extends Omit<
     SubscriptionRecord,
@@ -1078,6 +1087,52 @@ export class DatabaseService {
     } catch (error) {
       console.error('Error getting the tags:', error);
       return [];
+    }
+  }
+
+  async addTicket(mintUrl: string, unit: string, price: number, currency: string): Promise<string> {
+    try {
+      const now = toUnixSeconds(Date.now());
+      const result = await this.db.runAsync(
+        `INSERT INTO tickets (
+          mint_url, unit, price, currency, created_at
+        ) VALUES (?, ?, ?, ?, ?)`,
+        [mintUrl, unit, price, currency, now]
+      );
+      return result.lastInsertRowId?.toString() || '';
+    } catch (error) {
+      console.error('Error adding ticket:', error);
+      throw error;
+    }
+  }
+
+  async getTickets(): Promise<Array<Ticket>> {
+    try {
+      const records = await this.db.getAllAsync<Ticket>(
+        `SELECT * FROM tickets 
+         ORDER BY created_at DESC`
+      );
+
+      return records.map(record => ({
+        id: record.id,
+        mint_url: record.mint_url,
+        unit: record.unit,
+        price: record.price,
+        currency: record.currency,
+        created_at: record.created_at,
+      }));
+    } catch (error) {
+      console.error('Error getting tickets:', error);
+      return [];
+    }
+  }
+
+  async deleteTicket(id: string): Promise<void> {
+    try {
+      await this.db.runAsync(`DELETE FROM tickets WHERE id = ?`, [id]);
+    } catch (error) {
+      console.error('Error deleting ticket:', error);
+      throw error;
     }
   }
 }

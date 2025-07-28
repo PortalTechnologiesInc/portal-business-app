@@ -7,14 +7,21 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { ArrowLeft, Check } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useCurrency } from '@/context/CurrencyContext';
+import { useSQLiteContext } from 'expo-sqlite';
+import { DatabaseService } from '@/services/database';
 
 export default function AddTicketScreen() {
   const [mintUrl, setMintUrl] = useState('');
   const [unit, setUnit] = useState('');
   const [price, setPrice] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   // Currency context
   const { getCurrentCurrencySymbol } = useCurrency();
+
+  // Database setup
+  const sqliteContext = useSQLiteContext();
+  const DB = new DatabaseService(sqliteContext);
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
@@ -29,17 +36,36 @@ export default function AddTicketScreen() {
     router.back();
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!mintUrl.trim() || !unit.trim() || !price.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
-    // Here you would save the ticket data
-    console.log('Adding ticket:', { mintUrl, unit, price });
+    const priceValue = parseFloat(price);
+    if (isNaN(priceValue) || priceValue <= 0) {
+      Alert.alert('Error', 'Please enter a valid price');
+      return;
+    }
 
-    // Navigate back to tickets page
-    router.back();
+    setIsSaving(true);
+
+    try {
+      const currency = getCurrentCurrencySymbol();
+      await DB.addTicket(mintUrl.trim(), unit.trim(), priceValue, currency);
+
+      Alert.alert('Success', 'Ticket added successfully', [
+        {
+          text: 'OK',
+          onPress: () => router.back(),
+        },
+      ]);
+    } catch (error) {
+      console.error('Error saving ticket:', error);
+      Alert.alert('Error', 'Failed to save ticket. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -125,10 +151,11 @@ export default function AddTicketScreen() {
               style={[styles.saveButton, { backgroundColor: buttonPrimaryColor }]}
               onPress={handleSave}
               activeOpacity={0.7}
+              disabled={isSaving}
             >
               <Check size={24} color={buttonPrimaryTextColor} />
               <ThemedText style={[styles.saveButtonText, { color: buttonPrimaryTextColor }]}>
-                Save Ticket
+                {isSaving ? 'Saving...' : 'Save Ticket'}
               </ThemedText>
             </TouchableOpacity>
           </View>

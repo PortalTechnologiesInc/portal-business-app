@@ -1,331 +1,345 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
+import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { formatDayAndDate, Ticket } from '@/utils';
+import {
+  Tag as TagIcon,
+  MapPin,
+  Calendar,
+  Ticket,
+  Trash2,
+  TicketCheck,
+  BanknoteArrowUp,
+} from 'lucide-react-native';
+import type { Ticket as DatabaseTicket } from '@/services/database';
+import type { Ticket as OriginalTicket } from '@/utils/types';
 
-const TicketCard: React.FC<{
-  ticket: Ticket;
-  index: number;
-  isFocused: boolean;
-  onPress: () => void;
-}> = ({ ticket, index, isFocused, onPress }) => {
+// Union type to handle both database and original tickets
+type TicketData = DatabaseTicket | OriginalTicket;
+
+interface TicketCardProps {
+  ticket: TicketData;
+  onDelete?: (id: string) => void;
+  onVerify?: (id: string) => void;
+  onSell?: (id: string) => void;
+  onPress?: () => void;
+}
+
+export default function TicketCard({
+  ticket,
+  onDelete,
+  onVerify,
+  onSell,
+  onPress,
+}: TicketCardProps) {
+  // Debug: Log the ticket data
+
+  // Theme colors
   const cardBackgroundColor = useThemeColor({}, 'cardBackground');
-  const borderColor = useThemeColor({}, 'borderPrimary');
+  const iconBackgroundColor = useThemeColor({}, 'surfaceSecondary');
+  const iconColor = useThemeColor({}, 'icon');
   const primaryTextColor = useThemeColor({}, 'textPrimary');
   const secondaryTextColor = useThemeColor({}, 'textSecondary');
+  const borderColor = useThemeColor({}, 'borderPrimary');
 
-  // Use card background if available, otherwise fallback to mockup
-  const cardImageSource = ticket.frontCardBackground
-    ? { uri: ticket.frontCardBackground }
-    : require('@/assets/images/ticketCoverMockup.png');
+  // Check if this is a database ticket or original ticket
+  const isDatabaseTicket = 'mint_url' in ticket && 'unit' in ticket && 'price' in ticket;
 
-  // Format ticket title with quantity if balance > 1
-  const formatTicketTitle = () => {
-    const balance = Number(ticket.balance);
-    if (balance > 1) {
-      return `${ticket.title} x ${balance}`;
-    }
-    return ticket.title;
+  // Extract data based on ticket type
+  const title = isDatabaseTicket ? ticket.mint_url : (ticket as OriginalTicket).title;
+
+  const description = isDatabaseTicket
+    ? `Unit: ${(ticket as DatabaseTicket).unit}`
+    : (ticket as OriginalTicket).description;
+
+  const location = isDatabaseTicket ? undefined : (ticket as OriginalTicket).location;
+
+  const date = isDatabaseTicket ? undefined : (ticket as OriginalTicket).date;
+
+  const price = isDatabaseTicket
+    ? `${(ticket as DatabaseTicket).price} ${(ticket as DatabaseTicket).currency}`
+    : undefined;
+
+  const balance = isDatabaseTicket ? undefined : (ticket as OriginalTicket).balance;
+
+  // Format the title for better display - use unit as main text
+  const displayTitle = isDatabaseTicket ? (ticket as DatabaseTicket).unit : title;
+
+  // Format the description for better display - use mint URL as description
+  const displayDescription = isDatabaseTicket
+    ? (ticket as DatabaseTicket).mint_url.length > 50
+      ? (ticket as DatabaseTicket).mint_url.substring(0, 50) + '...'
+      : (ticket as DatabaseTicket).mint_url
+    : description;
+
+  // Format creation date for database tickets
+  const creationDate = isDatabaseTicket
+    ? new Date((ticket as DatabaseTicket).created_at * 1000).toLocaleDateString()
+    : undefined;
+
+  const handleDelete = () => {
+    onDelete?.(ticket.id);
   };
 
-  if (isFocused) {
-    // Focused card with info overlay
-    return (
-      <View
-        style={[styles.focusedCardContainer, { backgroundColor: cardBackgroundColor, borderColor }]}
-      >
-        <TouchableOpacity style={styles.touchableArea} activeOpacity={0.8} onPress={onPress}>
-          <View style={styles.focusedContainer}>
-            <Image source={cardImageSource} style={styles.focusedCoverImage} resizeMode="cover" />
-            <View style={styles.focusedContent}>
-              {/* Title and description at top */}
-              <View style={styles.focusedTopSection}>
-                {/* Title at top like front card */}
-                <View style={styles.focusedTitleContainer}>
-                  <ThemedText style={styles.focusedTitleText}>{formatTicketTitle()}</ThemedText>
-                </View>
+  const handleVerify = () => {
+    onVerify?.(ticket.id);
+  };
 
-                {/* Description right under title */}
-                {ticket.description && (
-                  <View style={styles.focusedDescriptionContainer}>
-                    <ThemedText style={styles.focusedDescriptionText}>
-                      {ticket.description}
-                    </ThemedText>
-                  </View>
-                )}
-              </View>
+  const handleSell = () => {
+    onSell?.(ticket.id);
+  };
 
-              {/* Date and Location at bottom */}
-              <View style={styles.focusedBottomRow}>
-                {ticket.date && (
-                  <View style={styles.focusedDateContainer}>
-                    <ThemedText style={styles.focusedDateText}>📅 {ticket.date}</ThemedText>
-                  </View>
-                )}
-                {ticket.location && (
-                  <View style={styles.focusedLocationContainer}>
-                    <ThemedText style={styles.focusedLocationText}>📍 {ticket.location}</ThemedText>
-                  </View>
-                )}
-              </View>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+  const handlePress = () => {
+    onPress?.();
+  };
 
-  // Stacked/overlapping cover card view with more spacing
   return (
-    <View
-      style={[
-        styles.ticketCard,
-        {
-          backgroundColor: cardBackgroundColor,
-          borderColor,
-          top: index * 130, // More spacing between stacked cards
-        },
-        styles.ticketCardCover,
-      ]}
+    <TouchableOpacity
+      style={[styles.container, { backgroundColor: cardBackgroundColor, borderColor }]}
+      onPress={handlePress}
+      activeOpacity={0.7}
+      disabled={!onPress}
     >
-      <TouchableOpacity style={styles.touchableArea} activeOpacity={0.8} onPress={onPress}>
-        <View style={styles.coverContainer}>
-          <Image source={cardImageSource} style={styles.coverImage} resizeMode="cover" />
-          <View style={styles.titleOverlay}>
-            <ThemedText style={styles.titleOverlayText}>{formatTicketTitle()}</ThemedText>
+      <View style={styles.header}>
+        <View style={[styles.ticketIcon, { backgroundColor: iconBackgroundColor }]}>
+          <Ticket size={20} color={iconColor} />
+        </View>
+        {creationDate && (
+          <View style={styles.createdHeaderContainer}>
+            <Calendar size={14} color={secondaryTextColor} />
+            <ThemedText
+              style={[styles.createdHeaderText, { color: secondaryTextColor }]}
+              numberOfLines={1}
+            >
+              Created: {creationDate}
+            </ThemedText>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.content}>
+        <View style={styles.mainContent}>
+          <View style={styles.upperSection}>
+            <ThemedText style={[styles.title, { color: primaryTextColor }]} numberOfLines={2}>
+              {displayTitle}
+            </ThemedText>
+
+            {displayDescription && (
+              <ThemedText
+                style={[styles.subtitle, { color: secondaryTextColor }]}
+                numberOfLines={2}
+              >
+                {displayDescription}
+              </ThemedText>
+            )}
+          </View>
+
+          <View style={styles.metadata}>
+            {location && (
+              <View style={styles.metadataItem}>
+                <MapPin size={14} color={secondaryTextColor} />
+                <ThemedText
+                  style={[styles.metadataText, { color: secondaryTextColor }]}
+                  numberOfLines={1}
+                >
+                  {location}
+                </ThemedText>
+              </View>
+            )}
+
+            {date && (
+              <View style={styles.metadataItem}>
+                <Calendar size={14} color={secondaryTextColor} />
+                <ThemedText
+                  style={[styles.metadataText, { color: secondaryTextColor }]}
+                  numberOfLines={1}
+                >
+                  {date}
+                </ThemedText>
+              </View>
+            )}
           </View>
         </View>
-      </TouchableOpacity>
-    </View>
+      </View>
+
+      {price && (
+        <View style={styles.priceContainer}>
+          <ThemedText style={[styles.priceText, { color: primaryTextColor }]}>{price}</ThemedText>
+        </View>
+      )}
+
+      <View style={styles.actionButtons}>
+        {onDelete && (
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleDelete}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Trash2 size={22} color={secondaryTextColor} />
+          </TouchableOpacity>
+        )}
+
+        {onVerify && (
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleVerify}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <TicketCheck size={24} color={secondaryTextColor} />
+          </TouchableOpacity>
+        )}
+
+        {onSell && (
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={handleSell}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <BanknoteArrowUp size={24} color={secondaryTextColor} />
+          </TouchableOpacity>
+        )}
+      </View>
+    </TouchableOpacity>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  ticketCard: {
-    position: 'absolute',
-    width: '100%',
-    aspectRatio: 1.586,
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: 'hidden',
-    top: 0,
-  },
-  focusedCardContainer: {
-    position: 'relative',
-    width: '100%',
-    aspectRatio: 1.586,
-    borderRadius: 12,
-    borderWidth: 1,
-    overflow: 'hidden',
-    marginBottom: 16,
-  },
-  ticketCardCover: {
-    padding: 0,
-  },
-  cardContent: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  container: {
+    borderRadius: 20,
     padding: 16,
+    marginBottom: 16,
+    minHeight: 160,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+    position: 'relative',
   },
-  leftSection: {
-    flex: 1,
-    marginRight: 12,
-  },
-  titleRow: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 2,
   },
-  ticketTypeIcon: {
-    fontSize: 16,
+  content: {
+    flex: 1,
   },
-  serviceName: {
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    alignSelf: 'center',
+  },
+  mainContent: {
+    flex: 1,
+    marginTop: 0,
+    justifyContent: 'center',
+  },
+  upperSection: {
+    marginBottom: 24,
+    marginTop: 24,
+  },
+  headerRight: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '600',
+    flex: 1,
+    marginRight: 8,
+    lineHeight: 24,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 14,
+    marginBottom: 12,
+    lineHeight: 18,
+    opacity: 0.8,
+  },
+  metadata: {
+    gap: 6,
+    marginTop: 8,
+  },
+  metadataItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metadataText: {
     fontSize: 12,
-    fontWeight: '500',
+    flex: 1,
+    opacity: 0.7,
   },
-  description: {
-    fontSize: 11,
-    lineHeight: 14,
+  valueContainer: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    minWidth: 80,
+  },
+  price: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  balance: {
+    fontSize: 18,
+    fontWeight: '600',
     marginBottom: 6,
   },
-  coverContainer: {
-    flex: 1,
+  deleteIcon: {
+    padding: 4,
+    marginLeft: 8,
+  },
+  ticketIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
+    margin: 0,
   },
-  coverImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 12,
+  createdHeaderContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
-  titleOverlay: {
+  createdHeaderText: {
+    fontSize: 12,
+    opacity: 0.8,
+  },
+  priceContainer: {
     position: 'absolute',
-    top: 12,
-    left: 12,
-    right: 12,
+    bottom: 8,
+    left: 16,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    height: 40,
   },
-  titleOverlayText: {
+  priceText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    fontWeight: '600',
   },
-  detailBackgroundImage: {
-    borderRadius: 12,
-  },
-  dateLocationRow: {
+  actionButtons: {
+    position: 'absolute',
+    bottom: 8,
+    right: 12,
     flexDirection: 'row',
-    marginTop: 8,
-    gap: 12,
+    gap: 8,
   },
-  dateLocationItem: {
-    flex: 1,
-  },
-  dateLocationLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  touchableArea: {
-    flex: 1,
-  },
-  balanceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  balanceText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  nftBadge: {
-    fontSize: 12,
-    fontWeight: '600',
-    backgroundColor: '#E0E0E0',
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginLeft: 8,
-  },
-  mintInfo: {
-    marginTop: 8,
-  },
-  mintLabel: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  overlayBalance: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  overlayBalanceText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  overlayNftBadge: {
-    fontSize: 12,
-    fontWeight: '600',
-    backgroundColor: '#E0E0E0',
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginLeft: 8,
-  },
-  focusedContainer: {
-    flex: 1,
+  actionButton: {
+    padding: 8,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  focusedCoverImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 12,
-  },
-  focusedContent: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    justifyContent: 'space-between',
-  },
-  focusedTopSection: {
-    flex: 1,
-  },
-  focusedHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  focusedTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  focusedDescription: {
-    fontSize: 13,
-    lineHeight: 16,
-    marginBottom: 8,
-  },
-  focusedDateLocationRow: {
-    flexDirection: 'row',
-    marginTop: 8,
-    gap: 12,
-  },
-  focusedDateLocationItem: {
-    flex: 1,
-  },
-  focusedDateLocationLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  focusedTitleContainer: {
-    marginBottom: 2,
-  },
-  focusedTitleText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  focusedDescriptionContainer: {
-    marginBottom: 2,
-  },
-  focusedDescriptionText: {
-    fontSize: 13,
-    lineHeight: 16,
-    color: '#FFFFFF',
-  },
-  focusedBottomRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: 8,
-  },
-  focusedDateContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  focusedDateText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#FFFFFF',
-  },
-  focusedLocationContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  focusedLocationText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#FFFFFF',
   },
 });
-
-export default TicketCard;

@@ -59,12 +59,22 @@ export const DatabaseProvider = ({ children }: DatabaseProviderProps) => {
   const migrateDbIfNeeded = useCallback(async (db: SQLiteDatabase) => {
     console.log('Database initialization started');
     setIsDbInitializing(true);
-    const DATABASE_VERSION = 14;
+    const DATABASE_VERSION = 16;
 
     try {
       let { user_version: currentDbVersion } = (await db.getFirstAsync<{
         user_version: number;
       }>('PRAGMA user_version')) ?? { user_version: 0 };
+
+      // Force migration for tickets table if it doesn't exist
+      const ticketsTableExists = await db.getFirstAsync<{ count: number }>(
+        "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='tickets'"
+      );
+
+      if (!ticketsTableExists || ticketsTableExists.count === 0) {
+        console.log('Tickets table does not exist, forcing migration');
+        currentDbVersion = 14; // Force migration from version 14
+      }
 
       if (currentDbVersion >= DATABASE_VERSION) {
         console.log(`Database already at version ${currentDbVersion}`);
@@ -429,13 +439,51 @@ export const DatabaseProvider = ({ children }: DatabaseProviderProps) => {
           );
         `);
         currentDbVersion = 14;
-        console.log(
-          'Created payment_status table and added status column to activities - now at version 12'
-        );
+        console.log('Created tags table - now at version 14');
+      }
+
+      if (currentDbVersion <= 14) {
+        await db.execAsync(`
+          CREATE TABLE IF NOT EXISTS tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mint_url TEXT NOT NULL,
+            unit TEXT NOT NULL,
+            price REAL NOT NULL,
+            currency TEXT NOT NULL,
+            created_at INTEGER NOT NULL -- Unix timestamp
+          );
+          CREATE INDEX IF NOT EXISTS idx_tickets_created_at ON tickets(created_at);
+        `);
+        currentDbVersion = 15;
+        console.log('Created tickets table - now at version 15');
+      }
+
+      if (currentDbVersion <= 15) {
+        console.log('Running tickets table migration...');
+        await db.execAsync(`
+          CREATE TABLE IF NOT EXISTS tickets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mint_url TEXT NOT NULL,
+            unit TEXT NOT NULL,
+            price REAL NOT NULL,
+            currency TEXT NOT NULL,
+            created_at INTEGER NOT NULL -- Unix timestamp
+          );
+          CREATE INDEX IF NOT EXISTS idx_tickets_created_at ON tickets(created_at);
+        `);
+        currentDbVersion = 16;
+        console.log('Created tickets table - now at version 16');
       }
 
       await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
       console.log(`Database migration completed to version ${DATABASE_VERSION}`);
+
+      // Verify tickets table exists
+      const ticketsTableCheck = await db.getFirstAsync<{ count: number }>(
+        "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='tickets'"
+      );
+      console.log('Tickets table exists:', ticketsTableCheck?.count > 0);
+
       setDbInitialized(true);
     } catch (error) {
       console.error('Database migration failed:', error);

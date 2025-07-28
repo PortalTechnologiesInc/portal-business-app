@@ -20,9 +20,16 @@ export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPil
   const [favoriteTagId, setFavoriteTagId] = useState<string | null>(null);
   const [internalSelectedItem, setInternalSelectedItem] = useState<Tag | null>(null);
 
-  // Database setup
-  const sqliteContext = useSQLiteContext();
-  const DB = new DatabaseService(sqliteContext);
+  // Database setup with error handling
+  let sqliteContext = null;
+  let DB = null;
+
+  try {
+    sqliteContext = useSQLiteContext();
+    DB = new DatabaseService(sqliteContext);
+  } catch (error) {
+    console.log('SQLite context not available yet, tag loading will be delayed');
+  }
 
   // Load favorite tag from AsyncStorage
   useEffect(() => {
@@ -41,6 +48,12 @@ export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPil
   // Fetch tags from database
   useEffect(() => {
     const fetchTags = async () => {
+      if (!DB) {
+        console.log('Database not ready, skipping tag fetch');
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const fetchedTags = await DB.getTags();
         setTags(fetchedTags);
@@ -120,7 +133,7 @@ export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPil
               { color: isSelected ? buttonPrimaryTextColor : primaryTextColor },
             ]}
           >
-            {item.description || item.token}
+            {item.token}
           </ThemedText>
         </View>
         <View style={styles.dropdownItemActions}>
@@ -183,7 +196,7 @@ export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPil
         <View style={styles.content}>
           <TagIcon size={16} color={primaryTextColor} style={styles.icon} />
           <ThemedText style={[styles.label, { color: primaryTextColor }]}>
-            {currentItem.description || currentItem.token}
+            {currentItem.token}
           </ThemedText>
         </View>
         <ChevronDown size={20} color={secondaryTextColor} />
