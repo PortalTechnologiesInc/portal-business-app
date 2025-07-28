@@ -31,11 +31,14 @@ export const resetDatabase = async (): Promise<void> => {
       		DROP TABLE IF EXISTS activities;
       		DROP TABLE IF EXISTS subscriptions;
       		DROP TABLE IF EXISTS name_cache;
+      		DROP TABLE IF EXISTS workflows;
       		DROP INDEX IF EXISTS idx_activities_date;
       		DROP INDEX IF EXISTS idx_activities_type;
       		DROP INDEX IF EXISTS idx_activities_subscription;
       		DROP INDEX IF EXISTS idx_subscriptions_next_payment;
       		DROP INDEX IF EXISTS idx_name_cache_expires;
+      		DROP INDEX IF EXISTS idx_workflows_updated_at;
+      		DROP INDEX IF EXISTS idx_workflows_is_active;
       		DROP TABLE IF EXISTS subscriptions;
       		PRAGMA user_version = 0;
     	`);
@@ -59,7 +62,7 @@ export const DatabaseProvider = ({ children }: DatabaseProviderProps) => {
   const migrateDbIfNeeded = useCallback(async (db: SQLiteDatabase) => {
     console.log('Database initialization started');
     setIsDbInitializing(true);
-    const DATABASE_VERSION = 13;
+    const DATABASE_VERSION = 14;
 
     try {
       let { user_version: currentDbVersion } = (await db.getFirstAsync<{
@@ -413,6 +416,26 @@ export const DatabaseProvider = ({ children }: DatabaseProviderProps) => {
         `);
         currentDbVersion = 13;
         console.log('Added invoice column to activities table - now at version 13');
+      }
+
+      if (currentDbVersion <= 13) {
+        await db.execAsync(`
+          -- Create workflows table for automation workflows
+          CREATE TABLE IF NOT EXISTS workflows (
+            id TEXT PRIMARY KEY NOT NULL,
+            name TEXT NOT NULL,
+            data TEXT NOT NULL, -- JSON string containing blocks, connections, and block_configs
+            created_at INTEGER NOT NULL, -- Unix timestamp in seconds
+            updated_at INTEGER NOT NULL, -- Unix timestamp in seconds
+            is_active INTEGER NOT NULL DEFAULT 1 -- 0 or 1 for SQLite boolean
+          );
+          
+          -- Create indexes for better query performance
+          CREATE INDEX IF NOT EXISTS idx_workflows_updated_at ON workflows(updated_at);
+          CREATE INDEX IF NOT EXISTS idx_workflows_is_active ON workflows(is_active);
+        `);
+        currentDbVersion = 14;
+        console.log('Created workflows table - now at version 14');
       }
 
       await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);

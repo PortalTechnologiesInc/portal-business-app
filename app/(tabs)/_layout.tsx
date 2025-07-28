@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Tabs } from 'expo-router';
-import { Home, List, Receipt, Ticket, UserSquare2, Settings } from 'lucide-react-native';
+import { Home, List, Receipt, Workflow, UserSquare2, Settings } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { View, Platform, ToastAndroid } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,8 +16,8 @@ const SubscriptionIcon = React.memo(({ color }: { color: string }) => (
   <Receipt size={24} color={color} />
 ));
 
-const TicketIcon = React.memo(({ color }: { color: string }) => (
-  <Ticket size={24} color={color} />
+const AutomationIcon = React.memo(({ color }: { color: string }) => (
+  <Workflow size={24} color={color} />
 ));
 
 const IdentityIcon = React.memo(({ color }: { color: string }) => (
@@ -110,10 +110,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="Tickets"
+        name="Automation"
         options={{
-          title: 'Tickets',
-          tabBarIcon: ({ color }) => <TicketIcon color={color} />,
+          title: 'Automation',
+          tabBarIcon: ({ color }) => <AutomationIcon color={color} />,
         }}
       />
       <Tabs.Screen
