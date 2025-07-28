@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, TouchableOpacity, Alert, TextInput, View, ToastAndroid } from 'react-native';
+import { StyleSheet, TouchableOpacity, Alert, TextInput, View, ToastAndroid, Modal } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, X, Plus, Tag as TagIcon } from 'lucide-react-native';
+import { ArrowLeft, X, Plus, Tag as TagIcon, Home, User, Settings, Star, Heart, ShoppingCart, CreditCard, Gift, Coffee, Utensils, Car, Bike, Footprints, Phone, Mail, Calendar, Clock, MapPin, Camera } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { DatabaseService, Tag, toUnixSeconds } from '@/services/database';
@@ -16,13 +16,52 @@ export default function PortalTagsManagementScreen() {
   const [newTagDescription, setNewTagDescription] = useState<string>('');
   const [newTagIcon, setNewTagIcon] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isIconModalVisible, setIsIconModalVisible] = useState(false);
+
+  // Available icons for selection
+  const availableIcons = [
+    'tag', 'home', 'user', 'settings', 'star', 'heart', 'shopping-cart',
+    'credit-card', 'gift', 'coffee', 'food', 'car', 'bike', 'footprints',
+    'phone', 'mail', 'calendar', 'clock', 'map-pin', 'camera'
+  ];
+
+  // Function to get icon component by name
+  const getIconComponent = (iconName: string) => {
+    const iconMap: { [key: string]: any } = {
+      'tag': TagIcon,
+      'home': Home,
+      'user': User,
+      'settings': Settings,
+      'star': Star,
+      'heart': Heart,
+      'shopping-cart': ShoppingCart,
+      'credit-card': CreditCard,
+      'gift': Gift,
+      'coffee': Coffee,
+      'food': Utensils,
+      'car': Car,
+      'bike': Bike,
+      'footprints': Footprints,
+      'phone': Phone,
+      'mail': Mail,
+      'calendar': Calendar,
+      'clock': Clock,
+      'map-pin': MapPin,
+      'camera': Camera
+    };
+    return iconMap[iconName] || TagIcon;
+  };
+
+  const handleIconSelect = (iconName: string) => {
+    setNewTagIcon(iconName);
+    setIsIconModalVisible(false);
+  };
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
   const surfaceSecondaryColor = useThemeColor({}, 'surfaceSecondary');
   const primaryTextColor = useThemeColor({}, 'textPrimary');
   const secondaryTextColor = useThemeColor({}, 'textSecondary');
-  const inputBackgroundColor = useThemeColor({}, 'inputBackground');
   const inputBorderColor = useThemeColor({}, 'inputBorder');
   const inputPlaceholderColor = useThemeColor({}, 'inputPlaceholder');
   const buttonSecondaryColor = useThemeColor({}, 'buttonSecondary');
@@ -50,6 +89,7 @@ export default function PortalTagsManagementScreen() {
   const handleClearInput = () => {
     setNewTagToken('');
     setNewTagDescription('');
+    setNewTagIcon('');
   };
 
   const addNewTag = async () => {
@@ -77,16 +117,19 @@ export default function PortalTagsManagementScreen() {
       description: newTagDescription.trim() || null,
       // portal://npub1ek206p7gwgqzgc6s7sfedmlu87cz9894jzzq0283t72lhz3uuxwsgn9stz?relays=wss%3A%2F%2Frelay.getportal.cc&token=alekos
       url: `portal://npub?relays=wss%3A%2F%2Frelay.getportal.cc&token=${newTagToken.trim()}`,
-      icon: newTagIcon,
+      icon: newTagIcon === "" ? 'tag' : newTagIcon,
       created_at: 0,
     };
 
     try {
       // Add to database
-      await DB.addTag(newTag.token, newTag.description, newTag.url, '');
+      await DB.addTag(newTag.token, newTag.description, newTag.url, newTagIcon);
+
+      setTags([...tags, newTag]);
 
       setNewTagToken('');
       setNewTagDescription('');
+      setNewTagIcon('');
 
       ToastAndroid.showWithGravity(
         'Tag created successfully',
@@ -116,10 +159,10 @@ export default function PortalTagsManagementScreen() {
             try {
               // Delete from database
               await DB.deleteTag(tagToken);
-              
+
               // Update local state
               setTags(tags.filter(tag => tag.token !== tagToken));
-              
+
               ToastAndroid.showWithGravity(
                 'Tag deleted successfully',
                 ToastAndroid.SHORT,
@@ -208,6 +251,34 @@ export default function PortalTagsManagementScreen() {
             </View>
           </View>
 
+          <View style={styles.inputContainer}>
+            <TouchableOpacity
+              style={[styles.iconPickerButton, { backgroundColor: buttonSecondaryColor }]}
+              onPress={() => {
+                setIsIconModalVisible(true);
+              }}
+            >
+              {newTagIcon ? (
+                <>
+                  {React.createElement(getIconComponent(newTagIcon), {
+                    size: 20,
+                    color: buttonSecondaryTextColor
+                  })}
+                  <ThemedText style={[styles.iconPickerText, { color: buttonSecondaryTextColor }]}>
+                    {newTagIcon}
+                  </ThemedText>
+                </>
+              ) : (
+                <>
+                  <TagIcon size={20} color={buttonSecondaryTextColor} />
+                  <ThemedText style={[styles.iconPickerText, { color: buttonSecondaryTextColor }]}>
+                    Select Icon
+                  </ThemedText>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity
             style={[styles.addButton, { backgroundColor: buttonPrimaryColor }]}
             onPress={addNewTag}
@@ -230,14 +301,21 @@ export default function PortalTagsManagementScreen() {
                   <View key={index} style={[styles.tagItem, { backgroundColor: surfaceSecondaryColor }]}>
                     <View style={styles.tagContent}>
                       <View style={[styles.tagIcon, { backgroundColor: buttonPrimaryColor }]}>
-                        <TagIcon size={16} color={buttonPrimaryTextColor} />
+                        {tag.icon ? (
+                          React.createElement(getIconComponent(tag.icon), {
+                            size: 16,
+                            color: buttonPrimaryTextColor
+                          })
+                        ) : (
+                          <TagIcon size={16} color={buttonPrimaryTextColor} />
+                        )}
                       </View>
                       <View style={styles.tagText}>
                         <ThemedText style={[styles.tagName, { color: primaryTextColor }]}>
                           {tag.token}
                         </ThemedText>
                         <ThemedText style={[styles.tagStatus, { color: secondaryTextColor }]}>
-                          Ready to use
+                          {tag.description ? tag.description : 'Ready to use'}
                         </ThemedText>
                       </View>
                     </View>
@@ -268,6 +346,63 @@ export default function PortalTagsManagementScreen() {
           )}
         </ThemedView>
       </ThemedView>
+
+      <Modal
+        visible={isIconModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsIconModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsIconModalVisible(false)}
+        >
+          <TouchableOpacity
+            style={[styles.modalContent, { backgroundColor }]}
+            activeOpacity={1}
+            onPress={e => e.stopPropagation()}
+          >
+            <View style={styles.modalHeader}>
+              <ThemedText style={[styles.modalTitle, { color: primaryTextColor }]}>
+                Select Icon
+              </ThemedText>
+              <TouchableOpacity
+                onPress={() => setIsIconModalVisible(false)}
+                style={styles.modalCloseButton}
+              >
+                <X size={24} color={secondaryTextColor} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.modalBody}>
+              <ThemedText style={[styles.modalDescription, { color: secondaryTextColor }]}>
+                Choose an icon for your tag
+              </ThemedText>
+              <View style={styles.iconGrid}>
+                {availableIcons.map((iconName, index) => {
+                  const IconComponent = getIconComponent(iconName);
+                  const isSelected = newTagIcon === iconName;
+                  return (
+                    <TouchableOpacity
+                      key={index}
+                      style={[
+                        styles.iconItem,
+                        { backgroundColor: isSelected ? buttonPrimaryColor : surfaceSecondaryColor }
+                      ]}
+                      onPress={() => handleIconSelect(iconName)}
+                    >
+                      <IconComponent
+                        size={24}
+                        color={isSelected ? buttonPrimaryTextColor : primaryTextColor}
+                      />
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -332,7 +467,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
-    marginTop: 8,
+    marginTop: 24,
   },
   addButtonText: {
     fontSize: 16,
@@ -400,5 +535,69 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  iconPickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  iconPickerText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    height: '80%',
+    minHeight: 400,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalBody: {
+    flex: 1,
+  },
+  modalDescription: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  iconGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  iconItem: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 }); 
