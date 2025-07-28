@@ -17,16 +17,13 @@ import {
   ClosedRecurringPaymentListener,
   RelayStatusListener,
   KeypairInterface,
-  parseCashuToken,
-  CashuDirectContentWithKey,
-  CashuRequestContentWithKey,
-  CashuResponseStatus,
   PaymentStatusNotifier,
   PaymentStatus,
-  PortalBusiness,
   PortalBusinessInterface,
+  KeyHandshakeListener,
+  PublicKey,
 } from 'portal-business-app-lib';
-import { DatabaseService } from '@/services/database';
+import { DatabaseService, Tag } from '@/services/database';
 import { useSQLiteContext } from 'expo-sqlite';
 import { PortalAppManager } from '@/services/PortalAppManager';
 import type {
@@ -114,6 +111,17 @@ export class LocalPaymentRequestListener implements PaymentRequestListener {
     event: RecurringPaymentRequest
   ): Promise<RecurringPaymentResponseContent> {
     return this.recurringCb(event);
+  }
+}
+
+export class LocalKeyHandhakeListener implements KeyHandshakeListener {
+  private callback: (pubkey: PublicKey) => Promise<void>;
+
+  constructor(callback: (pubkey: PublicKey) => Promise<void>) {
+    this.callback = callback;
+  }
+  onKeyHandshake(pubkey: PublicKey): Promise<void> {
+    return this.callback(pubkey)
   }
 }
 
@@ -262,6 +270,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   const [relayStatuses, setRelayStatuses] = useState<RelayInfo[]>([]);
   const [keypair, setKeypair] = useState<KeypairInterface | null>(null);
   const [reinitKey, setReinitKey] = useState(0);
+  const [keyHandshakeCallback, setKeyHandshakeCallback] = useState<(userPubkey: string) => Promise<void>>(async () => {});
 
   // Remove the in-memory deduplication system
   // const processedCashuTokens = useRef<Set<string>>(new Set());
@@ -455,6 +464,13 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
           }
         }
         app.listenClosedRecurringPayment(new ClosedRecurringPaymentListenerImpl());
+
+        for (const tag of (await DB.getTags())) {
+          app.listenForKeyHandshake(
+            tag.token,
+            new LocalKeyHandhakeListener(keyHandshakeCallback)
+          )
+        }
 
         // Save portal app instance
         setPortalApp(app);
