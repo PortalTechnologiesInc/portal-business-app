@@ -1,9 +1,46 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, TouchableOpacity, Alert, TextInput, View, ToastAndroid, Modal, ScrollView, Platform, BackHandler } from 'react-native';
+import {
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  TextInput,
+  View,
+  ToastAndroid,
+  Modal,
+  ScrollView,
+  Platform,
+  BackHandler,
+} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, X, Plus, Tag as TagIcon, Home, User, Settings, Star, Heart, ShoppingCart, CreditCard, Gift, Coffee, Utensils, Car, Bike, Footprints, Phone, Mail, Calendar, Clock, MapPin, Camera, WifiOff } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  X,
+  Plus,
+  Tag as TagIcon,
+  Home,
+  User,
+  Settings,
+  Star,
+  Heart,
+  ShoppingCart,
+  CreditCard,
+  Gift,
+  Coffee,
+  Utensils,
+  Car,
+  Bike,
+  Footprints,
+  Phone,
+  Mail,
+  Calendar,
+  Clock,
+  MapPin,
+  Camera,
+  WifiOff,
+} from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { DatabaseService, Tag, toUnixSeconds } from '@/services/database';
@@ -26,34 +63,51 @@ export default function PortalTagsManagementScreen() {
 
   // Available icons for selection
   const availableIcons = [
-    'tag', 'home', 'user', 'settings', 'star', 'heart', 'shopping-cart',
-    'credit-card', 'gift', 'coffee', 'food', 'car', 'bike', 'footprints',
-    'phone', 'mail', 'calendar', 'clock', 'map-pin', 'camera'
+    'tag',
+    'home',
+    'user',
+    'settings',
+    'star',
+    'heart',
+    'shopping-cart',
+    'credit-card',
+    'gift',
+    'coffee',
+    'food',
+    'car',
+    'bike',
+    'footprints',
+    'phone',
+    'mail',
+    'calendar',
+    'clock',
+    'map-pin',
+    'camera',
   ];
 
   // Function to get icon component by name
   const getIconComponent = (iconName: string) => {
     const iconMap: { [key: string]: any } = {
-      'tag': TagIcon,
-      'home': Home,
-      'user': User,
-      'settings': Settings,
-      'star': Star,
-      'heart': Heart,
+      tag: TagIcon,
+      home: Home,
+      user: User,
+      settings: Settings,
+      star: Star,
+      heart: Heart,
       'shopping-cart': ShoppingCart,
       'credit-card': CreditCard,
-      'gift': Gift,
-      'coffee': Coffee,
-      'food': Utensils,
-      'car': Car,
-      'bike': Bike,
-      'footprints': Footprints,
-      'phone': Phone,
-      'mail': Mail,
-      'calendar': Calendar,
-      'clock': Clock,
+      gift: Gift,
+      coffee: Coffee,
+      food: Utensils,
+      car: Car,
+      bike: Bike,
+      footprints: Footprints,
+      phone: Phone,
+      mail: Mail,
+      calendar: Calendar,
+      clock: Clock,
       'map-pin': MapPin,
-      'camera': Camera
+      camera: Camera,
     };
     return iconMap[iconName] || TagIcon;
   };
@@ -81,6 +135,12 @@ export default function PortalTagsManagementScreen() {
 
   // NFC Status Checking
   const checkNFCStatus = async (): Promise<boolean> => {
+    // Return true in development mode for testing
+    if (__DEV__) {
+      console.log('Development mode: Portal Tags NFC check returning true');
+      return true;
+    }
+
     try {
       const isStarted = await NfcManager.isSupported();
       if (!isStarted) {
@@ -117,7 +177,7 @@ export default function PortalTagsManagementScreen() {
 
     setIsWriting(false);
     return result;
-  }
+  };
 
   useEffect(() => {
     try {
@@ -134,7 +194,7 @@ export default function PortalTagsManagementScreen() {
         // Load tags
         let tags = await DB.getTags();
         setTags(tags);
-      }
+      };
       initializeScreen();
     } catch (error) {
       console.error('Error loading data:', error);
@@ -177,7 +237,7 @@ export default function PortalTagsManagementScreen() {
       description: newTagDescription.trim() || null,
       // portal://npub1ek206p7gwgqzgc6s7sfedmlu87cz9894jzzq0283t72lhz3uuxwsgn9stz?relays=wss%3A%2F%2Frelay.getportal.cc&token=alekos
       url: `portal://${nostrService.publicKey}?relays=wss%3A%2F%2Frelay.getportal.cc&token=${encodedToken}`,
-      icon: newTagIcon === "" ? 'tag' : newTagIcon,
+      icon: newTagIcon === '' ? 'tag' : newTagIcon,
       created_at: 0,
     };
 
@@ -213,7 +273,7 @@ export default function PortalTagsManagementScreen() {
     } catch (error) {
       console.error('Error with NFC tag:', error);
 
-      clearNfc()
+      clearNfc();
 
       ToastAndroid.showWithGravity(
         'Failed to interact with NFC tag. Please try again.',
@@ -221,7 +281,7 @@ export default function PortalTagsManagementScreen() {
         ToastAndroid.CENTER
       );
     }
-  }
+  };
   const clearNfc = async () => {
     // Clean up NFC session on error
     try {
@@ -230,7 +290,7 @@ export default function PortalTagsManagementScreen() {
     } catch (cleanupError) {
       console.error('Error cleaning up NFC session:', cleanupError);
     }
-  }
+  };
 
   const deleteTag = async (tagToken: string) => {
     Alert.alert(
@@ -243,8 +303,25 @@ export default function PortalTagsManagementScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
+              // Find the tag being deleted to get its ID
+              const tagToDelete = tags.find(tag => tag.token === tagToken);
+
               // Delete from database
               await DB.deleteTag(tagToken);
+
+              // Check if this was the favorite tag and clean up AsyncStorage
+              if (tagToDelete) {
+                try {
+                  const favoriteTagId = await AsyncStorage.getItem('favorite_tag_id');
+                  if (favoriteTagId && String(tagToDelete.id) === favoriteTagId) {
+                    await AsyncStorage.removeItem('favorite_tag_id');
+                    console.log('Cleared favorite tag ID for deleted tag');
+                  }
+                } catch (storageError) {
+                  console.error('Error cleaning up favorite tag:', storageError);
+                  // Don't fail the deletion if storage cleanup fails
+                }
+              }
 
               // Update local state
               setTags(tags.filter(tag => tag.token !== tagToken));
@@ -325,7 +402,8 @@ export default function PortalTagsManagementScreen() {
                 NFC Not Available
               </ThemedText>
               <ThemedText style={[styles.nfcCourtesyDescription, { color: secondaryTextColor }]}>
-                NFC is not enabled on your device. To use Portal tags, you need to enable NFC in your device settings.
+                NFC is not enabled on your device. To use Portal tags, you need to enable NFC in
+                your device settings.
               </ThemedText>
 
               <View style={styles.nfcInstructions}>
@@ -333,19 +411,25 @@ export default function PortalTagsManagementScreen() {
                   How to enable NFC:
                 </ThemedText>
                 <View style={styles.nfcInstructionItem}>
-                  <ThemedText style={[styles.nfcInstructionNumber, { color: buttonPrimaryColor }]}>1</ThemedText>
+                  <ThemedText style={[styles.nfcInstructionNumber, { color: buttonPrimaryColor }]}>
+                    1
+                  </ThemedText>
                   <ThemedText style={[styles.nfcInstructionText, { color: secondaryTextColor }]}>
                     Go to your device Settings
                   </ThemedText>
                 </View>
                 <View style={styles.nfcInstructionItem}>
-                  <ThemedText style={[styles.nfcInstructionNumber, { color: buttonPrimaryColor }]}>2</ThemedText>
+                  <ThemedText style={[styles.nfcInstructionNumber, { color: buttonPrimaryColor }]}>
+                    2
+                  </ThemedText>
                   <ThemedText style={[styles.nfcInstructionText, { color: secondaryTextColor }]}>
                     Find "Connections" or "Connected devices"
                   </ThemedText>
                 </View>
                 <View style={styles.nfcInstructionItem}>
-                  <ThemedText style={[styles.nfcInstructionNumber, { color: buttonPrimaryColor }]}>3</ThemedText>
+                  <ThemedText style={[styles.nfcInstructionNumber, { color: buttonPrimaryColor }]}>
+                    3
+                  </ThemedText>
                   <ThemedText style={[styles.nfcInstructionText, { color: secondaryTextColor }]}>
                     Enable "NFC" or "Near Field Communication"
                   </ThemedText>
@@ -381,9 +465,9 @@ export default function PortalTagsManagementScreen() {
     return (
       <NFCScanUI
         isNFCEnabled={isNfcEnabled}
-        scanState='scanning'
+        scanState="scanning"
         onBackPress={() => {
-          setIsWriting(false)
+          setIsWriting(false);
           clearNfc();
         }}
       />
@@ -457,7 +541,7 @@ export default function PortalTagsManagementScreen() {
                 <>
                   {React.createElement(getIconComponent(newTagIcon), {
                     size: 20,
-                    color: buttonSecondaryTextColor
+                    color: buttonSecondaryTextColor,
                   })}
                   <ThemedText style={[styles.iconPickerText, { color: buttonSecondaryTextColor }]}>
                     {newTagIcon}
@@ -493,13 +577,16 @@ export default function PortalTagsManagementScreen() {
 
               <View style={styles.tagsContainer}>
                 {tags.map((tag, index) => (
-                  <View key={index} style={[styles.tagItem, { backgroundColor: surfaceSecondaryColor }]}>
+                  <View
+                    key={index}
+                    style={[styles.tagItem, { backgroundColor: surfaceSecondaryColor }]}
+                  >
                     <View style={styles.tagContent}>
                       <View style={[styles.tagIcon, { backgroundColor: buttonPrimaryColor }]}>
                         {tag.icon ? (
                           React.createElement(getIconComponent(tag.icon), {
                             size: 16,
-                            color: buttonPrimaryTextColor
+                            color: buttonPrimaryTextColor,
                           })
                         ) : (
                           <TagIcon size={16} color={buttonPrimaryTextColor} />
@@ -518,7 +605,9 @@ export default function PortalTagsManagementScreen() {
                       style={[styles.deleteButton, { backgroundColor: buttonSecondaryColor }]}
                       onPress={() => deleteTag(tag.token)}
                     >
-                      <ThemedText style={[styles.deleteButtonText, { color: buttonSecondaryTextColor }]}>
+                      <ThemedText
+                        style={[styles.deleteButtonText, { color: buttonSecondaryTextColor }]}
+                      >
                         Delete
                       </ThemedText>
                     </TouchableOpacity>
@@ -582,7 +671,9 @@ export default function PortalTagsManagementScreen() {
                       key={index}
                       style={[
                         styles.iconItem,
-                        { backgroundColor: isSelected ? buttonPrimaryColor : surfaceSecondaryColor }
+                        {
+                          backgroundColor: isSelected ? buttonPrimaryColor : surfaceSecondaryColor,
+                        },
                       ]}
                       onPress={() => handleIconSelect(iconName)}
                     >
@@ -854,4 +945,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-}); 
+});

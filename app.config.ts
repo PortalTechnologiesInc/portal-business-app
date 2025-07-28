@@ -39,7 +39,7 @@ export default {
       googleServicesFile: process.env.GOOGLE_SERVICES_JSON,
       adaptiveIcon: {
         foregroundImage: './assets/images/appLogo.png',
-        backgroundColor: '#141416',
+        backgroundColor: '#ffffff',
       },
       package: 'cc.getportal.portalbusiness',
       userInterfaceStyle: 'dark',
