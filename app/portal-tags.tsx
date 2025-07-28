@@ -46,6 +46,7 @@ import { useThemeColor } from '@/hooks/useThemeColor';
 import { DatabaseService, Tag, toUnixSeconds } from '@/services/database';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useNostrService } from '@/context/NostrServiceContext';
+import { useDatabaseStatus } from '@/services/database/DatabaseProvider';
 import NfcManager, { Ndef } from 'react-native-nfc-manager';
 import { NfcTech } from 'react-native-nfc-manager';
 import NFCScanUI from './nfc/NFCScanUI';
@@ -56,10 +57,11 @@ export default function PortalTagsManagementScreen() {
   const [newTagToken, setNewTagToken] = useState<string>('');
   const [newTagDescription, setNewTagDescription] = useState<string>('');
   const [newTagIcon, setNewTagIcon] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isIconModalVisible, setIsIconModalVisible] = useState(false);
   const [isNfcEnabled, setIsNfcEnabled] = useState<boolean | null>(null);
   const [isWriting, setIsWriting] = useState<boolean>(false);
+  const [db, setDb] = useState<DatabaseService | null>(null);
 
   // Available icons for selection
   const availableIcons = [
@@ -129,9 +131,22 @@ export default function PortalTagsManagementScreen() {
   const buttonPrimaryColor = useThemeColor({}, 'buttonPrimary');
   const buttonPrimaryTextColor = useThemeColor({}, 'buttonPrimaryText');
 
-  const sqliteContext = useSQLiteContext();
-  const DB = new DatabaseService(sqliteContext);
   const nostrService = useNostrService();
+
+  // Get database initialization status
+  const dbStatus = useDatabaseStatus();
+
+  // Only try to access SQLite context if the database is initialized
+  let sqliteContext = null;
+  try {
+    // This will throw an error if SQLiteProvider is not available
+    if (dbStatus.isDbInitialized && dbStatus.shouldInitDb) {
+      sqliteContext = useSQLiteContext();
+    }
+  } catch (error) {
+    // SQLiteContext is not available, which is expected sometimes
+    console.log('SQLite context not available yet, tags loading will be delayed');
+  }
 
   // NFC Status Checking
   const checkNFCStatus = async (): Promise<boolean> => {
@@ -179,7 +194,50 @@ export default function PortalTagsManagementScreen() {
     return result;
   };
 
+  // Initialize DB safely when the SQLite context becomes available
   useEffect(() => {
+    let isMounted = true;
+
+    const initDb = async () => {
+      // Skip if database is not ready or SQLite context is not available
+      if (!dbStatus.isDbInitialized || !sqliteContext) {
+        if (isMounted) {
+          setDb(null);
+          if (!dbStatus.isDbInitialized) {
+            console.log('Database not yet initialized, skipping SQLite context access');
+          }
+        }
+        return;
+      }
+
+      try {
+        if (isMounted && sqliteContext) {
+          console.log('SQLite context obtained, initializing database service');
+          const newDb = new DatabaseService(sqliteContext);
+          setDb(newDb);
+          console.log('Database service successfully initialized');
+        }
+      } catch (error) {
+        if (isMounted) {
+          setDb(null);
+          console.error('Error initializing database service:', error);
+        }
+      }
+    };
+
+    initDb();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [dbStatus.isDbInitialized, sqliteContext]);
+
+  useEffect(() => {
+    if (!db) {
+      setIsLoading(true);
+      return;
+    }
+
     try {
       setIsLoading(true);
       const initializeScreen = async () => {
@@ -192,7 +250,7 @@ export default function PortalTagsManagementScreen() {
         }
 
         // Load tags
-        let tags = await DB.getTags();
+        let tags = await db.getTags();
         setTags(tags);
       };
       initializeScreen();
@@ -201,7 +259,7 @@ export default function PortalTagsManagementScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [db]);
 
   const handleClearInput = () => {
     setNewTagToken('');
@@ -210,6 +268,15 @@ export default function PortalTagsManagementScreen() {
   };
 
   const addNewTag = async () => {
+    if (!db) {
+      ToastAndroid.showWithGravity(
+        'Database not ready. Please wait a moment and try again.',
+        ToastAndroid.LONG,
+        ToastAndroid.CENTER
+      );
+      return;
+    }
+
     if (!newTagToken.trim()) {
       ToastAndroid.showWithGravity(
         'Tag name cannot be empty',
@@ -257,7 +324,7 @@ export default function PortalTagsManagementScreen() {
         return;
       }
       // Add to database
-      await DB.addTag(newTag.token, newTag.description, newTag.url, newTagIcon);
+      await db!.addTag(newTag.token, newTag.description, newTag.url, newTagIcon);
 
       setTags([newTag, ...tags]);
 
@@ -293,6 +360,15 @@ export default function PortalTagsManagementScreen() {
   };
 
   const deleteTag = async (tagToken: string) => {
+    if (!db) {
+      ToastAndroid.showWithGravity(
+        'Database not ready. Please wait a moment and try again.',
+        ToastAndroid.LONG,
+        ToastAndroid.CENTER
+      );
+      return;
+    }
+
     Alert.alert(
       'Delete Tag',
       `Are you sure you want to delete the tag "${decodeURIComponent(tagToken)}"?`,
@@ -307,7 +383,7 @@ export default function PortalTagsManagementScreen() {
               const tagToDelete = tags.find(tag => tag.token === tagToken);
 
               // Delete from database
-              await DB.deleteTag(tagToken);
+              await db!.deleteTag(tagToken);
 
               // Check if this was the favorite tag and clean up AsyncStorage
               if (tagToDelete) {

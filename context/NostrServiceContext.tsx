@@ -12,7 +12,6 @@ import {
   SinglePaymentRequest,
   RecurringPaymentRequest,
   LookupInvoiceResponse,
-  PortalAppInterface,
   AuthResponseStatus,
   CloseRecurringPaymentResponse,
   ClosedRecurringPaymentListener,
@@ -20,13 +19,12 @@ import {
   KeypairInterface,
   parseCashuToken,
   CashuDirectContentWithKey,
-  CashuDirectListener,
-  CashuRequestListener,
   CashuRequestContentWithKey,
   CashuResponseStatus,
   PaymentStatusNotifier,
-  PaymentStatus
-} from 'portal-app-lib';
+  PaymentStatus,
+  PortalBusiness,
+} from 'portal-business-app-lib';
 import { DatabaseService } from '@/services/database';
 import { useSQLiteContext } from 'expo-sqlite';
 import { PortalAppManager } from '@/services/PortalAppManager';
@@ -80,30 +78,6 @@ function mapNumericStatusToString(numericStatus: number): RelayConnectionStatus 
   }
 }
 
-export class LocalCashuDirectListener implements CashuDirectListener {
-  private callback: (event: CashuDirectContentWithKey) => Promise<void>;
-
-  constructor(callback: (event: CashuDirectContentWithKey) => Promise<void>) {
-    this.callback = callback;
-  }
-
-  onCashuDirect(event: CashuDirectContentWithKey): Promise<void> {
-    return this.callback(event);
-  }
-}
-
-export class LocalCashuRequestListener implements CashuRequestListener {
-  private callback: (event: CashuRequestContentWithKey) => Promise<CashuResponseStatus>;
-
-  constructor(callback: (event: CashuRequestContentWithKey) => Promise<CashuResponseStatus>) {
-    this.callback = callback;
-  }
-
-  onCashuRequest(event: CashuRequestContentWithKey): Promise<CashuResponseStatus> {
-    return this.callback(event);
-  }
-}
-
 export class LocalAuthChallengeListener implements AuthChallengeListener {
   private callback: (event: AuthChallengeEvent) => Promise<AuthResponseStatus>;
 
@@ -149,19 +123,17 @@ interface NostrServiceContextType {
   isInitialized: boolean;
   isWalletConnected: boolean;
   publicKey: string | null;
-  portalApp: PortalAppInterface | null;
+  portalApp: PortalBusiness | null;
   nwcWallet: Nwc | null;
   pendingRequests: { [key: string]: PendingRequest };
   payInvoice: (invoice: string) => Promise<string>;
   lookupInvoice: (invoice: string) => Promise<LookupInvoiceResponse>;
   disconnectWallet: () => void;
-  sendKeyHandshake: (url: KeyHandshakeUrl) => Promise<void>;
   getServiceName: (publicKey: string) => Promise<string | null>;
   dismissPendingRequest: (id: string) => void;
   setUserProfile: (profile: Profile) => Promise<void>;
   submitNip05: (nip05: string) => Promise<void>;
   submitImage: (imageBase64: string) => Promise<void>;
-  closeRecurringPayment: (pubkey: string, subscriptionId: string) => Promise<void>;
   allRelaysConnected: boolean;
   connectedCount: number;
   issueJWT: ((targetKey: string, expiresInHours: bigint) => string) | undefined;
@@ -270,7 +242,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   walletUrl,
   children,
 }) => {
-  const [portalApp, setPortalApp] = useState<PortalAppInterface | null>(null);
+  const [portalApp, setPortalApp] = useState<PortalBusiness | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [pendingRequests, setPendingRequests] = useState<{ [key: string]: PendingRequest }>({});
@@ -327,7 +299,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   const connectedCount = relayStatuses.filter(r => r.connected).length;
 
   // Refs to store current values for stable AppState listener
-  const portalAppRef = useRef<PortalAppInterface | null>(null);
+  const portalAppRef = useRef<PortalBusiness | null>(null);
   const refreshNwcConnectionStatusRef = useRef<(() => Promise<void>) | null>(null);
 
   const eCashContext = useECash();
@@ -386,232 +358,6 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
         // Start listening and give it a moment to establish connections
         app.listen({ signal: abortController.signal });
         console.log('PortalApp listening started...');
-
-        app
-          .listenCashuDirect(
-            new LocalCashuDirectListener(async (event: CashuDirectContentWithKey) => {
-              console.log('Cashu direct token received', event);
-
-              try {
-                // Auto-process the Cashu token (receiving tokens)
-                const token = event.inner.token;
-
-                // Check if we've already processed this token
-                const tokenInfo = await parseCashuToken(token);
-                const isProcessed = await DB.markCashuTokenAsProcessed(
-                  token,
-                  tokenInfo.mintUrl,
-                  tokenInfo.unit,
-                  tokenInfo.amount ? Number(tokenInfo.amount) : 0
-                );
-                if (isProcessed) {
-                  console.log('Cashu token already processed, skipping');
-                  return;
-                }
-
-                const wallet = await eCashContext.addWallet(tokenInfo.mintUrl, tokenInfo.unit);
-                await wallet.receiveToken(token);
-
-                console.log('Cashu token processed successfully');
-
-                // Emit event to notify that wallet balances have changed
-                const { globalEvents } = await import('@/utils/index');
-                globalEvents.emit('walletBalancesChanged', {
-                  mintUrl: tokenInfo.mintUrl,
-                  unit: tokenInfo.unit,
-                });
-                console.log('walletBalancesChanged event emitted');
-
-                // Record activity for token receipt
-                try {
-                  // For Cashu direct, use mint URL as service identifier
-                  const serviceKey = tokenInfo.mintUrl;
-                  const unitInfo = await wallet.getUnitInfo();
-                  const ticketTitle = unitInfo?.title || wallet.unit();
-
-                  // Add activity to database using ActivitiesContext directly
-                  const activity = {
-                    type: 'ticket_received' as const,
-                    service_key: serviceKey,
-                    service_name: ticketTitle, // Always use ticket title
-                    detail: ticketTitle, // Always use ticket title
-                    date: new Date(),
-                    amount: tokenInfo.amount ? Number(tokenInfo.amount) : null, // Store actual number of tickets, not divided by 1000
-                    currency: 'sats' as const,
-                    request_id: `cashu-direct-${Date.now()}`,
-                    subscription_id: null,
-                    status: 'neutral' as 'neutral',
-                  };
-
-                  // Import and use ActivitiesContext directly
-                  const { useActivities } = await import('@/context/ActivitiesContext');
-                  // Note: We can't use hooks inside event listeners, so we'll use the database directly
-                  // but also emit the event for UI updates
-                  const activityId = await DB.addActivity(activity);
-                  console.log('Activity added to database with ID:', activityId);
-
-                  // Emit event for UI updates
-                  globalEvents.emit('activityAdded', activity);
-                  console.log('activityAdded event emitted');
-                  console.log('Cashu direct activity recorded successfully');
-                } catch (activityError) {
-                  console.error('Error recording Cashu direct activity:', activityError);
-                }
-              } catch (error: any) {
-                console.error('Error processing Cashu token:', error.inner);
-              }
-
-              // Return void for direct processing
-              return;
-            })
-          )
-          .catch(e => {
-            console.error('Error listening for Cashu direct', e);
-            handleErrorWithToastAndReinit(
-              'Failed to listen for Cashu direct. Retrying...',
-              triggerReinit
-            );
-          });
-
-        app.listenCashuRequests(
-          new LocalCashuRequestListener(async (event: CashuRequestContentWithKey) => {
-            const id = `cashu-request-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-            console.log(`Cashu request with id ${id} received`, event);
-
-            // Declare wallet in outer scope
-            let wallet;
-            // Check if we have the required unit before creating pending request
-            try {
-              const requiredMintUrl = event.inner.mintUrl;
-              const requiredUnit = event.inner.unit;
-              const requiredAmount = event.inner.amount;
-
-              console.log(
-                `Checking if we have unit: ${requiredUnit} from mint: ${requiredMintUrl} with amount: ${requiredAmount}`
-              );
-              console.log(`Available wallets:`, Object.keys(eCashContext.wallets));
-              console.log(`Looking for wallet key: ${requiredMintUrl}-${requiredUnit}`);
-
-              // Check if we have a wallet for this mint and unit
-              wallet = await eCashContext.getWallet(requiredMintUrl, requiredUnit);
-              console.log(`Wallet found in ECashContext:`, !!wallet);
-
-              // If wallet not found in ECashContext, try to create it
-              if (!wallet) {
-                console.log(`Wallet not found in ECashContext, trying to create it...`);
-                try {
-                  wallet = await eCashContext.addWallet(requiredMintUrl, requiredUnit);
-                  console.log(`Successfully created wallet for ${requiredMintUrl}-${requiredUnit}`);
-                } catch (error) {
-                  console.error(
-                    `Error creating wallet for ${requiredMintUrl}-${requiredUnit}:`,
-                    error
-                  );
-                }
-              }
-
-              if (!wallet) {
-                console.log(
-                  `No wallet found for mint: ${requiredMintUrl}, unit: ${requiredUnit} - auto-rejecting`
-                );
-                return new CashuResponseStatus.InsufficientFunds();
-              }
-
-              // Check if we have sufficient balance
-              const balance = await wallet.getBalance();
-              if (balance < requiredAmount) {
-                console.log(
-                  `Insufficient balance: ${balance} < ${requiredAmount} - auto-rejecting`
-                );
-                return new CashuResponseStatus.InsufficientFunds();
-              }
-
-              console.log(
-                `Wallet found with sufficient balance: ${balance} >= ${requiredAmount} - creating pending request`
-              );
-            } catch (error) {
-              console.error('Error checking wallet availability:', error);
-              return new CashuResponseStatus.InsufficientFunds();
-            }
-
-            // Get the ticket title for pending requests
-            let ticketTitle = 'Unknown Ticket';
-            if (wallet) {
-              let unitInfo;
-              try {
-                unitInfo = wallet.getUnitInfo ? await wallet.getUnitInfo() : undefined;
-              } catch (e) {
-                unitInfo = undefined;
-              }
-              ticketTitle = unitInfo?.title || wallet.unit();
-            }
-            return new Promise<CashuResponseStatus>(resolve => {
-              const newRequest: PendingRequest = {
-                id,
-                metadata: event,
-                timestamp: new Date(),
-                type: 'ticket',
-                result: resolve,
-                ticketTitle, // Set the ticket name for UI
-              };
-              setPendingRequests(prev => {
-                // Check if request already exists to prevent duplicates
-                if (prev[id]) {
-                  console.log(`Request ${id} already exists, skipping duplicate`);
-                  return prev;
-                }
-                const newPendingRequests = { ...prev };
-                newPendingRequests[id] = newRequest;
-                console.log('Updated pending requests map:', newPendingRequests);
-                return newPendingRequests;
-              });
-            });
-          })
-        );
-
-        /**
-         * these logic go inside the new listeners that will be implemented
-         */
-        // end
-
-        app
-          .listenForAuthChallenge(
-            new LocalAuthChallengeListener((event: AuthChallengeEvent) => {
-              const id = event.eventId;
-
-              console.log(`Auth challenge with id ${id} received`, event);
-
-              return new Promise<AuthResponseStatus>(resolve => {
-                const newRequest: PendingRequest = {
-                  id,
-                  metadata: event,
-                  timestamp: new Date(),
-                  type: 'login',
-                  result: resolve,
-                };
-
-                setPendingRequests(prev => {
-                  // Check if request already exists to prevent duplicates
-                  if (prev[id]) {
-                    console.log(`Request ${id} already exists, skipping duplicate`);
-                    return prev;
-                  }
-                  const newPendingRequests = { ...prev };
-                  newPendingRequests[id] = newRequest;
-                  console.log('Updated pending requests map:', newPendingRequests);
-                  return newPendingRequests;
-                });
-              });
-            })
-          )
-          .catch(e => {
-            console.error('Error listening for auth challenge', e);
-            handleErrorWithToastAndReinit(
-              'Failed to listen for authentication challenge. Retrying...',
-              triggerReinit
-            );
-          });
 
         app
           .listenForPaymentRequest(
@@ -680,7 +426,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
               }
             )
           )
-          .catch(e => {
+          .catch((e: unknown) => {
             console.error('Error listening for payment request', e);
             handleErrorWithToastAndReinit(
               'Failed to listen for payment request. Retrying...',
@@ -857,19 +603,6 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     setNwcWallet(null);
   }, []);
 
-  // Send auth init
-  const sendKeyHandshake = useCallback(
-    async (url: KeyHandshakeUrl): Promise<void> => {
-      if (!portalApp) {
-        throw new Error('PortalApp not initialized');
-      }
-
-      console.log('Sending auth init', url);
-      return portalApp.sendKeyHandshake(url);
-    },
-    [portalApp]
-  );
-
   // Get service name with database caching
   const getServiceName = useCallback(
     async (pubKey: string): Promise<string | null> => {
@@ -952,16 +685,6 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
         throw new Error('PortalApp not initialized');
       }
       await portalApp.setProfile(profile);
-    },
-    [portalApp]
-  );
-
-  const closeRecurringPayment = useCallback(
-    async (pubkey: string, subscriptionId: string) => {
-      if (!portalApp) {
-        throw new Error('PortalApp not initialized');
-      }
-      await portalApp.closeRecurringPayment(pubkey, subscriptionId);
     },
     [portalApp]
   );
@@ -1271,11 +994,9 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     payInvoice,
     lookupInvoice,
     disconnectWallet,
-    sendKeyHandshake,
     getServiceName,
     dismissPendingRequest,
     setUserProfile,
-    closeRecurringPayment,
     startPeriodicMonitoring,
     stopPeriodicMonitoring,
     nwcConnectionStatus,
