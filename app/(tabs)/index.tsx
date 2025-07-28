@@ -5,12 +5,21 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useCurrency } from '@/context/CurrencyContext';
+import { useOperation, createChargeOperation } from '@/context/OperationContext';
 import { Send, ArrowLeft } from 'lucide-react-native';
 import DropdownPill from '@/components/DropdownPill';
 
 export default function Home() {
   const [display, setDisplay] = useState('');
   const { getCurrentCurrencySymbol } = useCurrency();
+  const {
+    startOperation,
+    addOperationStep,
+    updateOperationStep,
+    navigateToPending,
+    completeOperation,
+    failOperation,
+  } = useOperation();
 
   // Currency formatting function
   const formatCurrency = (numStr: string) => {
@@ -76,11 +85,95 @@ export default function Home() {
     setDisplay(prev => prev.slice(0, -1));
   };
 
-  const handleSubmit = () => {
-    // Handle keypad submission logic here
+  const handleSubmit = async () => {
     const numericValue = parseFloat(display || '0');
-    console.log('Keypad submitted:', formatCurrency(display), 'Numeric value:', numericValue);
+
+    // Validate amount
+    if (numericValue <= 0) {
+      // Could show an alert here
+      console.log('Invalid amount');
+      return;
+    }
+
+    // Clear display
     setDisplay('');
+
+    // Create operation data
+    const operationData = createChargeOperation(numericValue, getCurrentCurrencySymbol());
+
+    // Start the operation
+    const operationId = startOperation('charge', operationData);
+
+    // Navigate to pending screen
+    navigateToPending(operationId);
+
+    // Simulate charge process with steps
+    simulateChargeProcess(operationId, numericValue, getCurrentCurrencySymbol());
+  };
+
+  // Simulate charge processing with realistic steps
+  const simulateChargeProcess = async (operationId: string, amount: number, currency: string) => {
+    try {
+      // Step 1: Initializing payment
+      addOperationStep(operationId, {
+        id: 'init',
+        status: 'pending',
+        title: 'Initializing payment...',
+        subtitle: 'Setting up your payment request',
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      updateOperationStep(operationId, 'init', {
+        status: 'completed',
+        title: 'Payment initialized',
+        subtitle: 'Payment request created successfully',
+      });
+
+      // Step 2: Processing payment
+      addOperationStep(operationId, {
+        id: 'process',
+        status: 'pending',
+        title: 'Processing payment...',
+        subtitle: `Charging ${amount} ${currency}`,
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Simulate random success/failure for demo
+      const isSuccess = Math.random() > 0.3; // 70% success rate
+
+      if (isSuccess) {
+        updateOperationStep(operationId, 'process', {
+          status: 'success',
+          title: 'Payment processed',
+          subtitle: 'Your payment has been completed successfully',
+        });
+
+        // Complete the operation
+        completeOperation(operationId, {
+          transactionId: `txn_${Date.now()}`,
+          amount,
+          currency,
+          status: 'completed',
+        });
+      } else {
+        // Simulate different types of errors
+        const errorTypes = ['insufficient_funds', 'network_error', 'payment_declined'] as const;
+        const randomError = errorTypes[Math.floor(Math.random() * errorTypes.length)];
+
+        updateOperationStep(operationId, 'process', {
+          status: 'error',
+          title: 'Payment failed',
+          subtitle: 'Unable to process your payment',
+          errorType: randomError,
+        });
+
+        failOperation(operationId, `Payment failed: ${randomError.replace('_', ' ')}`);
+      }
+    } catch (error) {
+      failOperation(operationId, 'An unexpected error occurred');
+    }
   };
 
   const renderKey = (key: string, type: 'number' | 'action' = 'number') => (

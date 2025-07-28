@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { OnboardingProvider, useOnboarding } from '@/context/OnboardingContext';
 import { UserProfileProvider } from '@/context/UserProfileContext';
 import { PendingRequestsProvider } from '@/context/PendingRequestsContext';
+import { OperationProvider } from '@/context/OperationContext';
 import { DeeplinkProvider } from '@/context/DeeplinkContext';
 import { ActivitiesProvider } from '@/context/ActivitiesContext';
 import { DatabaseProvider } from '@/services/database/DatabaseProvider';
@@ -17,7 +18,7 @@ import { Asset } from 'expo-asset';
 import { ThemeProvider, useTheme } from '@/context/ThemeContext';
 import { CurrencyProvider } from '@/context/CurrencyContext';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import registerPubkeysForPushNotificationsAsync from '@/services/NotificationService'
+import registerPubkeysForPushNotificationsAsync from '@/services/NotificationService';
 import * as TaskManager from 'expo-task-manager';
 import { keyToHex } from 'portal-app-lib';
 import * as Notifications from 'expo-notifications';
@@ -29,16 +30,19 @@ SplashScreen.preventAutoHideAsync();
 
 const BACKGROUND_NOTIFICATION_TASK = 'BACKGROUND-NOTIFICATION-TASK';
 
-TaskManager.defineTask<Notifications.NotificationTaskPayload>(BACKGROUND_NOTIFICATION_TASK, async ({ data, error, executionInfo }) => {
-  console.log('Received a notification task payload!');
-  console.error('error: ', error);
-  const isNotificationResponse = 'actionIdentifier' in data;
-  if (isNotificationResponse) {
-    // Do something with the notification response from user
-  } else {
-    // Do something with the data from notification that was received
+TaskManager.defineTask<Notifications.NotificationTaskPayload>(
+  BACKGROUND_NOTIFICATION_TASK,
+  async ({ data, error, executionInfo }) => {
+    console.log('Received a notification task payload!');
+    console.error('error: ', error);
+    const isNotificationResponse = 'actionIdentifier' in data;
+    if (isNotificationResponse) {
+      // Do something with the notification response from user
+    } else {
+      // Do something with the data from notification that was received
+    }
   }
-});
+);
 
 const NotificationConfigurator = () => {
   // Disable notifications for now
@@ -131,10 +135,12 @@ const AuthenticatedAppContent = () => {
         <UserProfileProvider>
           <ActivitiesProvider>
             <PendingRequestsProvider>
-              <DeeplinkProvider>
-                <NotificationConfigurator />
-                <Stack screenOptions={{ headerShown: false }} />
-              </DeeplinkProvider>
+              <OperationProvider>
+                <DeeplinkProvider>
+                  <NotificationConfigurator />
+                  <Stack screenOptions={{ headerShown: false }} />
+                </DeeplinkProvider>
+              </OperationProvider>
             </PendingRequestsProvider>
           </ActivitiesProvider>
         </UserProfileProvider>

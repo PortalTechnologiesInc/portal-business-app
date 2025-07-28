@@ -6,16 +6,29 @@ import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Plus, ArrowLeft } from 'lucide-react-native';
 import { router, useFocusEffect } from 'expo-router';
+import {
+  useOperation,
+  createTicketVerifyOperation,
+  createTicketSellOperation,
+} from '@/context/OperationContext';
 import DropdownPill from '@/components/DropdownPill';
 import TicketCard from '@/components/TicketCard';
 import { useSQLiteContext } from 'expo-sqlite';
-import { DatabaseService, type Ticket } from '@/services/database';
+import { DatabaseService, type Ticket as DatabaseTicket } from '@/services/database';
 import { useDatabaseStatus } from '@/services/database/DatabaseProvider';
 
 export default function TicketsScreen() {
-  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [tickets, setTickets] = useState<DatabaseTicket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [db, setDb] = useState<DatabaseService | null>(null);
+  const {
+    startOperation,
+    addOperationStep,
+    updateOperationStep,
+    navigateToPending,
+    completeOperation,
+    failOperation,
+  } = useOperation();
 
   // Get database initialization status
   const dbStatus = useDatabaseStatus();
@@ -152,7 +165,10 @@ export default function TicketsScreen() {
   };
 
   const handleVerifyTicket = async (id: string) => {
-    Alert.alert('Verify Ticket', `Verify ticket ${id}?`, [
+    const ticket = tickets.find(t => t.id === id);
+    if (!ticket) return;
+
+    Alert.alert('Verify Ticket', `Verify ticket for ${ticket.unit}?`, [
       {
         text: 'Cancel',
         style: 'cancel',
@@ -160,15 +176,17 @@ export default function TicketsScreen() {
       {
         text: 'Verify',
         onPress: () => {
-          // TODO: Implement verify logic
-          console.log('Verify ticket:', id);
+          startTicketVerification(id, ticket);
         },
       },
     ]);
   };
 
   const handleSellTicket = async (id: string) => {
-    Alert.alert('Sell Ticket', `Sell ticket ${id}?`, [
+    const ticket = tickets.find(t => t.id === id);
+    if (!ticket) return;
+
+    Alert.alert('Sell Ticket', `Sell ticket for ${ticket.unit}?`, [
       {
         text: 'Cancel',
         style: 'cancel',
@@ -176,11 +194,161 @@ export default function TicketsScreen() {
       {
         text: 'Sell',
         onPress: () => {
-          // TODO: Implement sell logic
-          console.log('Sell ticket:', id);
+          startTicketSale(id, ticket);
         },
       },
     ]);
+  };
+
+  // Start ticket verification process
+  const startTicketVerification = async (ticketId: string, ticket: DatabaseTicket) => {
+    const operationData = createTicketVerifyOperation(ticketId, ticket.unit);
+    const operationId = startOperation('verify_ticket', operationData);
+
+    navigateToPending(operationId);
+    simulateTicketVerification(operationId, ticketId, ticket);
+  };
+
+  // Start ticket sale process
+  const startTicketSale = async (ticketId: string, ticket: DatabaseTicket) => {
+    const operationData = createTicketSellOperation(ticketId, ticket.unit, ticket.price);
+    const operationId = startOperation('sell_ticket', operationData);
+
+    navigateToPending(operationId);
+    simulateTicketSale(operationId, ticketId, ticket);
+  };
+
+  // Simulate ticket verification process
+  const simulateTicketVerification = async (
+    operationId: string,
+    ticketId: string,
+    ticket: DatabaseTicket
+  ) => {
+    try {
+      // Step 1: Validating ticket
+      addOperationStep(operationId, {
+        id: 'validate',
+        status: 'pending',
+        title: 'Validating ticket...',
+        subtitle: 'Checking ticket authenticity',
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      updateOperationStep(operationId, 'validate', {
+        status: 'completed',
+        title: 'Ticket validated',
+        subtitle: 'Ticket is authentic and valid',
+      });
+
+      // Step 2: Verifying with blockchain
+      addOperationStep(operationId, {
+        id: 'blockchain',
+        status: 'pending',
+        title: 'Blockchain verification...',
+        subtitle: 'Confirming ticket on blockchain',
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Simulate success/failure
+      const isSuccess = Math.random() > 0.2; // 80% success rate
+
+      if (isSuccess) {
+        updateOperationStep(operationId, 'blockchain', {
+          status: 'success',
+          title: 'Verification complete',
+          subtitle: 'Ticket successfully verified',
+        });
+
+        completeOperation(operationId, {
+          verificationId: `ver_${Date.now()}`,
+          ticketId,
+          status: 'verified',
+          verifiedAt: new Date().toISOString(),
+        });
+      } else {
+        updateOperationStep(operationId, 'blockchain', {
+          status: 'error',
+          title: 'Verification failed',
+          subtitle: 'Unable to verify ticket',
+          errorType: 'network_error',
+        });
+
+        failOperation(operationId, 'Ticket verification failed: Network error');
+      }
+    } catch (error) {
+      failOperation(operationId, 'An unexpected error occurred during verification');
+    }
+  };
+
+  // Simulate ticket sale process
+  const simulateTicketSale = async (
+    operationId: string,
+    ticketId: string,
+    ticket: DatabaseTicket
+  ) => {
+    try {
+      // Step 1: Preparing sale
+      addOperationStep(operationId, {
+        id: 'prepare',
+        status: 'pending',
+        title: 'Preparing sale...',
+        subtitle: 'Setting up ticket transfer',
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      updateOperationStep(operationId, 'prepare', {
+        status: 'completed',
+        title: 'Sale prepared',
+        subtitle: 'Ticket ready for transfer',
+      });
+
+      // Step 2: Processing payment
+      addOperationStep(operationId, {
+        id: 'payment',
+        status: 'pending',
+        title: 'Processing payment...',
+        subtitle: `Transferring ${ticket.price} ${ticket.currency}`,
+      });
+
+      await new Promise(resolve => setTimeout(resolve, 2500));
+
+      // Simulate success/failure
+      const isSuccess = Math.random() > 0.25; // 75% success rate
+
+      if (isSuccess) {
+        updateOperationStep(operationId, 'payment', {
+          status: 'success',
+          title: 'Sale completed',
+          subtitle: 'Payment received and ticket transferred',
+        });
+
+        completeOperation(operationId, {
+          saleId: `sale_${Date.now()}`,
+          ticketId,
+          amount: ticket.price,
+          currency: ticket.currency,
+          status: 'sold',
+          soldAt: new Date().toISOString(),
+        });
+      } else {
+        const errorTypes = ['insufficient_funds', 'network_error', 'payment_declined'] as const;
+        const randomError = errorTypes[Math.floor(Math.random() * errorTypes.length)];
+
+        updateOperationStep(operationId, 'payment', {
+          status: 'error',
+          title: 'Sale failed',
+          subtitle: 'Unable to complete ticket sale',
+          errorType: randomError,
+        });
+
+        failOperation(operationId, `Ticket sale failed: ${randomError.replace('_', ' ')}`);
+      }
+    } catch (error) {
+      failOperation(operationId, 'An unexpected error occurred during sale');
+    }
   };
 
   const handleBack = () => {
