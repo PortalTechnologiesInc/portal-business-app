@@ -6,10 +6,15 @@ import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { ArrowLeft, Check } from 'lucide-react-native';
 import { router } from 'expo-router';
+import { useCurrency } from '@/context/CurrencyContext';
 
 export default function AddTicketScreen() {
   const [mintUrl, setMintUrl] = useState('');
   const [unit, setUnit] = useState('');
+  const [price, setPrice] = useState('');
+
+  // Currency context
+  const { getCurrentCurrencySymbol } = useCurrency();
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
@@ -25,13 +30,13 @@ export default function AddTicketScreen() {
   };
 
   const handleSave = () => {
-    if (!mintUrl.trim() || !unit.trim()) {
+    if (!mintUrl.trim() || !unit.trim() || !price.trim()) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
     // Here you would save the ticket data
-    console.log('Adding ticket:', { mintUrl, unit });
+    console.log('Adding ticket:', { mintUrl, unit, price });
 
     // Navigate back to tickets page
     router.back();
@@ -88,6 +93,29 @@ export default function AddTicketScreen() {
                 placeholderTextColor={secondaryTextColor}
                 autoCapitalize="none"
                 autoCorrect={false}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <ThemedText style={[styles.label, { color: primaryTextColor }]}>
+                Price ({getCurrentCurrencySymbol()})
+              </ThemedText>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: cardBackgroundColor,
+                    borderColor: inputBorderColor,
+                    color: primaryTextColor,
+                  },
+                ]}
+                value={price}
+                onChangeText={setPrice}
+                placeholder={`Enter price in ${getCurrentCurrencySymbol()}`}
+                placeholderTextColor={secondaryTextColor}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="numeric"
               />
             </View>
           </View>

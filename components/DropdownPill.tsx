@@ -169,14 +169,16 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     borderWidth: 1,
     minHeight: 48,
+    width: '50%',
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     flex: 1,
   },
   icon: {
-    marginRight: 8,
+    marginRight: 12,
   },
   label: {
     fontSize: 16,
