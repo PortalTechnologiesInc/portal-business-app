@@ -11,6 +11,7 @@ import DropdownPill from '@/components/DropdownPill';
 import { useNostrService } from '@/context/NostrServiceContext';
 import { globalEvents } from '@/utils';
 import { Currency } from 'portal-business-app-lib';
+import uuid from 'react-native-uuid';
 
 export default function Home() {
   const [display, setDisplay] = useState('');
@@ -203,7 +204,7 @@ export default function Home() {
           currentExchangeRate: undefined,
           expiresAt: BigInt((new Date().getTime() + 1000 * 60 * 60 * 24)),
           subscriptionId: undefined,
-          requestId: 'temp-request-id',
+          requestId: uuid.v4(),
         }).catch(error => {
           console.log('Error:', error);
         });
