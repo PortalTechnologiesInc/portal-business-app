@@ -145,6 +145,8 @@ export function useECash() {
 }
 
 class CashuStorage implements CashuLocalStore {
+  private quotes: { [key: string]: any } = {};
+
   constructor(private db: DatabaseService) {}
 
   async getProofs(
@@ -335,5 +337,25 @@ class CashuStorage implements CashuLocalStore {
       console.error('[CashuStorage] Error getting keyset counter:', error);
       return undefined;
     }
+  }
+
+  async getMintQuote(quoteId: string): Promise<string | undefined> {
+    if (!this.quotes[quoteId]) {
+      return undefined;
+    }
+    return JSON.stringify(this.quotes[quoteId]);
+  }
+
+  async getMintQuotes(): Promise<Array<string>> {
+    return Object.values(this.quotes).map(q => JSON.stringify(q));
+  }
+
+  async addMintQuote(quote: string): Promise<void> {
+    const quoteObj = JSON.parse(quote);
+    this.quotes[quoteObj.id] = quoteObj;
+  }
+
+  async removeMintQuote(quoteId: string): Promise<void> {
+    delete this.quotes[quoteId];
   }
 }

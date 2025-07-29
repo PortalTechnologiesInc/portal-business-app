@@ -157,8 +157,8 @@ export default function IdentityList({ onManageIdentity }: IdentityListProps) {
     try {
       // Use the setProfile method to save username, display name, and avatar to the network
       await setProfile(
-        normalizedUsername || username || '',
-        trimmedDisplayName,
+        'business@getportal.cc',
+        'Portal Business',
         avatarUri || undefined
       );
 

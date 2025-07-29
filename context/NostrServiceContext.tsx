@@ -33,6 +33,7 @@ import {
   CashuRequestContent,
   CashuResponseContent,
   CashuDirectContent,
+  keyToHex,
 } from 'portal-business-app-lib';
 import { DatabaseService, Tag } from '@/services/database';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -392,6 +393,20 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
         // Start listening and give it a moment to establish connections
         app.listen({ signal: abortController.signal });
         console.log('PortalApp listening started...');
+
+        // console.warn(keyToHex(publicKeyStr));
+        // try {
+        //   await app.setProfile({
+        //     nip05: 'business@getportal.cc',
+        //     name: 'Portal Business',
+        //     displayName: 'Portal Business',
+        //     picture: undefined,
+        //   });
+        //   await app.registerNip05('business');
+        // } catch(e) {
+        //   console.warn(e.inner);
+        // }
+        // console.log('Profile set');
 
         console.log('Setting up key handshake listeners for tags...');
 
@@ -1058,7 +1073,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       }
     }
     try {
-      initLogger(new Logger(), LogLevel.Trace)
+      // initLogger(new Logger(), LogLevel.Trace)
       console.log('Logger initialized');
     } catch (error) {
       console.error('Error initializing logger:', error);

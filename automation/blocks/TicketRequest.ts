@@ -1,4 +1,5 @@
 import { BlockType, BlockParameter, ConnectionPoint, DataField, BlockConfig } from '../types';
+import uuid from 'react-native-uuid';
 
 export const ticketRequest: BlockType = {
   id: 'ticket_request',
@@ -76,28 +77,33 @@ export const ticketRequest: BlockType = {
   getWidth(): number { return 155; },
   getHeight(): number { return 80; },
 
-  async run(inputs: Promise<any>[], config?: BlockConfig): Promise<any> {
-    // TODO: request the ticket
+  async run(inputs: Promise<any>[], config?: BlockConfig, nostrService?: any, ecashService?: any): Promise<any> {
     console.log(inputs);
+
     const key = inputs[0]['input-key'];
     const amount = inputs[0]['input-amount'];
 
+    const mintUrl = config?.parameters['mint-url'];
+    const unit = config?.parameters['unit'];
+
+    const wallet = await ecashService.addWallet(mintUrl, unit);
+    const response = await nostrService.requestCashu(key, [], {
+      requestId: uuid.v4(),
+      mintUrl: mintUrl,
+      unit: unit,
+      amount: BigInt(amount),
+    }).catch(error => {
+      console.log('Error:', error);
+    });
+
+    const received = wallet.receiveToken(response.status.inner.token);
+
     return new Promise((resolve) => {
-      setTimeout(() => {
-        if (Math.random() < 0.5) {
-          resolve({
-            'output-success': {
-              'num_tickets': amount,
-            },
-          })
-        } else {
-          resolve({
-            'output-failure': {
-              'error': 'Failed to request ticket',
-            }
-          })
-        }
-      }, 3000)
+      resolve({
+        'output-success': {
+          'num_tickets': received,
+        },
+      })
     })
  }
 }; 

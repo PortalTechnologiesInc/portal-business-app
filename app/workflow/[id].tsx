@@ -15,6 +15,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { DatabaseService, type WorkflowWithDates } from '@/services/database';
 import { useDatabaseStatus } from '@/services/database/DatabaseProvider';
 import { useNostrService } from '@/context/NostrServiceContext';
+import { useECash } from '@/context/ECashContext';
 
 export default function WorkflowEditorScreen() {
   const router = useRouter();
@@ -38,6 +39,7 @@ export default function WorkflowEditorScreen() {
   const db = new DatabaseService(sqliteContext);
 
   const nostrService = useNostrService();
+  const ecashService = useECash();
 
   // Load workflow data from database
   React.useEffect(() => {
@@ -275,7 +277,7 @@ export default function WorkflowEditorScreen() {
 
     console.log('Block', block.id, 'Incoming promises:', mergedPromises);
     try {
-      const res = await blockTypeData?.run([mergedPromises], blockConfig, nostrService);
+      const res = await blockTypeData?.run([mergedPromises], blockConfig, nostrService, ecashService);
       console.log('results', res);
       return res;
     } catch (e) {

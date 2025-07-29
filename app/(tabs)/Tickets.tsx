@@ -246,7 +246,13 @@ export default function TicketsScreen() {
         subtitle: 'Ask customer to tap their tag or scan QR',
       });
 
+      let received = false;
       setKeyHandshakeCallbackWithTimeout(activeToken || '', async (userPubkey: string) => {
+        if (received) {
+          return;
+        }
+        received = true;
+
         // Step 2: Waiting for customer
         addOperationStep(operationId, {
           id: 'waiting',
@@ -268,6 +274,12 @@ export default function TicketsScreen() {
           failOperation(operationId, 'An unexpected error occurred during verification');
           return;
         }
+
+        updateOperationStep(operationId, 'waiting', {
+          status: 'completed',
+          title: 'Requesting ticket...',
+          subtitle: 'Requesting ticket from mint',
+        });
 
         addOperationStep(operationId, {
           id: 'received',
@@ -322,7 +334,13 @@ export default function TicketsScreen() {
         subtitle: 'Ask customer to tap their tag or scan QR',
       });
 
+      let received = false;
       setKeyHandshakeCallbackWithTimeout(activeToken || '', async (userPubkey: string) => {
+        if (received) {
+          return;
+        }
+        received = true;
+
         const invoice = await makeInvoice(BigInt(ticket.price * 1000), 'Ticket sale');
         console.log('Invoice created:', invoice);
 
@@ -355,10 +373,16 @@ export default function TicketsScreen() {
           failOperation(operationId, 'Payment failed');
         }
 
-        addOperationStep(operationId, {
-          id: 'received',
-          status: 'pending',
+        updateOperationStep(operationId, 'waiting', {
+          status: 'completed',
           title: 'Payment received, issuing ticket...',
+          subtitle: 'Issuing ticket to customer',
+        });
+
+        addOperationStep(operationId, {
+          id: 'connecting',
+          status: 'pending',
+          title: 'Connecting to mint...',
           subtitle: 'Issuing ticket to customer',
         });
 
@@ -367,17 +391,29 @@ export default function TicketsScreen() {
         const mintResponse = await walletMint.mintToken(BigInt(1));
         console.warn('minted token', mintResponse);
 
+        updateOperationStep(operationId, 'connecting', {
+          status: 'completed',
+          title: 'Token minted, sending to customer...',
+          subtitle: 'Sending token to customer',
+        });
+
         addOperationStep(operationId, {
           id: 'issued',
           status: 'pending',
-          title: 'Ticket issued...',
-          subtitle: 'Ticket issued to customer',
+          title: 'Sending token to customer...',
+          subtitle: 'Sending token to customer',
         });
 
         await sendCashuDirect(userPubkey, [], {
           token: mintResponse,
         }).catch(error => {
           console.log('Error:', error);
+        });
+
+        completeOperation(operationId, {
+          transactionId: `txn_${Date.now()}`,
+          amount: BigInt(ticket.price * 1000),
+          currency: 'SAT',
         });
       });
     } catch (error) {

@@ -69,61 +69,29 @@ export const ticketSend: BlockType = {
   getWidth(): number { return 155; },
   getHeight(): number { return 80; },
 
-  async run(inputs: Promise<any>[], config?: BlockConfig): Promise<Promise<any>[]> {
-    try {
-      // Await all input promises
-      const resolvedInputs = await Promise.all(inputs);
-      
-      // Extract key and amount from inputs
-      const key = resolvedInputs[0]?.key;
-      const amount = resolvedInputs[0]?.amount;
-      
-      // Get configured values from config
-      const configuredMintUrl = config?.parameters?.['mint-url'] as string;
-      const configuredUnit = config?.parameters?.unit as string;
-      
-      // Use configured values if available, otherwise use inputs
-      const finalKey = configuredMintUrl || key;
-      const finalAmount = configuredUnit || amount;
-      
-      // Simulate ticket send processing
-      console.log(`Processing ticket send for mint URL ${finalKey}, unit: ${finalAmount}`);
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
-      // Simulate success (80% success rate)
-      const isSuccess = Math.random() > 0.2;
-      
-      if (isSuccess) {
-        const transactionId = `tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        return [
-          Promise.resolve({
-            transaction_id: transactionId,
-            key: finalKey,
-            amount: finalAmount,
-            status: 'completed'
-          })
-        ];
-      } else {
-        return [
-          Promise.resolve({
-            error: 'Ticket send failed',
-            key: finalKey,
-            amount: finalAmount,
-            status: 'failed'
-          })
-        ];
-      }
-    } catch (error) {
-      return [
-        Promise.resolve({
-          error: error instanceof Error ? error.message : 'Unknown error',
-          key: 'unknown',
-          amount: 0,
-          status: 'failed'
-        })
-      ];
-    }
+  async run(inputs: Promise<any>[], config?: BlockConfig, nostrService?: any, ecashService?: any): Promise<any> {
+    console.log(inputs);
+
+    const key = inputs[0]['input-key'];
+    const amount = inputs[0]['input-amount'];
+
+    const mintUrl = config?.parameters['mint-url'];
+    const unit = config?.parameters['unit'];
+
+    const wallet = await ecashService.addWallet(mintUrl, unit);
+    const token = await wallet.mintToken(BigInt(amount));
+    await nostrService.sendCashuDirect(key, [], {
+      token: token
+    }).catch(error => {
+      console.log('Error:', error);
+    });
+
+    return new Promise((resolve) => {
+      resolve({
+        'output-success': {
+          'num_tickets': amount,
+        },
+      })
+    })
   }
 }; 

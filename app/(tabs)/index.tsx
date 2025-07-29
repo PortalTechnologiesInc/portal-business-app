@@ -167,7 +167,14 @@ export default function Home() {
         subtitle: 'Ready to receive payment',
       });
 
+      let received = false;
+
       setKeyHandshakeCallbackWithTimeout(activeToken || '', async (userPubkey: string) => {
+        if (received) {
+          return;
+        }
+        received = true;
+
         // Step 2: Waiting for customer
         addOperationStep(operationId, {
           id: 'waiting',
