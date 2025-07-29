@@ -59,6 +59,15 @@ export interface NameCacheRecord {
   created_at: number; // Unix timestamp in seconds
 }
 
+export interface WorkflowRecord {
+  id: string;
+  name: string;
+  data: string; // JSON string containing blocks, connections, and block_configs
+  created_at: number; // Unix timestamp in seconds
+  updated_at: number; // Unix timestamp in seconds
+  is_active: number; // 0 or 1 for SQLite boolean
+}
+
 // Application layer types (with Date objects)
 export interface ActivityWithDates extends Omit<ActivityRecord, 'date' | 'created_at'> {
   date: Date;
@@ -112,6 +121,19 @@ export interface SubscriptionWithDates
 
 export interface NostrRelayWithDates extends Omit<NostrRelay, 'created_at'> {
   created_at: Date;
+}
+
+export interface WorkflowWithDates extends Omit<WorkflowRecord, 'created_at' | 'updated_at' | 'is_active' | 'data'> {
+  created_at: Date;
+  updated_at: Date;
+  is_active: boolean;
+  data: WorkflowData;
+}
+
+export interface WorkflowData {
+  blocks: any[];
+  connections: any[];
+  block_configs: any[];
 }
 
 export class DatabaseService {
@@ -1134,5 +1156,133 @@ export class DatabaseService {
       console.error('Error deleting ticket:', error);
       throw error;
     }
+  }
+
+  // Workflow methods
+  async addWorkflow(workflow: { name: string; data: WorkflowData; is_active: boolean }): Promise<string> {
+    const id = uuid.v4() as string;
+    const now = toUnixSeconds(new Date());
+
+    await this.db.runAsync(
+      `INSERT INTO workflows (
+        id, name, data, created_at, updated_at, is_active
+      ) VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        workflow.name,
+        JSON.stringify(workflow.data),
+        now,
+        now,
+        workflow.is_active ? 1 : 0,
+      ]
+    );
+
+    return id;
+  }
+
+  async getWorkflow(id: string): Promise<WorkflowWithDates | null> {
+    const result = await this.db.getFirstAsync<WorkflowRecord>(
+      `SELECT * FROM workflows WHERE id = ?`,
+      [id]
+    );
+
+    if (!result) return null;
+
+    const data: WorkflowData = JSON.parse(result.data);
+
+    return {
+      id: result.id,
+      name: result.name,
+      data,
+      created_at: fromUnixSeconds(result.created_at),
+      updated_at: fromUnixSeconds(result.updated_at),
+      is_active: result.is_active === 1,
+    };
+  }
+
+  async getWorkflows(
+    options: {
+      activeOnly?: boolean;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Promise<WorkflowWithDates[]> {
+    let query = `SELECT * FROM workflows`;
+    const params: (string | number)[] = [];
+
+    if (options.activeOnly) {
+      query += ` WHERE is_active = 1`;
+    }
+
+    query += ` ORDER BY updated_at DESC`;
+
+    if (options.limit) {
+      query += ` LIMIT ?`;
+      params.push(options.limit);
+    }
+
+    if (options.offset) {
+      query += ` OFFSET ?`;
+      params.push(options.offset);
+    }
+
+    const result = await this.db.getAllAsync<WorkflowRecord>(query, params);
+
+    return result.map((row) => {
+      const data: WorkflowData = JSON.parse(row.data);
+      return {
+        id: row.id,
+        name: row.name,
+        data,
+        created_at: fromUnixSeconds(row.created_at),
+        updated_at: fromUnixSeconds(row.updated_at),
+        is_active: row.is_active === 1,
+      };
+    });
+  }
+
+  async updateWorkflow(
+    id: string,
+    updates: Partial<{ name: string; data: WorkflowData; is_active: boolean }>
+  ): Promise<void> {
+    const now = toUnixSeconds(new Date());
+    const setClauses: string[] = [];
+    const params: (string | number)[] = [];
+
+    if (updates.name !== undefined) {
+      setClauses.push('name = ?');
+      params.push(updates.name);
+    }
+
+    if (updates.data !== undefined) {
+      setClauses.push('data = ?');
+      params.push(JSON.stringify(updates.data));
+    }
+
+    if (updates.is_active !== undefined) {
+      setClauses.push('is_active = ?');
+      params.push(updates.is_active ? 1 : 0);
+    }
+
+    setClauses.push('updated_at = ?');
+    params.push(now);
+
+    params.push(id);
+
+    await this.db.runAsync(
+      `UPDATE workflows SET ${setClauses.join(', ')} WHERE id = ?`,
+      params
+    );
+  }
+
+  async deleteWorkflow(id: string): Promise<void> {
+    await this.db.runAsync(`DELETE FROM workflows WHERE id = ?`, [id]);
+  }
+
+  async toggleWorkflowActive(id: string): Promise<void> {
+    await this.db.runAsync(
+      `UPDATE workflows SET is_active = NOT is_active, updated_at = ? WHERE id = ?`,
+      [toUnixSeconds(new Date()), id]
+    );
   }
 }
