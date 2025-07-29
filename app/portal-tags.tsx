@@ -51,6 +51,14 @@ import NfcManager, { Ndef } from 'react-native-nfc-manager';
 import { NfcTech } from 'react-native-nfc-manager';
 import NFCScanUI from './nfc/NFCScanUI';
 
+// Use the same relays that the business app listens on
+const DEFAULT_RELAYS = [
+  'wss://relay.getportal.cc',
+  'wss://relay.nostr.band',
+  'wss://nos.lol',
+  'wss://offchain.pub',
+];
+
 export default function PortalTagsManagementScreen() {
   const router = useRouter();
   const [tags, setTags] = useState<Tag[]>([]);
@@ -302,11 +310,16 @@ export default function PortalTagsManagementScreen() {
       id: '', // The database will assign an ID
       token: encodedToken, // Store encoded token
       description: newTagDescription.trim() || null,
-      // portal://npub1ek206p7gwgqzgc6s7sfedmlu87cz9894jzzq0283t72lhz3uuxwsgn9stz?relays=wss%3A%2F%2Frelay.getportal.cc&token=alekos
-      url: `portal://${nostrService.publicKey}?relays=wss%3A%2F%2Frelay.getportal.cc&token=${encodedToken}`,
+      // Include ALL relays that the business app listens on
+      // portal://npub1...?relays=wss%3A%2F%2Frelay.getportal.cc,wss%3A%2F%2Frelay.nostr.band,wss%3A%2F%2Fnos.lol,wss%3A%2F%2Foffchain.pub&token=alekos
+      url: `portal://${nostrService.publicKey}?relays=${encodeURIComponent(DEFAULT_RELAYS.join(','))}&token=${encodedToken}`,
       icon: newTagIcon === '' ? 'tag' : newTagIcon,
       created_at: 0,
     };
+
+    console.log('🏷️ Generated Portal URL:', newTag.url);
+    console.log('🔗 Relays included:', DEFAULT_RELAYS);
+    console.log('🎯 Token:', encodedToken);
 
     try {
       // Check if NFC is enabled before proceeding

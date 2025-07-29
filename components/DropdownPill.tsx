@@ -1,24 +1,82 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Modal, FlatList } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { ChevronDown, X, Star, Tag as TagIcon } from 'lucide-react-native';
+import {
+  ChevronDown,
+  X,
+  Star,
+  Tag as TagIcon,
+  Home,
+  User,
+  Settings,
+  Heart,
+  ShoppingCart,
+  CreditCard,
+  Gift,
+  Coffee,
+  Utensils,
+  Car,
+  Bike,
+  Footprints,
+  Phone,
+  Mail,
+  Calendar,
+  Clock,
+  MapPin,
+  Camera,
+} from 'lucide-react-native';
 import { useSQLiteContext } from 'expo-sqlite';
 import { DatabaseService, type Tag } from '@/services/database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { globalEvents } from '@/utils';
+import { useNostrService } from '@/context/NostrServiceContext';
+
+// Function to get icon component by name (matching the one from portal-tags.tsx)
+const getIconComponent = (iconName: string) => {
+  const iconMap: { [key: string]: any } = {
+    tag: TagIcon,
+    home: Home,
+    user: User,
+    settings: Settings,
+    star: Star,
+    heart: Heart,
+    'shopping-cart': ShoppingCart,
+    'credit-card': CreditCard,
+    gift: Gift,
+    coffee: Coffee,
+    food: Utensils,
+    car: Car,
+    bike: Bike,
+    footprints: Footprints,
+    phone: Phone,
+    mail: Mail,
+    calendar: Calendar,
+    clock: Clock,
+    'map-pin': MapPin,
+    camera: Camera,
+  };
+  return iconMap[iconName] || TagIcon;
+};
 
 interface DropdownPillProps {
   selectedItem?: Tag;
   onItemSelect?: (item: Tag) => void;
 }
 
-export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPillProps) {
+export default React.memo(function DropdownPill({ selectedItem, onItemSelect }: DropdownPillProps) {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [tags, setTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [favoriteTagId, setFavoriteTagId] = useState<string | null>(null);
   const [internalSelectedItem, setInternalSelectedItem] = useState<Tag | null>(null);
+  const [persistedSelectedTagId, setPersistedSelectedTagId] = useState<string | null>(null);
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+  const previousActiveTokenRef = useRef<string | null>(null);
+
+  // Get NostrService context for active token management
+  const { setActiveToken } = useNostrService();
 
   // Database setup with error handling
   let sqliteContext = null;
@@ -31,25 +89,61 @@ export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPil
     console.log('SQLite context not available yet, tag loading will be delayed');
   }
 
-  // Load favorite tag from AsyncStorage
+  // Load favorite tag and selected tag from AsyncStorage
   useEffect(() => {
-    const loadFavoriteTag = async () => {
+    const loadStoredData = async () => {
       try {
-        const favoriteId = await AsyncStorage.getItem('favorite_tag_id');
+        const [favoriteId, selectedId] = await Promise.all([
+          AsyncStorage.getItem('favorite_tag_id'),
+          AsyncStorage.getItem('selected_tag_id'),
+        ]);
+
         setFavoriteTagId(favoriteId);
+
+        // Clear persisted selection on app start so favorite becomes default
+        // Session selections will be persisted via the handleItemSelect function
+        await AsyncStorage.removeItem('selected_tag_id');
+        setPersistedSelectedTagId(null);
+
+        setInitialDataLoaded(true);
       } catch (error) {
-        console.error('Error loading favorite tag:', error);
+        console.error('Error loading stored tag data:', error);
+        setInitialDataLoaded(true);
       }
     };
 
-    loadFavoriteTag();
+    loadStoredData();
   }, []);
+
+  // Listen for tag selection changes from other DropdownPill instances
+  useEffect(() => {
+    const handleTagSelectionChange = (data: { tagId: string }) => {
+      setPersistedSelectedTagId(data.tagId);
+
+      // Also update the active token for the newly selected tag
+      const tag = tags.find(t => String(t.id) === data.tagId);
+      if (tag) {
+        setActiveToken(tag.token);
+      }
+    };
+
+    const handleFavoriteTagChange = (data: { tagId: string | null }) => {
+      setFavoriteTagId(data.tagId);
+    };
+
+    globalEvents.on('tagSelectionChanged', handleTagSelectionChange);
+    globalEvents.on('favoriteTagChanged', handleFavoriteTagChange);
+
+    return () => {
+      globalEvents.off('tagSelectionChanged', handleTagSelectionChange);
+      globalEvents.off('favoriteTagChanged', handleFavoriteTagChange);
+    };
+  }, [tags, setActiveToken]);
 
   // Fetch tags from database
   useEffect(() => {
     const fetchTags = async () => {
       if (!DB) {
-        console.log('Database not ready, skipping tag fetch');
         setIsLoading(false);
         return;
       }
@@ -68,12 +162,39 @@ export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPil
     fetchTags();
   }, [DB]);
 
-  // Use selected item, then internal selected item, then favorite tag, then first item
-  const currentItem =
-    selectedItem ||
-    internalSelectedItem ||
-    (favoriteTagId ? tags.find(tag => String(tag.id) === favoriteTagId) : null) ||
-    (tags.length > 0 ? tags[0] : null);
+  // Use simple priority: persisted selection (if exists) > favorite tag > fallbacks
+  const currentItem = useMemo(() => {
+    // Always respect controlled selectedItem prop first
+    if (selectedItem) {
+      return selectedItem;
+    }
+
+    // If user has made a selection this session, prioritize it
+    if (persistedSelectedTagId) {
+      return tags.find(tag => String(tag.id) === persistedSelectedTagId) || null;
+    }
+
+    // Otherwise, default to favorite tag (app start behavior)
+    return (
+      (favoriteTagId ? tags.find(tag => String(tag.id) === favoriteTagId) : null) ||
+      internalSelectedItem ||
+      (tags.length > 0 ? tags[0] : null)
+    );
+  }, [selectedItem, persistedSelectedTagId, favoriteTagId, internalSelectedItem, tags]);
+
+  // Set the active token whenever the current item changes
+  useEffect(() => {
+    const newActiveToken = currentItem ? currentItem.token : null;
+
+    // Only call setActiveToken if the token actually changed
+    if (previousActiveTokenRef.current !== newActiveToken) {
+      console.log(
+        `🎯 DropdownPill: Setting active token to: "${newActiveToken}" (type: ${typeof newActiveToken})`
+      );
+      previousActiveTokenRef.current = newActiveToken;
+      setActiveToken(newActiveToken);
+    }
+  }, [currentItem, setActiveToken]);
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'cardBackground');
@@ -84,9 +205,24 @@ export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPil
   const buttonPrimaryColor = useThemeColor({}, 'buttonPrimary');
   const buttonPrimaryTextColor = useThemeColor({}, 'buttonPrimaryText');
 
-  const handleItemSelect = (item: Tag) => {
+  const handleItemSelect = async (item: Tag) => {
     setIsModalVisible(false);
     setInternalSelectedItem(item);
+
+    // Persist the selection across tabs
+    try {
+      await AsyncStorage.setItem('selected_tag_id', String(item.id));
+      setPersistedSelectedTagId(String(item.id));
+
+      // Set this as the active token for key handshake callbacks
+      setActiveToken(item.token);
+
+      // Emit event to sync with other DropdownPill instances
+      globalEvents.emit('tagSelectionChanged', { tagId: String(item.id) });
+    } catch (error) {
+      console.error('Error persisting selected tag:', error);
+    }
+
     onItemSelect?.(item);
   };
 
@@ -99,9 +235,11 @@ export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPil
       if (newFavoriteId) {
         await AsyncStorage.setItem('favorite_tag_id', String(newFavoriteId));
         setFavoriteTagId(String(newFavoriteId));
+        globalEvents.emit('favoriteTagChanged', { tagId: String(newFavoriteId) });
       } else {
         await AsyncStorage.removeItem('favorite_tag_id');
         setFavoriteTagId(null);
+        globalEvents.emit('favoriteTagChanged', { tagId: null });
       }
     } catch (error) {
       console.error('Error setting favorite tag:', error);
@@ -111,6 +249,7 @@ export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPil
   const renderDropdownItem = ({ item }: { item: Tag }) => {
     const isSelected = item.id === currentItem?.id;
     const isFavorite = String(item.id) === favoriteTagId;
+    const IconComponent = getIconComponent(item.icon);
 
     return (
       <TouchableOpacity
@@ -122,7 +261,7 @@ export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPil
         activeOpacity={0.7}
       >
         <View style={styles.dropdownItemContent}>
-          <TagIcon
+          <IconComponent
             size={16}
             color={isSelected ? buttonPrimaryTextColor : primaryTextColor}
             style={styles.dropdownItemIcon}
@@ -154,7 +293,7 @@ export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPil
     );
   };
 
-  if (isLoading) {
+  if (isLoading || !initialDataLoaded) {
     return (
       <TouchableOpacity
         style={[styles.container, { backgroundColor, borderColor }]}
@@ -194,7 +333,11 @@ export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPil
         activeOpacity={0.7}
       >
         <View style={styles.content}>
-          <TagIcon size={16} color={primaryTextColor} style={styles.icon} />
+          {React.createElement(getIconComponent(currentItem.icon), {
+            size: 16,
+            color: primaryTextColor,
+            style: styles.icon,
+          })}
           <ThemedText style={[styles.label, { color: primaryTextColor }]}>
             {currentItem.token}
           </ThemedText>
@@ -241,7 +384,7 @@ export default function DropdownPill({ selectedItem, onItemSelect }: DropdownPil
       </Modal>
     </>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
@@ -8,9 +8,12 @@ import { useCurrency } from '@/context/CurrencyContext';
 import { useOperation, createChargeOperation } from '@/context/OperationContext';
 import { Send, ArrowLeft } from 'lucide-react-native';
 import DropdownPill from '@/components/DropdownPill';
+import { useNostrService } from '@/context/NostrServiceContext';
+import { globalEvents } from '@/utils';
 
 export default function Home() {
   const [display, setDisplay] = useState('');
+  const currentOperationRef = useRef<string | null>(null);
   const { getCurrentCurrencySymbol } = useCurrency();
   const {
     startOperation,
@@ -20,6 +23,13 @@ export default function Home() {
     completeOperation,
     failOperation,
   } = useOperation();
+
+  const {
+    setKeyHandshakeCallback,
+    clearKeyHandshakeCallback,
+    requestSinglePayment,
+    lookupInvoice,
+  } = useNostrService();
 
   // Currency formatting function
   const formatCurrency = (numStr: string) => {
@@ -88,12 +98,20 @@ export default function Home() {
   const handleSubmit = async () => {
     const numericValue = parseFloat(display || '0');
 
+    console.log(`🚀 CHARGE BUTTON PRESSED:`);
+    console.log(`  - Display value: "${display}"`);
+    console.log(`  - Numeric value: ${numericValue}`);
+    console.log(`  - Currency: ${getCurrentCurrencySymbol()}`);
+
     // Validate amount
     if (numericValue <= 0) {
+      console.log('❌ Invalid amount, aborting charge process');
       // Could show an alert here
       console.log('Invalid amount');
       return;
     }
+
+    console.log(`✅ Amount validation passed, proceeding with charge...`);
 
     // Clear display
     setDisplay('');
@@ -103,16 +121,30 @@ export default function Home() {
 
     // Start the operation
     const operationId = startOperation('charge', operationData);
+    currentOperationRef.current = operationId;
+
+    console.log(`📋 Operation created with ID: ${operationId}`);
+    console.log(`🎯 Current operation ref set to: ${currentOperationRef.current}`);
 
     // Navigate to pending screen
     navigateToPending(operationId);
 
+    console.log(`🚀 About to call chargeProcess with:`);
+    console.log(`  - Operation ID: ${operationId}`);
+    console.log(`  - Amount: ${numericValue} sats`);
+    console.log(`  - Currency: ${getCurrentCurrencySymbol()}`);
+
     // Simulate charge process with steps
-    simulateChargeProcess(operationId, numericValue, getCurrentCurrencySymbol());
+    chargeProcess(operationId, numericValue, getCurrentCurrencySymbol());
   };
 
-  // Simulate charge processing with realistic steps
-  const simulateChargeProcess = async (operationId: string, amount: number, currency: string) => {
+  // charge processing with steps - REAL PAYMENT IMPLEMENTATION (SATS ONLY)
+  // This function implements real Lightning Network payments using PortalBusiness:
+  // 1. Wait for customer NFC tap/QR scan (key handshake)
+  // 2. Use amount directly as satoshis (no currency conversion)
+  // 3. Send payment request to customer using requestSinglePayment
+  // 4. Monitor payment status using lookupInvoice until settled
+  const chargeProcess = async (operationId: string, amount: number, currency: string) => {
     try {
       // Step 1: Initializing payment
       addOperationStep(operationId, {
@@ -122,59 +154,275 @@ export default function Home() {
         subtitle: 'Setting up your payment request',
       });
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Brief delay for UX
 
       updateOperationStep(operationId, 'init', {
         status: 'completed',
         title: 'Payment initialized',
-        subtitle: 'Payment request created successfully',
+        subtitle: 'Ready to receive payment',
       });
 
-      // Step 2: Processing payment
+      // Step 2: Waiting for customer
       addOperationStep(operationId, {
-        id: 'process',
+        id: 'waiting',
         status: 'pending',
-        title: 'Processing payment...',
-        subtitle: `Charging ${amount} ${currency}`,
+        title: 'Waiting for customer...',
+        subtitle: 'Ask customer to tap their tag or scan QR',
       });
 
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Set up the real callback to wait for key handshake
+      let paymentCompleted = false;
 
-      // Simulate random success/failure for demo
-      const isSuccess = Math.random() > 0.3; // 70% success rate
+      console.log(`🚀 Setting up key handshake callback for operation: ${operationId}`);
+      console.log(`🎯 Current active token should be set from DropdownPill`);
 
-      if (isSuccess) {
-        updateOperationStep(operationId, 'process', {
-          status: 'success',
-          title: 'Payment processed',
-          subtitle: 'Your payment has been completed successfully',
-        });
+      setKeyHandshakeCallback(async (token: string, userPubkey: string) => {
+        console.log(`🔔 Key handshake callback triggered!`);
+        console.log(`📱 Received token: "${token}" (type: ${typeof token})`);
+        console.log(`👤 Received userPubkey: "${userPubkey}" (type: ${typeof userPubkey})`);
+        console.log(`✅ Payment completed flag: ${paymentCompleted}`);
 
-        // Complete the operation
-        completeOperation(operationId, {
-          transactionId: `txn_${Date.now()}`,
-          amount,
-          currency,
-          status: 'completed',
-        });
-      } else {
-        // Simulate different types of errors
-        const errorTypes = ['insufficient_funds', 'network_error', 'payment_declined'] as const;
-        const randomError = errorTypes[Math.floor(Math.random() * errorTypes.length)];
+        if (paymentCompleted) {
+          console.log(`⚠️ Payment already completed, ignoring handshake`);
+          return; // Prevent duplicate processing
+        }
+        paymentCompleted = true;
 
-        updateOperationStep(operationId, 'process', {
-          status: 'error',
-          title: 'Payment failed',
-          subtitle: 'Unable to process your payment',
-          errorType: randomError,
-        });
+        console.log(`🎯 Key handshake received!`);
+        console.log(`📱 Token: ${token}`);
+        console.log(`👤 User PubKey: ${userPubkey}`);
+        console.log(`💰 Amount: ${amount} sats`);
 
-        failOperation(operationId, `Payment failed: ${randomError.replace('_', ' ')}`);
-      }
+        // Validate required parameters
+        if (!userPubkey) {
+          throw new Error('User public key is undefined');
+        }
+        if (!token) {
+          throw new Error('Token is undefined');
+        }
+        if (!amount || amount <= 0) {
+          throw new Error('Amount is invalid');
+        }
+
+        // Convert userPubkey to string if it's a PublicKey object
+        let userPubkeyString: string;
+        if (typeof userPubkey === 'string') {
+          userPubkeyString = userPubkey;
+        } else {
+          // Handle PublicKey object or other types
+          userPubkeyString = String(userPubkey);
+        }
+        console.log(`🔄 Converted userPubkey to string: "${userPubkeyString}"`);
+
+        try {
+          // Update waiting step to completed
+          updateOperationStep(operationId, 'waiting', {
+            status: 'completed',
+            title: 'Customer detected',
+            subtitle: `Processing payment for ${amount} sats`,
+          });
+
+          // Step 3: Processing payment
+          addOperationStep(operationId, {
+            id: 'process',
+            status: 'pending',
+            title: 'Requesting payment...',
+            subtitle: `Sending payment request for ${amount} sats`,
+          });
+
+          // Create payment request content
+          const amountInSats = amount; // Use the amount directly as sats
+
+          // Validate payment amount (minimum 1 sat, maximum 100M sats)
+          if (amountInSats < 1) {
+            throw new Error('Payment amount too small (minimum 1 satoshi)');
+          }
+          if (amountInSats > 100000000) {
+            throw new Error('Payment amount too large (maximum 100M sats)');
+          }
+
+          const paymentRequest = {
+            amount: amountInSats,
+            currency: 'SAT',
+            description: `Payment request for ${amountInSats} sats`,
+            memo: `Charge from business via ${token}`,
+          };
+
+          console.log(`💸 Requesting payment: ${amountInSats} sats`);
+          console.log(`📄 Payment request details:`, paymentRequest);
+          console.log(`🔍 Debug parameters:`);
+          console.log(`  - userPubkey: "${userPubkeyString}" (type: ${typeof userPubkeyString})`);
+          console.log(`  - subkeys: ${JSON.stringify([])} (type: ${typeof []})`);
+          console.log(
+            `  - paymentRequest.amount: ${paymentRequest.amount} (type: ${typeof paymentRequest.amount})`
+          );
+          console.log(
+            `  - paymentRequest.currency: "${paymentRequest.currency}" (type: ${typeof paymentRequest.currency})`
+          );
+          console.log(
+            `  - paymentRequest.description: "${paymentRequest.description}" (type: ${typeof paymentRequest.description})`
+          );
+          console.log(
+            `  - paymentRequest.memo: "${paymentRequest.memo}" (type: ${typeof paymentRequest.memo})`
+          );
+
+          // Send payment request to customer using PortalBusiness
+          let paymentResponse;
+          try {
+            console.log(`🚀 Calling requestSinglePayment...`);
+            paymentResponse = await requestSinglePayment(
+              userPubkeyString, // main key
+              [], // subkeys (empty for now)
+              paymentRequest
+            );
+            console.log(`✅ requestSinglePayment completed successfully`);
+          } catch (requestError) {
+            console.error(`❌ requestSinglePayment failed:`, requestError);
+            console.error(`❌ Error details:`, {
+              message: requestError instanceof Error ? requestError.message : 'Unknown error',
+              stack: requestError instanceof Error ? requestError.stack : 'No stack trace',
+              userPubkey: userPubkeyString,
+              paymentRequest: paymentRequest,
+            });
+            throw new Error(
+              `Payment request failed: ${requestError instanceof Error ? requestError.message : 'Unknown error'}`
+            );
+          }
+
+          console.log(`📄 Payment response:`, paymentResponse);
+
+          // Check if we got an invoice in the response
+          if (paymentResponse && (paymentResponse.invoice || paymentResponse.payment_request)) {
+            const invoice = paymentResponse.invoice || paymentResponse.payment_request;
+
+            updateOperationStep(operationId, 'process', {
+              status: 'pending',
+              title: 'Monitoring payment...',
+              subtitle: `Invoice: ${invoice.substring(0, 20)}...`,
+            });
+
+            // Use the existing lookupInvoice method to check payment status
+            console.log(`⏳ Monitoring invoice status: ${invoice}`);
+
+            // Poll for payment completion using the library's lookupInvoice method
+            let attempts = 0;
+            const maxAttempts = 30; // 60 seconds max
+
+            while (attempts < maxAttempts) {
+              try {
+                const invoiceStatus = await lookupInvoice(invoice);
+                console.log(`📊 Invoice status check ${attempts + 1}:`, invoiceStatus);
+
+                if (invoiceStatus.settledAt) {
+                  // Payment completed successfully
+                  updateOperationStep(operationId, 'process', {
+                    status: 'success',
+                    title: 'Payment completed',
+                    subtitle: 'Invoice paid successfully',
+                  });
+
+                  completeOperation(operationId, {
+                    transactionId: invoiceStatus.paymentHash || `txn_${Date.now()}`,
+                    amount,
+                    currency: 'SAT',
+                    status: 'completed',
+                    customerPubkey: userPubkey,
+                    paymentToken: token,
+                    invoice: invoice,
+                    invoiceStatus,
+                  });
+
+                  console.log(`✅ Payment completed! Hash: ${invoiceStatus.paymentHash}`);
+                  currentOperationRef.current = null;
+                  return; // Exit the callback successfully
+                }
+
+                // Check if invoice is still valid (not expired based on timestamp or status)
+                // We'll rely on errors from lookupInvoice to handle expiration
+
+                // Wait 2 seconds before next check
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                attempts++;
+              } catch (statusError) {
+                console.warn(`Error checking invoice status: ${statusError}`);
+                attempts++;
+                await new Promise(resolve => setTimeout(resolve, 2000));
+              }
+            }
+
+            // If we reach here, payment timed out
+            throw new Error('Payment timed out - no payment received within 60 seconds');
+          } else {
+            // No invoice in response - handle differently
+            throw new Error('No invoice received from payment request');
+          }
+        } catch (error) {
+          console.error('Error processing payment:', error);
+
+          let errorTitle = 'Payment failed';
+          let errorSubtitle = 'Unable to process payment request';
+
+          if (error instanceof Error) {
+            if (error.message.includes('amount too small')) {
+              errorTitle = 'Amount too small';
+              errorSubtitle = 'Minimum payment is 1 sat';
+            } else if (error.message.includes('amount too large')) {
+              errorTitle = 'Amount too large';
+              errorSubtitle = 'Maximum payment is 100M sats';
+            } else if (error.message.includes('not initialized')) {
+              errorTitle = 'Service unavailable';
+              errorSubtitle = 'Payment service is not ready';
+            } else if (error.message.includes('timeout')) {
+              errorTitle = 'Payment timeout';
+              errorSubtitle = 'Customer did not complete payment';
+            }
+          }
+
+          updateOperationStep(operationId, 'process', {
+            status: 'error',
+            title: errorTitle,
+            subtitle: errorSubtitle,
+          });
+
+          failOperation(
+            operationId,
+            `Payment failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
+          currentOperationRef.current = null; // Clear operation ref on error
+        }
+      });
+
+      console.log(`🔊 Now listening for key handshake on selected token...`);
     } catch (error) {
+      console.error('Error in charge process:', error);
       failOperation(operationId, 'An unexpected error occurred');
     }
   };
+
+  // Effect to listen for global callback timeout events
+  useEffect(() => {
+    const handleCallbackTimeout = (data: { reason: string; message: string }) => {
+      const operationId = currentOperationRef.current;
+      if (operationId) {
+        console.log(`⏰ Global callback timeout detected, failing operation: ${operationId}`);
+
+        updateOperationStep(operationId, 'waiting', {
+          status: 'error',
+          title: 'Payment timeout',
+          subtitle: 'No customer interaction detected',
+        });
+
+        failOperation(operationId, 'Payment timed out - no customer interaction');
+        currentOperationRef.current = null; // Clear the operation ref
+      }
+    };
+
+    globalEvents.on('callbackTimeout', handleCallbackTimeout);
+
+    return () => {
+      globalEvents.off('callbackTimeout', handleCallbackTimeout);
+    };
+  }, [updateOperationStep, failOperation]);
 
   const renderKey = (key: string, type: 'number' | 'action' = 'number') => (
     <TouchableOpacity

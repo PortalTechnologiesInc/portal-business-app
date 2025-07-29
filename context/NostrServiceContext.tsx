@@ -115,13 +115,43 @@ export class LocalPaymentRequestListener implements PaymentRequestListener {
 }
 
 export class LocalKeyHandhakeListener implements KeyHandshakeListener {
-  private callback: (pubkey: PublicKey) => Promise<void>;
+  private callback: (token: string, userPubkey: string) => Promise<void>;
+  private token: string;
+  private getActiveToken: () => string | null;
 
-  constructor(callback: (pubkey: PublicKey) => Promise<void>) {
+  constructor(
+    token: string,
+    callback: (token: string, userPubkey: string) => Promise<void>,
+    getActiveToken: () => string | null
+  ) {
+    this.token = token;
     this.callback = callback;
+    this.getActiveToken = getActiveToken;
   }
   onKeyHandshake(pubkey: PublicKey): Promise<void> {
-    return this.callback(pubkey)
+    const currentActiveToken = this.getActiveToken();
+
+    console.log(`🚨 onKeyHandshake called from:`, new Error().stack?.split('\n')[2]?.trim());
+    console.log(`🔔 Key handshake received in LocalKeyHandhakeListener:`);
+    console.log(`  - This listener token: "${this.token}" (type: ${typeof this.token})`);
+    console.log(
+      `  - Current active token: "${currentActiveToken}" (type: ${typeof currentActiveToken})`
+    );
+    console.log(`  - Pubkey: ${pubkey.toString()}`);
+    console.log(`  - Token match: ${currentActiveToken === this.token}`);
+
+    // Only fire callback if this token matches the currently active token
+    if (currentActiveToken === this.token) {
+      console.log(`✅ Token matches! Firing callback for token: "${this.token}"`);
+      console.log(`🔍 About to call callback with:`);
+      console.log(`  - token: "${this.token}" (type: ${typeof this.token})`);
+      console.log(`  - pubkeyString: "${pubkey.toString()}" (type: ${typeof pubkey.toString()})`);
+      return this.callback(this.token, pubkey.toString());
+    }
+
+    console.log(`❌ Token mismatch! Ignoring handshake for token: "${this.token}"`);
+    // If not active, just resolve without calling callback
+    return Promise.resolve();
   }
 }
 
@@ -160,6 +190,21 @@ interface NostrServiceContextType {
   refreshWalletInfo: () => Promise<void>;
   getWalletInfo: () => Promise<WalletInfo | null>;
   relayStatuses: RelayInfo[];
+  setKeyHandshakeCallback: (callback: (token: string, userPubkey: string) => Promise<void>) => void;
+  clearKeyHandshakeCallback: () => void;
+  setActiveToken: (token: string | null) => void;
+  activeToken: string | null;
+
+  // PortalBusiness payment methods
+  requestSinglePayment: (mainKey: string, subkeys: string[], paymentRequest: any) => Promise<any>;
+  requestRecurringPayment: (
+    mainKey: string,
+    subkeys: string[],
+    paymentRequest: any
+  ) => Promise<any>;
+  authenticateKey: (mainKey: string, subkeys: string[]) => Promise<any>;
+  requestCashu: (mainKey: string, subkeys: string[], content: any) => Promise<any>;
+  sendCashuDirect: (mainKey: string, subkeys: string[], content: any) => Promise<void>;
 }
 
 // Create context with default values
@@ -270,7 +315,14 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   const [relayStatuses, setRelayStatuses] = useState<RelayInfo[]>([]);
   const [keypair, setKeypair] = useState<KeypairInterface | null>(null);
   const [reinitKey, setReinitKey] = useState(0);
-  const [keyHandshakeCallback, setKeyHandshakeCallback] = useState<(userPubkey: string) => Promise<void>>(async () => {});
+  const [keyHandshakeCallback, setKeyHandshakeCallback] = useState<
+    (token: string, userPubkey: string) => Promise<void>
+  >(async (token: string, userPubkey: string) => {
+    console.log(`🚫 Default callback invoked with:`, { token, userPubkey });
+    console.log(`🚫 This should not happen unless there's a cached event replay`);
+  });
+  const [activeToken, setActiveToken] = useState<string | null>(null);
+  const [callbackTimeoutId, setCallbackTimeoutId] = useState<number | null>(null);
 
   // Remove the in-memory deduplication system
   // const processedCashuTokens = useRef<Set<string>>(new Set());
@@ -310,8 +362,8 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   // Refs to store current values for stable AppState listener
   const portalAppRef = useRef<PortalBusinessInterface | null>(null);
   const refreshNwcConnectionStatusRef = useRef<(() => Promise<void>) | null>(null);
+  const activeTokenRef = useRef<string | null>(null);
 
-  const eCashContext = useECash();
   const sqliteContext = useSQLiteContext();
   const DB = new DatabaseService(sqliteContext);
 
@@ -322,6 +374,11 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     setPublicKey(null);
     setReinitKey(k => k + 1);
   }, []);
+
+  // Update activeToken ref when activeToken state changes
+  useEffect(() => {
+    activeTokenRef.current = activeToken;
+  }, [activeToken]);
 
   // Initialize the NostrService
   useEffect(() => {
@@ -465,17 +522,36 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
         }
         app.listenClosedRecurringPayment(new ClosedRecurringPaymentListenerImpl());
 
-        for (const tag of (await DB.getTags())) {
+        console.log('Setting up key handshake listeners for tags...');
+
+        for (const tag of await DB.getTags()) {
+          console.log(`📋 Setting up listener for tag: "${tag.token}" (${tag.description})`);
+
+          console.log(`🔄 About to call app.listenForKeyHandshake...`);
           app.listenForKeyHandshake(
             tag.token,
-            new LocalKeyHandhakeListener(keyHandshakeCallback)
-          )
+            new LocalKeyHandhakeListener(tag.token, keyHandshakeCallback, () => {
+              const currentActiveToken = activeTokenRef.current;
+              console.log(
+                `🔍 getActiveToken called: "${currentActiveToken}" (type: ${typeof currentActiveToken})`
+              );
+              return currentActiveToken;
+            })
+          );
+          console.log(`✅ app.listenForKeyHandshake completed for tag: "${tag.token}"`);
+
+          console.log(`✅ Listener set up for tag: "${tag.token}"`);
         }
+
+        console.log('All key handshake listeners set up.');
 
         // Save portal app instance
         setPortalApp(app);
+        console.log('🎯 NostrService: PortalApp saved, listeners are now active');
         console.log('NostrService initialized successfully with public key:', publicKeyStr);
         console.log('Running on those relays:', relays);
+        console.log('🎯 Business app is now listening for handshakes on token-filtered basis');
+        console.log('🔗 Relay connectivity: All 4 relays should be connected for best results');
 
         // Mark as initialized
         setIsInitialized(true);
@@ -968,6 +1044,163 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     return keypair!.issueJwt(targetKey, expiresInHours);
   };
 
+  // PortalBusiness payment methods
+  const requestSinglePayment = useCallback(
+    async (mainKey: string, subkeys: string[], paymentRequest: any) => {
+      if (!portalApp) {
+        throw new Error('PortalApp not initialized');
+      }
+      return portalApp.requestSinglePayment(mainKey, subkeys, paymentRequest);
+    },
+    [portalApp]
+  );
+
+  const requestRecurringPayment = useCallback(
+    async (mainKey: string, subkeys: string[], paymentRequest: any) => {
+      if (!portalApp) {
+        throw new Error('PortalApp not initialized');
+      }
+      return portalApp.requestRecurringPayment(mainKey, subkeys, paymentRequest);
+    },
+    [portalApp]
+  );
+
+  const authenticateKey = useCallback(
+    async (mainKey: string, subkeys: string[]) => {
+      if (!portalApp) {
+        throw new Error('PortalApp not initialized');
+      }
+      return portalApp.authenticateKey(mainKey, subkeys);
+    },
+    [portalApp]
+  );
+
+  const requestCashu = useCallback(
+    async (mainKey: string, subkeys: string[], content: any) => {
+      if (!portalApp) {
+        throw new Error('PortalApp not initialized');
+      }
+      return portalApp.requestCashu(mainKey, subkeys, content);
+    },
+    [portalApp]
+  );
+
+  const sendCashuDirect = useCallback(
+    async (mainKey: string, subkeys: string[], content: any) => {
+      if (!portalApp) {
+        throw new Error('PortalApp not initialized');
+      }
+      return portalApp.sendCashuDirect(mainKey, subkeys, content);
+    },
+    [portalApp]
+  );
+
+  // Wrapped setKeyHandshakeCallback with global timeout
+  const setKeyHandshakeCallbackWithTimeout = useCallback(
+    (callback: (token: string, userPubkey: string) => Promise<void>) => {
+      console.log(`🔊 setKeyHandshakeCallbackWithTimeout called`);
+
+      // Clear any existing timeout
+      if (callbackTimeoutId) {
+        clearTimeout(callbackTimeoutId);
+        setCallbackTimeoutId(null);
+      }
+
+      console.log(`🔄 About to call setKeyHandshakeCallback...`);
+      // Set the new callback
+      const wrappedCallback = async (...args: any[]) => {
+        console.log(`🔍 Wrapped callback invoked with raw parameters:`);
+        console.log(`  - args:`, args);
+        console.log(`  - args.length:`, args.length);
+
+        // Validate we have exactly 2 arguments and they're reasonable
+        if (args.length !== 2) {
+          console.log(
+            `⚠️ Invalid callback args - expected 2, got ${args.length}. Ignoring cached/invalid event.`
+          );
+          return;
+        }
+
+        const [token, userPubkey] = args;
+        console.log(`  - token:`, token, `(type: ${typeof token})`);
+        console.log(`  - userPubkey:`, userPubkey, `(type: ${typeof userPubkey})`);
+
+        // Validate token and userPubkey are strings or can be converted to strings
+        if (typeof token !== 'string' && (typeof token !== 'object' || !token)) {
+          console.log(`⚠️ Invalid token type: ${typeof token}. Ignoring cached/invalid event.`);
+          return;
+        }
+
+        if (typeof userPubkey !== 'string' && (typeof userPubkey !== 'object' || !userPubkey)) {
+          console.log(
+            `⚠️ Invalid userPubkey type: ${typeof userPubkey}. Ignoring cached/invalid event.`
+          );
+          return;
+        }
+
+        // Convert to strings safely
+        const tokenStr = String(token);
+        const userPubkeyStr = String(userPubkey);
+
+        // Additional validation - check if this looks like a real handshake
+        if (
+          tokenStr === '[object Object]' ||
+          userPubkeyStr === 'undefined' ||
+          userPubkeyStr === '[object Object]'
+        ) {
+          console.log(
+            `⚠️ Invalid handshake data - token:"${tokenStr}", userPubkey:"${userPubkeyStr}". Ignoring cached/invalid event.`
+          );
+          return;
+        }
+
+        console.log(`✅ Valid handshake parameters - proceeding with callback`);
+        // Call the original callback with proper conversion
+        return callback(tokenStr, userPubkeyStr);
+      };
+
+      setKeyHandshakeCallback(wrappedCallback);
+      console.log(`✅ setKeyHandshakeCallback completed`);
+      console.log(`🔊 Global timeout: Callback set, will timeout in 60 seconds if no handshake`);
+
+      // Start new timeout
+      const timeoutId = setTimeout(async () => {
+        console.log(`⏰ Global timeout: 60 seconds elapsed, clearing callback`);
+
+        // Clear the callback by setting an empty function
+        setKeyHandshakeCallback(async () => {
+          console.log(`🚫 Handshake received but callback was cleared due to timeout`);
+        });
+
+        setCallbackTimeoutId(null);
+
+        // Emit global event so components can react to timeout
+        const { globalEvents } = await import('@/utils/index');
+        globalEvents.emit('callbackTimeout', {
+          reason: 'timeout',
+          message: 'Callback timed out after 60 seconds',
+        });
+      }, 60000); // 60 seconds
+
+      setCallbackTimeoutId(timeoutId);
+    },
+    [callbackTimeoutId, setKeyHandshakeCallback]
+  );
+
+  // Function to manually clear callback and timeout
+  const clearKeyHandshakeCallback = useCallback(() => {
+    if (callbackTimeoutId) {
+      clearTimeout(callbackTimeoutId);
+      setCallbackTimeoutId(null);
+    }
+
+    setKeyHandshakeCallback(async () => {
+      console.log(`🚫 Handshake received but no active callback`);
+    });
+
+    console.log(`🔇 Global timeout: Callback manually cleared`);
+  }, [callbackTimeoutId, setKeyHandshakeCallback]);
+
   /* useEffect(() => {
     class Logger implements LogCallback {
       log(entry: LogEntry) {
@@ -999,6 +1232,15 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     }
   }, []); */
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (callbackTimeoutId) {
+        clearTimeout(callbackTimeoutId);
+      }
+    };
+  }, [callbackTimeoutId]);
+
   // Context value
   const contextValue: NostrServiceContextType = {
     isInitialized,
@@ -1026,6 +1268,15 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     allRelaysConnected,
     connectedCount,
     issueJWT,
+    setKeyHandshakeCallback: setKeyHandshakeCallbackWithTimeout,
+    clearKeyHandshakeCallback,
+    setActiveToken,
+    activeToken,
+    requestSinglePayment,
+    requestRecurringPayment,
+    authenticateKey,
+    requestCashu,
+    sendCashuDirect,
   };
 
   return (
