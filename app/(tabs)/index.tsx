@@ -447,7 +447,7 @@ export default function Home() {
 
       console.log(`🔊 Now listening for key handshake on selected token...`);
     } catch (error) {
-      console.error('Error in charge process:', error);
+      console.error('Error in charge process:', error.inner);
       failOperation(operationId, 'An unexpected error occurred');
     }
   };

@@ -16,6 +16,10 @@ import TicketCard from '@/components/TicketCard';
 import { useSQLiteContext } from 'expo-sqlite';
 import { DatabaseService, type Ticket as DatabaseTicket } from '@/services/database';
 import { useDatabaseStatus } from '@/services/database/DatabaseProvider';
+import { useNostrService } from '@/context/NostrServiceContext';
+import { useECash } from '@/context/ECashContext';
+import uuid from 'react-native-uuid';
+import { Currency } from 'portal-business-app-lib';
 
 export default function TicketsScreen() {
   const [tickets, setTickets] = useState<DatabaseTicket[]>([]);
@@ -32,6 +36,9 @@ export default function TicketsScreen() {
 
   // Get database initialization status
   const dbStatus = useDatabaseStatus();
+
+  const { setKeyHandshakeCallbackWithTimeout, activeToken, requestCashu, requestSinglePayment, sendCashuDirect, makeInvoice } = useNostrService();
+  const { addWallet } = useECash();
 
   // Only try to access SQLite context if the database is initialized
   let sqliteContext = null;
@@ -229,54 +236,66 @@ export default function TicketsScreen() {
       addOperationStep(operationId, {
         id: 'validate',
         status: 'pending',
-        title: 'Validating ticket...',
-        subtitle: 'Checking ticket authenticity',
+        title: 'Waiting for customer...',
+        subtitle: 'Ask customer to tap their tag or scan QR',
       });
-
-      await new Promise(resolve => setTimeout(resolve, 1500));
 
       updateOperationStep(operationId, 'validate', {
         status: 'completed',
-        title: 'Ticket validated',
-        subtitle: 'Ticket is authentic and valid',
+        title: 'Waiting for customer...',
+        subtitle: 'Ask customer to tap their tag or scan QR',
       });
 
-      // Step 2: Verifying with blockchain
-      addOperationStep(operationId, {
-        id: 'blockchain',
-        status: 'pending',
-        title: 'Blockchain verification...',
-        subtitle: 'Confirming ticket on blockchain',
-      });
-
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Simulate success/failure
-      const isSuccess = Math.random() > 0.2; // 80% success rate
-
-      if (isSuccess) {
-        updateOperationStep(operationId, 'blockchain', {
-          status: 'success',
-          title: 'Verification complete',
-          subtitle: 'Ticket successfully verified',
+      setKeyHandshakeCallbackWithTimeout(activeToken || '', async (userPubkey: string) => {
+        // Step 2: Waiting for customer
+        addOperationStep(operationId, {
+          id: 'waiting',
+          status: 'pending',
+          title: 'Waiting for customer...',
+          subtitle: 'Ask customer to tap their tag or scan QR',
         });
 
-        completeOperation(operationId, {
-          verificationId: `ver_${Date.now()}`,
-          ticketId,
-          status: 'verified',
-          verifiedAt: new Date().toISOString(),
-        });
-      } else {
-        updateOperationStep(operationId, 'blockchain', {
-          status: 'error',
-          title: 'Verification failed',
-          subtitle: 'Unable to verify ticket',
-          errorType: 'network_error',
+        const response = await requestCashu(userPubkey, [], {
+          requestId: uuid.v4(),
+          mintUrl: ticket.mint_url,
+          unit: ticket.unit,
+          amount: BigInt(1),
+        }).catch(error => {
+          console.log('Error:', error);
         });
 
-        failOperation(operationId, 'Ticket verification failed: Network error');
-      }
+        if (response?.status.tag !== 'Success') {
+          failOperation(operationId, 'An unexpected error occurred during verification');
+          return;
+        }
+
+        addOperationStep(operationId, {
+          id: 'received',
+          status: 'pending',
+          title: 'Received ticket...',
+          subtitle: 'Confirming validity of ticket',
+        });
+
+        const wallet = await addWallet(ticket.mint_url, ticket.unit);
+        try {
+          await wallet.receiveToken(response.status.inner.token);
+
+          updateOperationStep(operationId, 'received', {
+            status: 'success',
+            title: 'Verification complete',
+            subtitle: 'Ticket successfully verified',
+          });
+
+          completeOperation(operationId, {
+            verificationId: `ver_${Date.now()}`,
+            ticketId,
+            status: 'verified',
+            verifiedAt: new Date().toISOString(),
+          });
+        } catch (error) {
+          failOperation(operationId, 'An unexpected error occurred during verification');
+        }
+     });
     } catch (error) {
       failOperation(operationId, 'An unexpected error occurred during verification');
     }
@@ -289,65 +308,80 @@ export default function TicketsScreen() {
     ticket: DatabaseTicket
   ) => {
     try {
-      // Step 1: Preparing sale
+      // Step 1: Validating ticket
       addOperationStep(operationId, {
-        id: 'prepare',
+        id: 'validate',
         status: 'pending',
-        title: 'Preparing sale...',
-        subtitle: 'Setting up ticket transfer',
+        title: 'Waiting for customer...',
+        subtitle: 'Ask customer to tap their tag or scan QR',
       });
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      updateOperationStep(operationId, 'prepare', {
+      updateOperationStep(operationId, 'validate', {
         status: 'completed',
-        title: 'Sale prepared',
-        subtitle: 'Ticket ready for transfer',
+        title: 'Waiting for customer...',
+        subtitle: 'Ask customer to tap their tag or scan QR',
       });
 
-      // Step 2: Processing payment
-      addOperationStep(operationId, {
-        id: 'payment',
-        status: 'pending',
-        title: 'Processing payment...',
-        subtitle: `Transferring ${ticket.price} ${ticket.currency}`,
+      setKeyHandshakeCallbackWithTimeout(activeToken || '', async (userPubkey: string) => {
+        const invoice = await makeInvoice(BigInt(ticket.price * 1000), 'Ticket sale');
+        console.log('Invoice created:', invoice);
+
+        // Step 2: Waiting for customer
+        addOperationStep(operationId, {
+          id: 'waiting',
+          status: 'pending',
+          title: 'Waiting for customer...',
+          subtitle: 'Ask customer to tap their tag or scan QR',
+        });
+
+        const response = await requestSinglePayment(userPubkey, [], {
+          amount: BigInt(ticket.price * 1000),
+          currency: new Currency.Millisats(),
+          description: 'Ticket sale',
+          authToken: undefined,
+          invoice: '',
+          currentExchangeRate: undefined,
+          expiresAt: BigInt((new Date().getTime() + 1000 * 60 * 60 * 24)),
+          subscriptionId: undefined,
+          requestId: uuid.v4(),
+        }).catch(error => {
+          console.log('Error:', error);
+        });
+
+        if (response.status.tag === "Approved") {
+          console.log('Payment approved');
+        } else {
+          console.log('Payment failed');
+          failOperation(operationId, 'Payment failed');
+        }
+
+        addOperationStep(operationId, {
+          id: 'received',
+          status: 'pending',
+          title: 'Payment received, issuing ticket...',
+          subtitle: 'Issuing ticket to customer',
+        });
+
+        const walletMint = await addWallet(ticket.mint_url, ticket.unit);
+        console.log('before minting');
+        const mintResponse = await walletMint.mintToken(BigInt(1));
+        console.warn('minted token', mintResponse);
+
+        addOperationStep(operationId, {
+          id: 'issued',
+          status: 'pending',
+          title: 'Ticket issued...',
+          subtitle: 'Ticket issued to customer',
+        });
+
+        await sendCashuDirect(userPubkey, [], {
+          token: mintResponse,
+        }).catch(error => {
+          console.log('Error:', error);
+        });
       });
-
-      await new Promise(resolve => setTimeout(resolve, 2500));
-
-      // Simulate success/failure
-      const isSuccess = Math.random() > 0.25; // 75% success rate
-
-      if (isSuccess) {
-        updateOperationStep(operationId, 'payment', {
-          status: 'success',
-          title: 'Sale completed',
-          subtitle: 'Payment received and ticket transferred',
-        });
-
-        completeOperation(operationId, {
-          saleId: `sale_${Date.now()}`,
-          ticketId,
-          amount: ticket.price,
-          currency: ticket.currency,
-          status: 'sold',
-          soldAt: new Date().toISOString(),
-        });
-      } else {
-        const errorTypes = ['insufficient_funds', 'network_error', 'payment_declined'] as const;
-        const randomError = errorTypes[Math.floor(Math.random() * errorTypes.length)];
-
-        updateOperationStep(operationId, 'payment', {
-          status: 'error',
-          title: 'Sale failed',
-          subtitle: 'Unable to complete ticket sale',
-          errorType: randomError,
-        });
-
-        failOperation(operationId, `Ticket sale failed: ${randomError.replace('_', ' ')}`);
-      }
     } catch (error) {
-      failOperation(operationId, 'An unexpected error occurred during sale');
+      failOperation(operationId, 'An unexpected error occurred during verification');
     }
   };
 

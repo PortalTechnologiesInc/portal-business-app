@@ -16,7 +16,7 @@ export interface BlockType {
   getOutputs: () => ConnectionPoint[];
   getWidth: () => number;
   getHeight: () => number;
-  run: (inputs: any[], config?: BlockConfig) => Promise<Promise<any>[]>;
+  run: (inputs: any[], config?: BlockConfig, nostrService?: any) => Promise<Promise<any>[]>;
 }
 
 export interface BlockConfig {

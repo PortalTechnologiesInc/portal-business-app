@@ -14,6 +14,7 @@ import { blockRegistry } from '@/automation/BlockRegistry';
 import { useSQLiteContext } from 'expo-sqlite';
 import { DatabaseService, type WorkflowWithDates } from '@/services/database';
 import { useDatabaseStatus } from '@/services/database/DatabaseProvider';
+import { useNostrService } from '@/context/NostrServiceContext';
 
 export default function WorkflowEditorScreen() {
   const router = useRouter();
@@ -35,6 +36,8 @@ export default function WorkflowEditorScreen() {
   const [hoveredConnection, setHoveredConnection] = useState<Connection | null>(null);
   const sqliteContext = useSQLiteContext();
   const db = new DatabaseService(sqliteContext);
+
+  const nostrService = useNostrService();
 
   // Load workflow data from database
   React.useEffect(() => {
@@ -271,9 +274,14 @@ export default function WorkflowEditorScreen() {
     }, {});
 
     console.log('Block', block.id, 'Incoming promises:', mergedPromises);
-    const results = await blockTypeData?.run([mergedPromises], blockConfig);
-    console.log('results', results);
-    return results;
+    try {
+      const res = await blockTypeData?.run([mergedPromises], blockConfig, nostrService);
+      console.log('results', res);
+      return res;
+    } catch (e) {
+      console.warn(e);
+      throw e;
+    }
   }
 
   const runWorkflow = async () => {

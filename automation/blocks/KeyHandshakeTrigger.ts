@@ -1,3 +1,4 @@
+import { useNostrService } from '@/context/NostrServiceContext';
 import { BlockType, BlockParameter, ConnectionPoint, DataField } from '../types';
 
 export class KeyHandshakeTrigger implements BlockType {
@@ -43,14 +44,14 @@ export class KeyHandshakeTrigger implements BlockType {
     return 80;
   }
 
-  async run(inputs: Promise<any>[]): Promise<any[]> {
+  async run(inputs: Promise<any>[], config?: BlockConfig, nostrService?: any): Promise<any[]> {
     return new Promise((resolve) => {
-      setTimeout(() => {
-        console.log('Key handshake trigger');
+      nostrService.setKeyHandshakeCallbackWithTimeout(config?.parameters?.token, async (userPubkey: string) => {
+        console.log('Key handshake trigger', userPubkey);
         resolve({
-          'main-key': '1234567890'
+          'main-key': userPubkey
         });
-      }, 1000);
+      });
     });
   }
 }

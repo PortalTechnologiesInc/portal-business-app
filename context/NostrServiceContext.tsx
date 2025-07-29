@@ -30,6 +30,9 @@ import {
   MakeInvoiceRequest,
   MakeInvoiceResponse,
   PaymentResponseContent,
+  CashuRequestContent,
+  CashuResponseContent,
+  CashuDirectContent,
 } from 'portal-business-app-lib';
 import { DatabaseService, Tag } from '@/services/database';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -153,8 +156,8 @@ interface NostrServiceContextType {
     paymentRequest: any
   ) => Promise<any>;
   authenticateKey: (mainKey: string, subkeys: string[]) => Promise<any>;
-  requestCashu: (mainKey: string, subkeys: string[], content: any) => Promise<any>;
-  sendCashuDirect: (mainKey: string, subkeys: string[], content: any) => Promise<void>;
+  requestCashu: (mainKey: string, subkeys: string[], content: CashuRequestContent) => Promise<CashuResponseContent | undefined>;
+  sendCashuDirect: (mainKey: string, subkeys: string[], content: CashuDirectContent) => Promise<void>;
 }
 
 // Create context with default values
@@ -558,7 +561,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       if (!nwcWallet) {
         throw new Error('NWC wallet not connected');
       }
-      return nwcWallet.makeInvoice(MakeInvoiceRequest.create({amount, description, descriptionHash: undefined, expiry: undefined}));
+      return nwcWallet.makeInvoice({amount, description, descriptionHash: undefined, expiry: undefined});
     },
     [nwcWallet]
   );
@@ -949,7 +952,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   );
 
   const requestCashu = useCallback(
-    async (mainKey: string, subkeys: string[], content: any) => {
+    async (mainKey: string, subkeys: string[], content: CashuRequestContent) => {
       if (!portalApp) {
         throw new Error('PortalApp not initialized');
       }
@@ -1055,7 +1058,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       }
     }
     try {
-      // initLogger(new Logger(), LogLevel.Trace)
+      initLogger(new Logger(), LogLevel.Trace)
       console.log('Logger initialized');
     } catch (error) {
       console.error('Error initializing logger:', error);

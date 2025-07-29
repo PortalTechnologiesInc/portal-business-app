@@ -86,7 +86,8 @@ export function ECashProvider({ children, mnemonic }: { children: ReactNode; mne
     console.log(`Creating new wallet for ${mintUrl}-${unit}`);
     const seed = new Mnemonic(mnemonic).deriveCashu();
     const storage = new CashuStorage(DB);
-    const wallet = await CashuWallet.create(mintUrl, unit, seed, storage);
+    const wallet = await CashuWallet.create(mintUrl, unit, seed, storage, 'test-static-token-for-mint-getportal-cc');
+    await wallet.getBalance();
 
     try {
       setWallets(prev => {
