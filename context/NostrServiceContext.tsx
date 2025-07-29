@@ -22,6 +22,14 @@ import {
   PortalBusinessInterface,
   KeyHandshakeListener,
   PublicKey,
+  LogCallback,
+  LogEntry,
+  LogLevel,
+  initLogger,
+  SinglePaymentRequestContent,
+  MakeInvoiceRequest,
+  MakeInvoiceResponse,
+  PaymentResponseContent,
 } from 'portal-business-app-lib';
 import { DatabaseService, Tag } from '@/services/database';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -76,81 +84,22 @@ function mapNumericStatusToString(numericStatus: number): RelayConnectionStatus 
   }
 }
 
-export class LocalAuthChallengeListener implements AuthChallengeListener {
-  private callback: (event: AuthChallengeEvent) => Promise<AuthResponseStatus>;
-
-  constructor(callback: (event: AuthChallengeEvent) => Promise<AuthResponseStatus>) {
-    this.callback = callback;
-  }
-
-  onAuthChallenge(event: AuthChallengeEvent): Promise<AuthResponseStatus> {
-    return this.callback(event);
-  }
-}
-
-export class LocalPaymentRequestListener implements PaymentRequestListener {
-  private singleCb: (event: SinglePaymentRequest, notifier: PaymentStatusNotifier) => Promise<void>;
-  private recurringCb: (event: RecurringPaymentRequest) => Promise<RecurringPaymentResponseContent>;
-
-  constructor(
-    singleCb: (event: SinglePaymentRequest, notifier: PaymentStatusNotifier) => Promise<void>,
-    recurringCb: (event: RecurringPaymentRequest) => Promise<RecurringPaymentResponseContent>
-  ) {
-    this.singleCb = singleCb;
-    this.recurringCb = recurringCb;
-  }
-
-  onSinglePaymentRequest(
-    event: SinglePaymentRequest,
-    notifier: PaymentStatusNotifier
-  ): Promise<void> {
-    return this.singleCb(event, notifier);
-  }
-
-  onRecurringPaymentRequest(
-    event: RecurringPaymentRequest
-  ): Promise<RecurringPaymentResponseContent> {
-    return this.recurringCb(event);
-  }
-}
-
 export class LocalKeyHandhakeListener implements KeyHandshakeListener {
-  private callback: (token: string, userPubkey: string) => Promise<void>;
+  private callback: (userPubkey: string) => Promise<void>;
   private token: string;
-  private getActiveToken: () => string | null;
 
   constructor(
     token: string,
-    callback: (token: string, userPubkey: string) => Promise<void>,
-    getActiveToken: () => string | null
+    callback: (userPubkey: string) => Promise<void>,
   ) {
     this.token = token;
     this.callback = callback;
-    this.getActiveToken = getActiveToken;
   }
   onKeyHandshake(pubkey: PublicKey): Promise<void> {
-    const currentActiveToken = this.getActiveToken();
+    console.log('onKeyHandshake', pubkey.toString());
 
-    console.log(`🚨 onKeyHandshake called from:`, new Error().stack?.split('\n')[2]?.trim());
-    console.log(`🔔 Key handshake received in LocalKeyHandhakeListener:`);
-    console.log(`  - This listener token: "${this.token}" (type: ${typeof this.token})`);
-    console.log(
-      `  - Current active token: "${currentActiveToken}" (type: ${typeof currentActiveToken})`
-    );
-    console.log(`  - Pubkey: ${pubkey.toString()}`);
-    console.log(`  - Token match: ${currentActiveToken === this.token}`);
+    this.callback(pubkey.toString());
 
-    // Only fire callback if this token matches the currently active token
-    if (currentActiveToken === this.token) {
-      console.log(`✅ Token matches! Firing callback for token: "${this.token}"`);
-      console.log(`🔍 About to call callback with:`);
-      console.log(`  - token: "${this.token}" (type: ${typeof this.token})`);
-      console.log(`  - pubkeyString: "${pubkey.toString()}" (type: ${typeof pubkey.toString()})`);
-      return this.callback(this.token, pubkey.toString());
-    }
-
-    console.log(`❌ Token mismatch! Ignoring handshake for token: "${this.token}"`);
-    // If not active, just resolve without calling callback
     return Promise.resolve();
   }
 }
@@ -165,7 +114,8 @@ interface NostrServiceContextType {
   nwcWallet: Nwc | null;
   pendingRequests: { [key: string]: PendingRequest };
   payInvoice: (invoice: string) => Promise<string>;
-  lookupInvoice: (invoice: string) => Promise<LookupInvoiceResponse>;
+  lookupInvoice: (invoice: string, paymnetHash: string) => Promise<LookupInvoiceResponse>;
+  makeInvoice: (amount: bigint, description: string) => Promise<MakeInvoiceResponse>;
   disconnectWallet: () => void;
   getServiceName: (publicKey: string) => Promise<string | null>;
   dismissPendingRequest: (id: string) => void;
@@ -190,13 +140,13 @@ interface NostrServiceContextType {
   refreshWalletInfo: () => Promise<void>;
   getWalletInfo: () => Promise<WalletInfo | null>;
   relayStatuses: RelayInfo[];
-  setKeyHandshakeCallback: (callback: (token: string, userPubkey: string) => Promise<void>) => void;
+  setKeyHandshakeCallbackWithTimeout: (token: string, callback: (userPubkey: string) => Promise<void>) => void;
   clearKeyHandshakeCallback: () => void;
   setActiveToken: (token: string | null) => void;
   activeToken: string | null;
 
   // PortalBusiness payment methods
-  requestSinglePayment: (mainKey: string, subkeys: string[], paymentRequest: any) => Promise<any>;
+  requestSinglePayment: (mainKey: string, subkeys: string[], paymentRequest: SinglePaymentRequestContent) => Promise<any>;
   requestRecurringPayment: (
     mainKey: string,
     subkeys: string[],
@@ -315,17 +265,32 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   const [relayStatuses, setRelayStatuses] = useState<RelayInfo[]>([]);
   const [keypair, setKeypair] = useState<KeypairInterface | null>(null);
   const [reinitKey, setReinitKey] = useState(0);
-  const [keyHandshakeCallback, setKeyHandshakeCallback] = useState<
-    (token: string, userPubkey: string) => Promise<void>
-  >(async (token: string, userPubkey: string) => {
-    console.log(`🚫 Default callback invoked with:`, { token, userPubkey });
-    console.log(`🚫 This should not happen unless there's a cached event replay`);
-  });
+  const [keyHandshakeCallback, setKeyHandshakeCallback] = useState<{
+    [token: string]: (userPubkey: string) => Promise<void>;
+  }>({});
   const [activeToken, setActiveToken] = useState<string | null>(null);
   const [callbackTimeoutId, setCallbackTimeoutId] = useState<number | null>(null);
+  const [incomingRequests, setIncomingRequests] = useState<[string, string][]>([]);
 
   // Remove the in-memory deduplication system
   // const processedCashuTokens = useRef<Set<string>>(new Set());
+  
+  useEffect(() => {
+    if (incomingRequests.length === 0) {
+      return;
+    }
+
+    const [token, pubkey] = incomingRequests[0];
+
+    console.log('keyHandshakeCallback', keyHandshakeCallback);
+
+    if (keyHandshakeCallback[token]) {
+      keyHandshakeCallback[token](pubkey);
+    } else {
+      console.log(`🚫 No callback found for tag: "${token}"`);
+    }
+    setIncomingRequests(prev => prev.slice(1));
+  }, [incomingRequests, keyHandshakeCallback]);
 
   class LocalRelayStatusListener implements RelayStatusListener {
     onRelayStatusChange(relay_url: string, status: number): Promise<void> {
@@ -425,120 +390,18 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
         app.listen({ signal: abortController.signal });
         console.log('PortalApp listening started...');
 
-        app
-          .listenForPaymentRequest(
-            new LocalPaymentRequestListener(
-              (event: SinglePaymentRequest, notifier: PaymentStatusNotifier) => {
-                const id = event.eventId;
-
-                console.log(`Single payment request with id ${id} received`, event);
-
-                return new Promise<void>(resolve => {
-                  // Immediately resolve the promise, we use the notifier to notify the payment status
-                  resolve();
-
-                  // TODO: validate amount against the invoice. If it doesn't match, reject immediately
-
-                  const newRequest: PendingRequest = {
-                    id,
-                    metadata: event,
-                    timestamp: new Date(),
-                    type: 'payment',
-                    result: async (status: PaymentStatus) => {
-                      await notifier.notify({
-                        status,
-                        requestId: event.content.requestId,
-                      });
-                    },
-                  };
-
-                  setPendingRequests(prev => {
-                    // Check if request already exists to prevent duplicates
-                    if (prev[id]) {
-                      console.log(`Request ${id} already exists, skipping duplicate`);
-                      return prev;
-                    }
-                    const newPendingRequests = { ...prev };
-                    newPendingRequests[id] = newRequest;
-                    return newPendingRequests;
-                  });
-                });
-              },
-              (event: RecurringPaymentRequest) => {
-                const id = event.eventId;
-
-                console.log(`Recurring payment request with id ${id} received`, event);
-
-                return new Promise<RecurringPaymentResponseContent>(resolve => {
-                  const newRequest: PendingRequest = {
-                    id,
-                    metadata: event,
-                    timestamp: new Date(),
-                    type: 'subscription',
-                    result: resolve,
-                  };
-
-                  setPendingRequests(prev => {
-                    // Check if request already exists to prevent duplicates
-                    if (prev[id]) {
-                      console.log(`Request ${id} already exists, skipping duplicate`);
-                      return prev;
-                    }
-                    const newPendingRequests = { ...prev };
-                    newPendingRequests[id] = newRequest;
-                    return newPendingRequests;
-                  });
-                });
-              }
-            )
-          )
-          .catch((e: unknown) => {
-            console.error('Error listening for payment request', e);
-            handleErrorWithToastAndReinit(
-              'Failed to listen for payment request. Retrying...',
-              triggerReinit
-            );
-          });
-
-        // Listen for closed recurring payments
-        class ClosedRecurringPaymentListenerImpl implements ClosedRecurringPaymentListener {
-          async onClosedRecurringPayment(event: CloseRecurringPaymentResponse): Promise<void> {
-            console.log('Closed subscription received', event);
-            try {
-              await DB.updateSubscriptionStatus(event.content.subscriptionId, 'cancelled');
-
-              // Refresh UI to reflect the subscription status change
-              console.log('Refreshing subscriptions UI after subscription closure');
-              // Import the global event emitter to notify ActivitiesProvider
-              const { globalEvents } = await import('@/utils/index');
-              globalEvents.emit('subscriptionStatusChanged', {
-                subscriptionId: event.content.subscriptionId,
-                status: 'cancelled',
-              });
-            } catch (error) {
-              console.error('Error setting closed recurring payment', error);
-            }
-          }
-        }
-        app.listenClosedRecurringPayment(new ClosedRecurringPaymentListenerImpl());
-
         console.log('Setting up key handshake listeners for tags...');
 
         for (const tag of await DB.getTags()) {
           console.log(`📋 Setting up listener for tag: "${tag.token}" (${tag.description})`);
 
-          console.log(`🔄 About to call app.listenForKeyHandshake...`);
           app.listenForKeyHandshake(
             tag.token,
-            new LocalKeyHandhakeListener(tag.token, keyHandshakeCallback, () => {
-              const currentActiveToken = activeTokenRef.current;
-              console.log(
-                `🔍 getActiveToken called: "${currentActiveToken}" (type: ${typeof currentActiveToken})`
-              );
-              return currentActiveToken;
+            new LocalKeyHandhakeListener(tag.token, (pubkey) => {
+              setIncomingRequests(prev => [...prev, [tag.token, pubkey]]);
+              return Promise.resolve();
             })
           );
-          console.log(`✅ app.listenForKeyHandshake completed for tag: "${tag.token}"`);
 
           console.log(`✅ Listener set up for tag: "${tag.token}"`);
         }
@@ -681,11 +544,21 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
 
   // Lookup invoice via wallet
   const lookupInvoice = useCallback(
-    async (invoice: string): Promise<LookupInvoiceResponse> => {
+    async (invoice: string, paymnetHash: string): Promise<LookupInvoiceResponse> => {
       if (!nwcWallet) {
         throw new Error('NWC wallet not connected');
       }
-      return nwcWallet.lookupInvoice(invoice);
+      return nwcWallet.lookupInvoice(invoice, paymnetHash);
+    },
+    [nwcWallet]
+  );
+
+  const makeInvoice = useCallback(
+    async (amount: bigint, description: string): Promise<MakeInvoiceResponse> => {
+      if (!nwcWallet) {
+        throw new Error('NWC wallet not connected');
+      }
+      return nwcWallet.makeInvoice(MakeInvoiceRequest.create({amount, description, descriptionHash: undefined, expiry: undefined}));
     },
     [nwcWallet]
   );
@@ -1096,8 +969,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
   );
 
   // Wrapped setKeyHandshakeCallback with global timeout
-  const setKeyHandshakeCallbackWithTimeout = useCallback(
-    (callback: (token: string, userPubkey: string) => Promise<void>) => {
+  const setKeyHandshakeCallbackWithTimeout = (token: string, callback: (userPubkey: string) => Promise<void>) => {
       console.log(`🔊 setKeyHandshakeCallbackWithTimeout called`);
 
       // Clear any existing timeout
@@ -1106,61 +978,20 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
         setCallbackTimeoutId(null);
       }
 
-      console.log(`🔄 About to call setKeyHandshakeCallback...`);
+      console.log('setting for token', token);
+
       // Set the new callback
-      const wrappedCallback = async (...args: any[]) => {
-        console.log(`🔍 Wrapped callback invoked with raw parameters:`);
-        console.log(`  - args:`, args);
-        console.log(`  - args.length:`, args.length);
+      const wrappedCallback = async (userPubkeyStr: string) => {
+        console.log(`wrapped callback stacktrace`, new Error().stack?.split('\n')[2]?.trim());
 
-        // Validate we have exactly 2 arguments and they're reasonable
-        if (args.length !== 2) {
-          console.log(
-            `⚠️ Invalid callback args - expected 2, got ${args.length}. Ignoring cached/invalid event.`
-          );
-          return;
-        }
+        // Delete callback so it's not used twice
+        // setKeyHandshakeCallback(prev => ({ ...prev, [token]: async () => {} }));
 
-        const [token, userPubkey] = args;
-        console.log(`  - token:`, token, `(type: ${typeof token})`);
-        console.log(`  - userPubkey:`, userPubkey, `(type: ${typeof userPubkey})`);
-
-        // Validate token and userPubkey are strings or can be converted to strings
-        if (typeof token !== 'string' && (typeof token !== 'object' || !token)) {
-          console.log(`⚠️ Invalid token type: ${typeof token}. Ignoring cached/invalid event.`);
-          return;
-        }
-
-        if (typeof userPubkey !== 'string' && (typeof userPubkey !== 'object' || !userPubkey)) {
-          console.log(
-            `⚠️ Invalid userPubkey type: ${typeof userPubkey}. Ignoring cached/invalid event.`
-          );
-          return;
-        }
-
-        // Convert to strings safely
-        const tokenStr = String(token);
-        const userPubkeyStr = String(userPubkey);
-
-        // Additional validation - check if this looks like a real handshake
-        if (
-          tokenStr === '[object Object]' ||
-          userPubkeyStr === 'undefined' ||
-          userPubkeyStr === '[object Object]'
-        ) {
-          console.log(
-            `⚠️ Invalid handshake data - token:"${tokenStr}", userPubkey:"${userPubkeyStr}". Ignoring cached/invalid event.`
-          );
-          return;
-        }
-
-        console.log(`✅ Valid handshake parameters - proceeding with callback`);
         // Call the original callback with proper conversion
-        return callback(tokenStr, userPubkeyStr);
+        callback(userPubkeyStr);
       };
 
-      setKeyHandshakeCallback(wrappedCallback);
-      console.log(`✅ setKeyHandshakeCallback completed`);
+      setKeyHandshakeCallback(prev => ({ ...prev, [token]: wrappedCallback }));
       console.log(`🔊 Global timeout: Callback set, will timeout in 60 seconds if no handshake`);
 
       // Start new timeout
@@ -1168,10 +999,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
         console.log(`⏰ Global timeout: 60 seconds elapsed, clearing callback`);
 
         // Clear the callback by setting an empty function
-        setKeyHandshakeCallback(async () => {
-          console.log(`🚫 Handshake received but callback was cleared due to timeout`);
-        });
-
+        // setKeyHandshakeCallback(prev => ({ ...prev, [token]: async () => {} }));
         setCallbackTimeoutId(null);
 
         // Emit global event so components can react to timeout
@@ -1183,9 +1011,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       }, 60000); // 60 seconds
 
       setCallbackTimeoutId(timeoutId);
-    },
-    [callbackTimeoutId, setKeyHandshakeCallback]
-  );
+    };
 
   // Function to manually clear callback and timeout
   const clearKeyHandshakeCallback = useCallback(() => {
@@ -1194,16 +1020,20 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       setCallbackTimeoutId(null);
     }
 
-    setKeyHandshakeCallback(async () => {
-      console.log(`🚫 Handshake received but no active callback`);
-    });
+    // setKeyHandshakeCallback(async () => {
+    //   console.log(`🚫 Handshake received but no active callback`);
+    // });
 
     console.log(`🔇 Global timeout: Callback manually cleared`);
   }, [callbackTimeoutId, setKeyHandshakeCallback]);
 
-  /* useEffect(() => {
+  useEffect(() => {
     class Logger implements LogCallback {
       log(entry: LogEntry) {
+        if (entry.target.indexOf('tungstenite') !== -1 || entry.target.indexOf('nostr_relay_pool') !== -1) {
+          return;
+        }
+
         const message = `[${entry.target}] ${entry.message}`;
         switch (entry.level) {
           case LogLevel.Trace:
@@ -1225,12 +1055,12 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
       }
     }
     try {
-      initLogger(new Logger(), LogLevel.Trace)
+      // initLogger(new Logger(), LogLevel.Trace)
       console.log('Logger initialized');
     } catch (error) {
       console.error('Error initializing logger:', error);
     }
-  }, []); */
+  }, []);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -1250,6 +1080,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     pendingRequests,
     payInvoice,
     lookupInvoice,
+    makeInvoice,
     disconnectWallet,
     getServiceName,
     dismissPendingRequest,
@@ -1268,7 +1099,7 @@ export const NostrServiceProvider: React.FC<NostrServiceProviderProps> = ({
     allRelaysConnected,
     connectedCount,
     issueJWT,
-    setKeyHandshakeCallback: setKeyHandshakeCallbackWithTimeout,
+    setKeyHandshakeCallbackWithTimeout,
     clearKeyHandshakeCallback,
     setActiveToken,
     activeToken,

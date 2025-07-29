@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { useNostrService } from '@/context/NostrServiceContext';
 
 export default function KeypadScreen() {
   const [display, setDisplay] = useState('');
@@ -66,7 +67,19 @@ export default function KeypadScreen() {
     setDisplay(prev => prev.slice(0, -1));
   };
 
+  const { setKeyHandshakeCallbackWithTimeout, requestSinglePayment } = useNostrService();
+
   const handleSubmit = () => {
+    // setKeyHandshakeCallbackWithTimeout('PowSpace', async (userPubkey: string) => {
+    //   console.log('Key handshake callback:', userPubkey);
+
+    //   const response = await requestSinglePayment(userPubkey, [], {
+    //     amount: parseInt(display) * 1000,
+    //     currency: 'Millisats',
+    //     description: 'Keypad payment',
+    //   });
+    //   console.log('Response:', response);
+    // });
     // Handle keypad submission logic here
     console.log('Keypad submitted:', display);
     setDisplay('');

@@ -71,11 +71,6 @@ export const DatabaseProvider = ({ children }: DatabaseProviderProps) => {
         "SELECT COUNT(*) as count FROM sqlite_master WHERE type='table' AND name='tickets'"
       );
 
-      if (!ticketsTableExists || ticketsTableExists.count === 0) {
-        console.log('Tickets table does not exist, forcing migration');
-        currentDbVersion = 14; // Force migration from version 14
-      }
-
       if (currentDbVersion >= DATABASE_VERSION) {
         console.log(`Database already at version ${currentDbVersion}`);
         setDbInitialized(true);

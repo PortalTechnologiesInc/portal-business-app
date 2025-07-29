@@ -10,6 +10,7 @@ import { Send, ArrowLeft } from 'lucide-react-native';
 import DropdownPill from '@/components/DropdownPill';
 import { useNostrService } from '@/context/NostrServiceContext';
 import { globalEvents } from '@/utils';
+import { Currency } from 'portal-business-app-lib';
 
 export default function Home() {
   const [display, setDisplay] = useState('');
@@ -25,10 +26,12 @@ export default function Home() {
   } = useOperation();
 
   const {
-    setKeyHandshakeCallback,
+    setKeyHandshakeCallbackWithTimeout,
+    activeToken,
     clearKeyHandshakeCallback,
     requestSinglePayment,
     lookupInvoice,
+    makeInvoice,
   } = useNostrService();
 
   // Currency formatting function
@@ -146,6 +149,9 @@ export default function Home() {
   // 4. Monitor payment status using lookupInvoice until settled
   const chargeProcess = async (operationId: string, amount: number, currency: string) => {
     try {
+      const invoice = await makeInvoice(BigInt(parseInt(display) * 1000), 'Keypad payment');
+      console.log('Invoice created:', invoice);
+
       // Step 1: Initializing payment
       addOperationStep(operationId, {
         id: 'init',
@@ -154,21 +160,67 @@ export default function Home() {
         subtitle: 'Setting up your payment request',
       });
 
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Brief delay for UX
-
       updateOperationStep(operationId, 'init', {
         status: 'completed',
         title: 'Payment initialized',
         subtitle: 'Ready to receive payment',
       });
 
-      // Step 2: Waiting for customer
-      addOperationStep(operationId, {
-        id: 'waiting',
-        status: 'pending',
-        title: 'Waiting for customer...',
-        subtitle: 'Ask customer to tap their tag or scan QR',
-      });
+      setKeyHandshakeCallbackWithTimeout(activeToken || '', async (userPubkey: string) => {
+        // Step 2: Waiting for customer
+        addOperationStep(operationId, {
+          id: 'waiting',
+          status: 'pending',
+          title: 'Waiting for customer...',
+          subtitle: 'Ask customer to tap their tag or scan QR',
+        });
+
+        // const int = setInterval(() => {
+        //   lookupInvoice(invoice.invoice, invoice.paymentHash).then(invoice => {
+        //     console.log('Invoice status:', invoice);
+
+        //     if (invoice.settledAt) {
+        //       console.warn('Invoice settled');
+        //       clearInterval(int);
+        //       completeOperation(operationId, {
+        //         transactionId: invoice.paymentHash || `txn_${Date.now()}`,
+        //         amount,
+        //         currency: 'SAT',
+        //       });
+        //     }
+        //   });
+        // }, 1000);
+        // setTimeout(() => {
+        //   clearInterval(int);
+        // }, 60000);
+
+        const response = await requestSinglePayment(userPubkey, [], {
+          amount: BigInt(parseInt(display) * 1000),
+          currency: new Currency.Millisats(),
+          description: 'Keypad payment',
+          authToken: undefined,
+          invoice: '',
+          currentExchangeRate: undefined,
+          expiresAt: BigInt((new Date().getTime() + 1000 * 60 * 60 * 24)),
+          subscriptionId: undefined,
+          requestId: 'temp-request-id',
+        }).catch(error => {
+          console.log('Error:', error);
+        });
+
+        if (response.status.tag === "Approved") {
+          console.log('Payment approved');
+          completeOperation(operationId, {
+            transactionId: invoice.paymentHash || `txn_${Date.now()}`,
+            amount,
+            currency: 'SAT',
+          });
+        } else {
+          console.log('Payment failed');
+          failOperation(operationId, 'Payment failed');
+        }
+
+     });
 
       // Set up the real callback to wait for key handshake
       let paymentCompleted = false;
@@ -176,221 +228,221 @@ export default function Home() {
       console.log(`🚀 Setting up key handshake callback for operation: ${operationId}`);
       console.log(`🎯 Current active token should be set from DropdownPill`);
 
-      setKeyHandshakeCallback(async (token: string, userPubkey: string) => {
-        console.log(`🔔 Key handshake callback triggered!`);
-        console.log(`📱 Received token: "${token}" (type: ${typeof token})`);
-        console.log(`👤 Received userPubkey: "${userPubkey}" (type: ${typeof userPubkey})`);
-        console.log(`✅ Payment completed flag: ${paymentCompleted}`);
+      // setKeyHandshakeCallback(async (token: string, userPubkey: string) => {
+      //   console.log(`🔔 Key handshake callback triggered!`);
+      //   console.log(`📱 Received token: "${token}" (type: ${typeof token})`);
+      //   console.log(`👤 Received userPubkey: "${userPubkey}" (type: ${typeof userPubkey})`);
+      //   console.log(`✅ Payment completed flag: ${paymentCompleted}`);
 
-        if (paymentCompleted) {
-          console.log(`⚠️ Payment already completed, ignoring handshake`);
-          return; // Prevent duplicate processing
-        }
-        paymentCompleted = true;
+      //   if (paymentCompleted) {
+      //     console.log(`⚠️ Payment already completed, ignoring handshake`);
+      //     return; // Prevent duplicate processing
+      //   }
+      //   paymentCompleted = true;
 
-        console.log(`🎯 Key handshake received!`);
-        console.log(`📱 Token: ${token}`);
-        console.log(`👤 User PubKey: ${userPubkey}`);
-        console.log(`💰 Amount: ${amount} sats`);
+      //   console.log(`🎯 Key handshake received!`);
+      //   console.log(`📱 Token: ${token}`);
+      //   console.log(`👤 User PubKey: ${userPubkey}`);
+      //   console.log(`💰 Amount: ${amount} sats`);
 
-        // Validate required parameters
-        if (!userPubkey) {
-          throw new Error('User public key is undefined');
-        }
-        if (!token) {
-          throw new Error('Token is undefined');
-        }
-        if (!amount || amount <= 0) {
-          throw new Error('Amount is invalid');
-        }
+      //   // Validate required parameters
+      //   if (!userPubkey) {
+      //     throw new Error('User public key is undefined');
+      //   }
+      //   if (!token) {
+      //     throw new Error('Token is undefined');
+      //   }
+      //   if (!amount || amount <= 0) {
+      //     throw new Error('Amount is invalid');
+      //   }
 
-        // Convert userPubkey to string if it's a PublicKey object
-        let userPubkeyString: string;
-        if (typeof userPubkey === 'string') {
-          userPubkeyString = userPubkey;
-        } else {
-          // Handle PublicKey object or other types
-          userPubkeyString = String(userPubkey);
-        }
-        console.log(`🔄 Converted userPubkey to string: "${userPubkeyString}"`);
+      //   // Convert userPubkey to string if it's a PublicKey object
+      //   let userPubkeyString: string;
+      //   if (typeof userPubkey === 'string') {
+      //     userPubkeyString = userPubkey;
+      //   } else {
+      //     // Handle PublicKey object or other types
+      //     userPubkeyString = String(userPubkey);
+      //   }
+      //   console.log(`🔄 Converted userPubkey to string: "${userPubkeyString}"`);
 
-        try {
-          // Update waiting step to completed
-          updateOperationStep(operationId, 'waiting', {
-            status: 'completed',
-            title: 'Customer detected',
-            subtitle: `Processing payment for ${amount} sats`,
-          });
+      //   try {
+      //     // Update waiting step to completed
+      //     updateOperationStep(operationId, 'waiting', {
+      //       status: 'completed',
+      //       title: 'Customer detected',
+      //       subtitle: `Processing payment for ${amount} sats`,
+      //     });
 
-          // Step 3: Processing payment
-          addOperationStep(operationId, {
-            id: 'process',
-            status: 'pending',
-            title: 'Requesting payment...',
-            subtitle: `Sending payment request for ${amount} sats`,
-          });
+      //     // Step 3: Processing payment
+      //     addOperationStep(operationId, {
+      //       id: 'process',
+      //       status: 'pending',
+      //       title: 'Requesting payment...',
+      //       subtitle: `Sending payment request for ${amount} sats`,
+      //     });
 
-          // Create payment request content
-          const amountInSats = amount; // Use the amount directly as sats
+      //     // Create payment request content
+      //     const amountInSats = amount; // Use the amount directly as sats
 
-          // Validate payment amount (minimum 1 sat, maximum 100M sats)
-          if (amountInSats < 1) {
-            throw new Error('Payment amount too small (minimum 1 satoshi)');
-          }
-          if (amountInSats > 100000000) {
-            throw new Error('Payment amount too large (maximum 100M sats)');
-          }
+      //     // Validate payment amount (minimum 1 sat, maximum 100M sats)
+      //     if (amountInSats < 1) {
+      //       throw new Error('Payment amount too small (minimum 1 satoshi)');
+      //     }
+      //     if (amountInSats > 100000000) {
+      //       throw new Error('Payment amount too large (maximum 100M sats)');
+      //     }
 
-          const paymentRequest = {
-            amount: amountInSats,
-            currency: 'SAT',
-            description: `Payment request for ${amountInSats} sats`,
-            memo: `Charge from business via ${token}`,
-          };
+      //     const paymentRequest = {
+      //       amount: amountInSats,
+      //       currency: 'SAT',
+      //       description: `Payment request for ${amountInSats} sats`,
+      //       memo: `Charge from business via ${token}`,
+      //     };
 
-          console.log(`💸 Requesting payment: ${amountInSats} sats`);
-          console.log(`📄 Payment request details:`, paymentRequest);
-          console.log(`🔍 Debug parameters:`);
-          console.log(`  - userPubkey: "${userPubkeyString}" (type: ${typeof userPubkeyString})`);
-          console.log(`  - subkeys: ${JSON.stringify([])} (type: ${typeof []})`);
-          console.log(
-            `  - paymentRequest.amount: ${paymentRequest.amount} (type: ${typeof paymentRequest.amount})`
-          );
-          console.log(
-            `  - paymentRequest.currency: "${paymentRequest.currency}" (type: ${typeof paymentRequest.currency})`
-          );
-          console.log(
-            `  - paymentRequest.description: "${paymentRequest.description}" (type: ${typeof paymentRequest.description})`
-          );
-          console.log(
-            `  - paymentRequest.memo: "${paymentRequest.memo}" (type: ${typeof paymentRequest.memo})`
-          );
+      //     console.log(`💸 Requesting payment: ${amountInSats} sats`);
+      //     console.log(`📄 Payment request details:`, paymentRequest);
+      //     console.log(`🔍 Debug parameters:`);
+      //     console.log(`  - userPubkey: "${userPubkeyString}" (type: ${typeof userPubkeyString})`);
+      //     console.log(`  - subkeys: ${JSON.stringify([])} (type: ${typeof []})`);
+      //     console.log(
+      //       `  - paymentRequest.amount: ${paymentRequest.amount} (type: ${typeof paymentRequest.amount})`
+      //     );
+      //     console.log(
+      //       `  - paymentRequest.currency: "${paymentRequest.currency}" (type: ${typeof paymentRequest.currency})`
+      //     );
+      //     console.log(
+      //       `  - paymentRequest.description: "${paymentRequest.description}" (type: ${typeof paymentRequest.description})`
+      //     );
+      //     console.log(
+      //       `  - paymentRequest.memo: "${paymentRequest.memo}" (type: ${typeof paymentRequest.memo})`
+      //     );
 
-          // Send payment request to customer using PortalBusiness
-          let paymentResponse;
-          try {
-            console.log(`🚀 Calling requestSinglePayment...`);
-            paymentResponse = await requestSinglePayment(
-              userPubkeyString, // main key
-              [], // subkeys (empty for now)
-              paymentRequest
-            );
-            console.log(`✅ requestSinglePayment completed successfully`);
-          } catch (requestError) {
-            console.error(`❌ requestSinglePayment failed:`, requestError);
-            console.error(`❌ Error details:`, {
-              message: requestError instanceof Error ? requestError.message : 'Unknown error',
-              stack: requestError instanceof Error ? requestError.stack : 'No stack trace',
-              userPubkey: userPubkeyString,
-              paymentRequest: paymentRequest,
-            });
-            throw new Error(
-              `Payment request failed: ${requestError instanceof Error ? requestError.message : 'Unknown error'}`
-            );
-          }
+      //     // Send payment request to customer using PortalBusiness
+      //     let paymentResponse;
+      //     try {
+      //       console.log(`🚀 Calling requestSinglePayment...`);
+      //       paymentResponse = await requestSinglePayment(
+      //         userPubkeyString, // main key
+      //         [], // subkeys (empty for now)
+      //         paymentRequest
+      //       );
+      //       console.log(`✅ requestSinglePayment completed successfully`);
+      //     } catch (requestError) {
+      //       console.error(`❌ requestSinglePayment failed:`, requestError);
+      //       console.error(`❌ Error details:`, {
+      //         message: requestError instanceof Error ? requestError.message : 'Unknown error',
+      //         stack: requestError instanceof Error ? requestError.stack : 'No stack trace',
+      //         userPubkey: userPubkeyString,
+      //         paymentRequest: paymentRequest,
+      //       });
+      //       throw new Error(
+      //         `Payment request failed: ${requestError instanceof Error ? requestError.message : 'Unknown error'}`
+      //       );
+      //     }
 
-          console.log(`📄 Payment response:`, paymentResponse);
+      //     console.log(`📄 Payment response:`, paymentResponse);
 
-          // Check if we got an invoice in the response
-          if (paymentResponse && (paymentResponse.invoice || paymentResponse.payment_request)) {
-            const invoice = paymentResponse.invoice || paymentResponse.payment_request;
+      //     // Check if we got an invoice in the response
+      //     if (paymentResponse && (paymentResponse.invoice || paymentResponse.payment_request)) {
+      //       const invoice = paymentResponse.invoice || paymentResponse.payment_request;
 
-            updateOperationStep(operationId, 'process', {
-              status: 'pending',
-              title: 'Monitoring payment...',
-              subtitle: `Invoice: ${invoice.substring(0, 20)}...`,
-            });
+      //       updateOperationStep(operationId, 'process', {
+      //         status: 'pending',
+      //         title: 'Monitoring payment...',
+      //         subtitle: `Invoice: ${invoice.substring(0, 20)}...`,
+      //       });
 
-            // Use the existing lookupInvoice method to check payment status
-            console.log(`⏳ Monitoring invoice status: ${invoice}`);
+      //       // Use the existing lookupInvoice method to check payment status
+      //       console.log(`⏳ Monitoring invoice status: ${invoice}`);
 
-            // Poll for payment completion using the library's lookupInvoice method
-            let attempts = 0;
-            const maxAttempts = 30; // 60 seconds max
+      //       // Poll for payment completion using the library's lookupInvoice method
+      //       let attempts = 0;
+      //       const maxAttempts = 30; // 60 seconds max
 
-            while (attempts < maxAttempts) {
-              try {
-                const invoiceStatus = await lookupInvoice(invoice);
-                console.log(`📊 Invoice status check ${attempts + 1}:`, invoiceStatus);
+      //       while (attempts < maxAttempts) {
+      //         try {
+      //           const invoiceStatus = await lookupInvoice(invoice);
+      //           console.log(`📊 Invoice status check ${attempts + 1}:`, invoiceStatus);
 
-                if (invoiceStatus.settledAt) {
-                  // Payment completed successfully
-                  updateOperationStep(operationId, 'process', {
-                    status: 'success',
-                    title: 'Payment completed',
-                    subtitle: 'Invoice paid successfully',
-                  });
+      //           if (invoiceStatus.settledAt) {
+      //             // Payment completed successfully
+      //             updateOperationStep(operationId, 'process', {
+      //               status: 'success',
+      //               title: 'Payment completed',
+      //               subtitle: 'Invoice paid successfully',
+      //             });
 
-                  completeOperation(operationId, {
-                    transactionId: invoiceStatus.paymentHash || `txn_${Date.now()}`,
-                    amount,
-                    currency: 'SAT',
-                    status: 'completed',
-                    customerPubkey: userPubkey,
-                    paymentToken: token,
-                    invoice: invoice,
-                    invoiceStatus,
-                  });
+      //             completeOperation(operationId, {
+      //               transactionId: invoiceStatus.paymentHash || `txn_${Date.now()}`,
+      //               amount,
+      //               currency: 'SAT',
+      //               status: 'completed',
+      //               customerPubkey: userPubkey,
+      //               paymentToken: token,
+      //               invoice: invoice,
+      //               invoiceStatus,
+      //             });
 
-                  console.log(`✅ Payment completed! Hash: ${invoiceStatus.paymentHash}`);
-                  currentOperationRef.current = null;
-                  return; // Exit the callback successfully
-                }
+      //             console.log(`✅ Payment completed! Hash: ${invoiceStatus.paymentHash}`);
+      //             currentOperationRef.current = null;
+      //             return; // Exit the callback successfully
+      //           }
 
-                // Check if invoice is still valid (not expired based on timestamp or status)
-                // We'll rely on errors from lookupInvoice to handle expiration
+      //           // Check if invoice is still valid (not expired based on timestamp or status)
+      //           // We'll rely on errors from lookupInvoice to handle expiration
 
-                // Wait 2 seconds before next check
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                attempts++;
-              } catch (statusError) {
-                console.warn(`Error checking invoice status: ${statusError}`);
-                attempts++;
-                await new Promise(resolve => setTimeout(resolve, 2000));
-              }
-            }
+      //           // Wait 2 seconds before next check
+      //           await new Promise(resolve => setTimeout(resolve, 2000));
+      //           attempts++;
+      //         } catch (statusError) {
+      //           console.warn(`Error checking invoice status: ${statusError}`);
+      //           attempts++;
+      //           await new Promise(resolve => setTimeout(resolve, 2000));
+      //         }
+      //       }
 
-            // If we reach here, payment timed out
-            throw new Error('Payment timed out - no payment received within 60 seconds');
-          } else {
-            // No invoice in response - handle differently
-            throw new Error('No invoice received from payment request');
-          }
-        } catch (error) {
-          console.error('Error processing payment:', error);
+      //       // If we reach here, payment timed out
+      //       throw new Error('Payment timed out - no payment received within 60 seconds');
+      //     } else {
+      //       // No invoice in response - handle differently
+      //       throw new Error('No invoice received from payment request');
+      //     }
+      //   } catch (error) {
+      //     console.error('Error processing payment:', error);
 
-          let errorTitle = 'Payment failed';
-          let errorSubtitle = 'Unable to process payment request';
+      //     let errorTitle = 'Payment failed';
+      //     let errorSubtitle = 'Unable to process payment request';
 
-          if (error instanceof Error) {
-            if (error.message.includes('amount too small')) {
-              errorTitle = 'Amount too small';
-              errorSubtitle = 'Minimum payment is 1 sat';
-            } else if (error.message.includes('amount too large')) {
-              errorTitle = 'Amount too large';
-              errorSubtitle = 'Maximum payment is 100M sats';
-            } else if (error.message.includes('not initialized')) {
-              errorTitle = 'Service unavailable';
-              errorSubtitle = 'Payment service is not ready';
-            } else if (error.message.includes('timeout')) {
-              errorTitle = 'Payment timeout';
-              errorSubtitle = 'Customer did not complete payment';
-            }
-          }
+      //     if (error instanceof Error) {
+      //       if (error.message.includes('amount too small')) {
+      //         errorTitle = 'Amount too small';
+      //         errorSubtitle = 'Minimum payment is 1 sat';
+      //       } else if (error.message.includes('amount too large')) {
+      //         errorTitle = 'Amount too large';
+      //         errorSubtitle = 'Maximum payment is 100M sats';
+      //       } else if (error.message.includes('not initialized')) {
+      //         errorTitle = 'Service unavailable';
+      //         errorSubtitle = 'Payment service is not ready';
+      //       } else if (error.message.includes('timeout')) {
+      //         errorTitle = 'Payment timeout';
+      //         errorSubtitle = 'Customer did not complete payment';
+      //       }
+      //     }
 
-          updateOperationStep(operationId, 'process', {
-            status: 'error',
-            title: errorTitle,
-            subtitle: errorSubtitle,
-          });
+      //     updateOperationStep(operationId, 'process', {
+      //       status: 'error',
+      //       title: errorTitle,
+      //       subtitle: errorSubtitle,
+      //     });
 
-          failOperation(
-            operationId,
-            `Payment failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-          );
-          currentOperationRef.current = null; // Clear operation ref on error
-        }
-      });
+      //     failOperation(
+      //       operationId,
+      //       `Payment failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      //     );
+      //     currentOperationRef.current = null; // Clear operation ref on error
+      //   }
+      // });
 
       console.log(`🔊 Now listening for key handshake on selected token...`);
     } catch (error) {
